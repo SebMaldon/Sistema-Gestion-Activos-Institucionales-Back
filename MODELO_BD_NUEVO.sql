@@ -1,11 +1,11 @@
 -- ==========================================
--- 1. CAT�LOGOS BASE
+-- 1. CATÁLOGOS BASE
 -- ==========================================
 
 CREATE DATABASE inventario;
 GO
 
--- Le indicamos a SQL Server que a partir de aqu� ejecute todo dentro de la nueva BD
+-- Le indicamos a SQL Server que a partir de aquí ejecute todo dentro de la nueva BD
 USE inventario;
 GO
 
@@ -14,8 +14,6 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-
-
 
 CREATE TABLE Cat_Inmuebles (
     clave_inmueble VARCHAR(50) PRIMARY KEY,
@@ -57,14 +55,14 @@ CREATE TABLE Cat_Modelos (
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
--- 1. Crear clave for�nea entre Cat_Modelos y marcas
+-- 1. Crear clave foránea entre Cat_Modelos y marcas
 ALTER TABLE [dbo].[Cat_Modelos] 
 ADD CONSTRAINT [FK_Cat_Modelos_marcas] 
 FOREIGN KEY ([clave_marca]) 
 REFERENCES [dbo].[marcas] ([clave_marca]);
 GO
 
--- 2. Crear clave for�nea entre Cat_Modelos y tipo_dispositivos
+-- 2. Crear clave foránea entre Cat_Modelos y tipo_dispositivos
 ALTER TABLE [dbo].[Cat_Modelos] 
 ADD CONSTRAINT [FK_Cat_Modelos_tipo_dispositivos] 
 FOREIGN KEY ([tipo_disp]) 
@@ -76,10 +74,10 @@ CREATE TABLE Roles (
     nombre_rol VARCHAR(50) NOT NULL UNIQUE
 );
 
--- Cat�logo para clasificar si es capitalizable o no, y si requiere n�mero de serie
+-- Catálogo para clasificar si es capitalizable o no, y si requiere número de serie
 CREATE TABLE Cat_CategoriasActivo (
     id_categoria INT IDENTITY(1,1) PRIMARY KEY,
-    nombre_categoria VARCHAR(100) NOT NULL, -- Ej: 'Equipo de C�mputo', 'Redes', 'Insumos de Instalaci�n'
+    nombre_categoria VARCHAR(100) NOT NULL, -- Ej: 'Equipo de Cómputo', 'Redes', 'Insumos de Instalación'
     es_capitalizable BIT NOT NULL DEFAULT 1, -- 1 = Capitalizable (PC, Router), 0 = No Capitalizable (Cables, Tapas)
     maneja_serie_individual BIT NOT NULL DEFAULT 1 -- 1 = Se registra 1 a 1, 0 = Se registra por cantidad/lote
 );
@@ -100,7 +98,7 @@ CREATE TABLE Usuarios (
     CONSTRAINT FK_Usuarios_Roles FOREIGN KEY (id_rol) REFERENCES Roles(id_rol)
 );
 
--- NUEVO: Cat�logo de Unidades de Medida
+-- NUEVO: Catálogo de Unidades de Medida
 CREATE TABLE Cat_UnidadesMedida (
     id_unidad INT IDENTITY(1,1) PRIMARY KEY,
     nombre_unidad VARCHAR(50) NOT NULL, -- Ej: 'Piezas', 'Metros', 'Litros', 'Lotes'
@@ -111,7 +109,7 @@ CREATE TABLE Cat_UnidadesMedida (
 CREATE TABLE Bienes (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     id_categoria INT NOT NULL,
-    id_unidad INT NOT NULL, -- NUEVA LLAVE FOR�NEA
+    id_unidad INT NOT NULL, -- NUEVA LLAVE FORÁNEA
     num_serie VARCHAR(50), 
     num_inv VARCHAR(50), 
     cantidad DECIMAL(10,2) DEFAULT 1, -- CAMBIO: De INT a DECIMAL por si en el futuro miden "1.5 metros"
@@ -122,7 +120,6 @@ CREATE TABLE Bienes (
     id_usuario_resguardo INT,
     fecha_adquisicion DATE,
     fecha_actualizacion DATETIME DEFAULT GETDATE(),
-    observaciones NVARCHAR(MAX),
     CONSTRAINT FK_Bienes_Categorias FOREIGN KEY (id_categoria) REFERENCES Cat_CategoriasActivo(id_categoria),
     CONSTRAINT FK_Bienes_UnidadMedida FOREIGN KEY (id_unidad) REFERENCES Cat_UnidadesMedida(id_unidad),
     CONSTRAINT FK_Bienes_Inmuebles FOREIGN KEY (clave_inmueble) REFERENCES Cat_Inmuebles(clave_inmueble),
@@ -130,7 +127,7 @@ CREATE TABLE Bienes (
     CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario)
 );
 
--- NUEVO: Extensi�n t�cnica solo para equipos que lo requieran (PCs, Laptops, Routers)
+-- NUEVO: Extensión técnica solo para equipos que lo requieran (PCs, Laptops, Routers)
 CREATE TABLE Especificaciones_TI (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY,
     nom_pc VARCHAR(64),
@@ -164,19 +161,26 @@ CREATE TABLE Incidencias (
     id_incidencia INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
     id_usuario_reporta INT NOT NULL,
+    id_usuario_asignado INT NULL,       -- NUEVO: Técnico asignado a resolver la incidencia
+    id_usuario_resuelve INT NULL,       -- NUEVO: Usuario que finalmente cerró/resolvió la incidencia
     descripcion_falla NVARCHAR(MAX) NOT NULL,
     fecha_reporte DATETIME DEFAULT GETDATE(),
-    estatus_reparacion VARCHAR(30) DEFAULT 'PENDIENTE',
+    estatus_reparacion VARCHAR(50) DEFAULT 'Pendiente', -- 'Pendiente', 'En proceso', 'Resuelto', 'Cerrado automaticamente', 'Cerrado sin resolver'
+    resolucion_textual NVARCHAR(MAX) NULL,   -- NUEVO: Nota que describe cómo se resolvió la incidencia
+    fecha_resolucion DATETIME NULL,          -- NUEVO: Fecha y hora en que se resolvió la incidencia
+	unidad VARCHAR(60),
     CONSTRAINT FK_Incidencias_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
-    CONSTRAINT FK_Incidencias_Usuarios FOREIGN KEY (id_usuario_reporta) REFERENCES Usuarios(id_usuario)
+    CONSTRAINT FK_Incidencias_UsuReporta FOREIGN KEY (id_usuario_reporta) REFERENCES Usuarios(id_usuario),
+    CONSTRAINT FK_Incidencias_UsuAsignado FOREIGN KEY (id_usuario_asignado) REFERENCES Usuarios(id_usuario),
+    CONSTRAINT FK_Incidencias_UsuResuelve FOREIGN KEY (id_usuario_resuelve) REFERENCES Usuarios(id_usuario)
 );
 
--- Modificamos la tabla Movimientos para soportar decimales tambi�n
+-- Modificamos la tabla Movimientos para soportar decimales también
 CREATE TABLE Movimientos_Inventario (
     id_movimiento INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
     id_usuario_autoriza INT NOT NULL,
-    tipo_movimiento VARCHAR(30), -- Ej: 'ENTRADA', 'ASIGNACI�N', 'CONSUMO/GASTO'
+    tipo_movimiento VARCHAR(30), -- Ej: 'ENTRADA', 'ASIGNACIÓN', 'CONSUMO/GASTO'
     cantidad_movida DECIMAL(10,2) DEFAULT 1, -- CAMBIO: Consistente con Bienes
     num_remision VARCHAR(50),
     fecha_movimiento DATETIME DEFAULT GETDATE(),
@@ -186,3 +190,28 @@ CREATE TABLE Movimientos_Inventario (
     CONSTRAINT FK_Movimientos_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
     CONSTRAINT FK_Movimientos_Usuarios FOREIGN KEY (id_usuario_autoriza) REFERENCES Usuarios(id_usuario)
 );
+
+USE inventario;
+GO
+
+CREATE TABLE Notas (
+    id_nota INT IDENTITY(1,1) PRIMARY KEY,
+    id_bien UNIQUEIDENTIFIER NULL,
+    id_incidencia INT NULL,
+    id_usuario_autor INT NULL, -- Opcional: Para saber quién escribió la nota
+    contenido_nota VARCHAR(MAX) NOT NULL,
+    fecha_creacion DATETIME DEFAULT GETDATE(),
+    
+    -- Definición de Llaves Foráneas
+    CONSTRAINT FK_Notas_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
+    CONSTRAINT FK_Notas_Incidencias FOREIGN KEY (id_incidencia) REFERENCES Incidencias(id_incidencia),
+    CONSTRAINT FK_Notas_Usuarios FOREIGN KEY (id_usuario_autor) REFERENCES Usuarios(id_usuario),
+
+    -- RESTRICCIÓN CLAVE: Garantiza que la nota pertenezca a un Bien o a una Incidencia exclusivamente
+    CONSTRAINT CHK_Notas_Exclusividad CHECK (
+        (id_bien IS NOT NULL AND id_incidencia IS NULL) 
+        OR 
+        (id_bien IS NULL AND id_incidencia IS NOT NULL)
+    )
+);
+GO

@@ -1,0 +1,94 @@
+/**
+ * EJEMPLOS DE QUERIES PARA INCIDENCIAS - KANBAN
+ */
+
+# 1. Obtener todas las incidencias (Sin filtros) con sus notas y técnicos asignados
+query GetAllIncidencias {
+  incidencias(pagination: { first: 50 }) {
+    edges {
+      node {
+        id_incidencia
+        estatus_reparacion
+        descripcion_falla
+        unidad
+        fecha_reporte
+        usuarioReporta {
+          nombre_completo
+          matricula
+        }
+        usuarioAsignado {
+          nombre_completo
+        }
+        usuarioResuelve {
+          nombre_completo
+        }
+        notas {
+          id_nota
+          contenido_nota
+          fecha_creacion
+          usuarioAutor {
+            nombre_completo
+          }
+        }
+      }
+    }
+  }
+}
+
+# 2. Filtrar incidencias por estatus (Ej. "Pendiente" para la primera columna del Kanban)
+query GetIncidenciasPendientes {
+  incidencias(estatus_reparacion: "Pendiente", pagination: { first: 50 }) {
+    edges {
+      node {
+        id_incidencia
+        descripcion_falla
+      }
+    }
+  }
+}
+
+# 3. Búsqueda y filtrado general: por unidad y palabra clave en descripción
+query SearchIncidencias {
+  incidencias(
+    unidad: "Almacén General"
+    search: "pantalla"
+    pagination: { first: 20 }
+  ) {
+    edges {
+      node {
+        id_incidencia
+        descripcion_falla
+        unidad
+        estatus_reparacion
+      }
+    }
+  }
+}
+
+# 4. Obtener el detalle de UNA incidencia en específico (Por Ej. para el Modal de revisión)
+query GetIncidenciaDetail($id: ID!) {
+  incidencia(id_incidencia: $id) {
+    id_incidencia
+    descripcion_falla
+    estatus_reparacion
+    unidad
+    fecha_reporte
+    resolucion_textual
+    fecha_resolucion
+    bien {
+      num_serie
+      clave_modelo
+    }
+    usuarioAsignado {
+      id_usuario
+      nombre_completo
+    }
+    notas {
+      contenido_nota
+      fecha_creacion
+      usuarioAutor {
+        nombre_completo
+      }
+    }
+  }
+}

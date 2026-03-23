@@ -1,0 +1,85 @@
+/**
+ * EJEMPLOS DE MUTACIONES PARA INCIDENCIAS - KANBAN
+ */
+
+# 1. Crear Nueva Incidencia (Modal inicial)
+# - Note que el estatus queda en "Pendiente" por defecto
+mutation CrearIncidencia {
+  createIncidencia(
+    id_bien: "XXXXX-XXXXX-XXXXX-XXXXX", 
+    descripcion_falla: "Error de calibración en la bandeja de papel 2",
+    unidad: "Hospital General Regional"
+  ) {
+    id_incidencia
+    estatus_reparacion
+  }
+}
+
+# 2. Asignar la Incidencia a un Técnico (Opcional, antes o en cualquier momento)
+mutation AsignarTecnico {
+  asignarIncidencia(
+    id_incidencia: "1", 
+    id_usuario_asignado: 4 # ID del usuario técnico
+  ) {
+    id_incidencia
+    usuarioAsignado {
+      nombre_completo
+    }
+  }
+}
+
+# 3. Mover la Incidencia a "En proceso" y agregar la primera nota de revisión
+# - Se usa cuando alguien arrastra la tarjeta a "En proceso"
+mutation EmpezarRevision {
+  pasarAEnProceso(
+    id_incidencia: "1",
+    contenido_nota: "Se procedió a revisar la bandeja 2, parece atorada."
+  ) {
+    id_incidencia
+    estatus_reparacion
+    notas {
+      contenido_nota
+    }
+  }
+}
+
+# 4. Agregar una nota adicional de seguimiento (Si ya estaba En proceso y solo quieres agregar texto)
+mutation AgregarNota {
+  agregarNotaSeguimiento(
+    id_incidencia: "1",
+    contenido_nota: "Reemplazado el cable de rodillos, reensamblando."
+  ) {
+    id_nota
+    contenido_nota
+    fecha_creacion
+  }
+}
+
+# 5. Resolver Incidencia (Modal/Sección final al mover a Resuelto o Cerrar)
+# - Puede ser "Resuelto", "Cerrado automaticamente" o "Cerrado sin resolver"
+mutation FinalizarIncidencia {
+  resolverIncidencia(
+    id_incidencia: "1",
+    estatus_cierre: "Resuelto",
+    resolucion_textual: "Se cambió pieza defectuosa y se calibraron rodillos. Exitosa."
+  ) {
+    id_incidencia
+    estatus_reparacion
+    resolucion_textual
+    fecha_resolucion
+    usuarioResuelve {
+      nombre_completo
+    }
+  }
+}
+
+# 6. Actualizar estatus genérico o manualmente sin resolver (Retorno a pendiente, etc.)
+mutation CambiarStatus {
+  updateIncidenciaEstatus(
+    id_incidencia: "1",
+    estatus_reparacion: "Pendiente"
+  ) {
+    id_incidencia
+    estatus_reparacion
+  }
+}

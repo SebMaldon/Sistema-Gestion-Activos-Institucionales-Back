@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../config/database';
 import { Garantia } from '../../entities/Garantia';
 import { Incidencia } from '../../entities/Incidencia';
+import { Nota } from '../../entities/Nota';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError } from '../../utils/errors';
@@ -31,7 +32,7 @@ export const transaccionalesResolvers = {
     // ── Incidencias
     incidencias: async (
       _: unknown,
-      { estatus_reparacion, id_bien, id_usuario_reporta, pagination }: any,
+      { estatus_reparacion, id_bien, id_usuario_reporta, unidad, search, pagination }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -40,6 +41,10 @@ export const transaccionalesResolvers = {
       if (estatus_reparacion) qb.andWhere('i.estatus_reparacion = :e', { e: estatus_reparacion });
       if (id_bien) qb.andWhere('i.id_bien = :b', { b: id_bien });
       if (id_usuario_reporta) qb.andWhere('i.id_usuario_reporta = :u', { u: id_usuario_reporta });
+      if (unidad) qb.andWhere('i.unidad = :un', { un: unidad });
+      if (search) {
+        qb.andWhere('(i.descripcion_falla LIKE :s OR i.unidad LIKE :s)', { s: `%${search}%` });
+      }
 
       const totalCount = await qb.getCount();
       const first = pagination?.first ?? 20;
@@ -104,30 +109,84 @@ export const transaccionalesResolvers = {
     },
 
     // ── Incidencias
-    createIncidencia: async (_: unknown, { id_bien, descripcion_falla }: any, context: GraphQLContext) => {
+    createIncidencia: async (_: unknown, { id_bien, descripcion_falla, unidad }: any, context: GraphQLContext) => {
       requireAuth(context);
       const repo = AppDataSource.getRepository(Incidencia);
       return repo.save(
         repo.create({
           id_bien,
           descripcion_falla,
+          unidad,
           id_usuario_reporta: context.user!.id_usuario,
-          estatus_reparacion: 'PENDIENTE',
+          estatus_reparacion: 'Pendiente',
         })
       );
     },
     updateIncidenciaEstatus: async (_: unknown, { id_incidencia, estatus_reparacion }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(Incidencia);
       const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
       if (!item) throw new NotFoundError('Incidencia');
       item.estatus_reparacion = estatus_reparacion;
       return repo.save(item);
     },
+    asignarIncidencia: async (_: unknown, { id_incidencia, id_usuario_asignado }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      const repo = AppDataSource.getRepository(Incidencia);
+      const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
+      if (!item) throw new NotFoundError('Incidencia');
+      item.id_usuario_asignado = id_usuario_asignado;
+      return repo.save(item);
+    },
+    pasarAEnProceso: async (_: unknown, { id_incidencia, contenido_nota }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      const repo = AppDataSource.getRepository(Incidencia);
+      const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
+      if (!item) throw new NotFoundError('Incidencia');
+      
+      item.estatus_reparacion = 'En proceso';
+      await repo.save(item);
+
+      if (contenido_nota) {
+        const notaRepo = AppDataSource.getRepository(Nota);
+        await notaRepo.save(
+          notaRepo.create({
+            id_incidencia: parseInt(id_incidencia),
+            id_usuario_autor: context.user!.id_usuario,
+            contenido_nota
+          })
+        );
+      }
+      return item;
+    },
+    agregarNotaSeguimiento: async (_: unknown, { id_incidencia, contenido_nota }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      const notaRepo = AppDataSource.getRepository(Nota);
+      return notaRepo.save(
+        notaRepo.create({
+          id_incidencia: parseInt(id_incidencia),
+          id_usuario_autor: context.user!.id_usuario,
+          contenido_nota
+        })
+      );
+    },
+    resolverIncidencia: async (_: unknown, { id_incidencia, estatus_cierre, resolucion_textual }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      const repo = AppDataSource.getRepository(Incidencia);
+      const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
+      if (!item) throw new NotFoundError('Incidencia');
+      
+      item.estatus_reparacion = estatus_cierre;
+      item.resolucion_textual = resolucion_textual;
+      item.fecha_resolucion = new Date();
+      item.id_usuario_resuelve = context.user!.id_usuario;
+      
+      return repo.save(item);
+    },
     deleteIncidencia: async (_: unknown, { id_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(Nota).delete({ id_incidencia: parseInt(id_incidencia) });
       await AppDataSource.getRepository(Incidencia).delete({ id_incidencia: parseInt(id_incidencia) });
       return true;
     },
@@ -151,5 +210,22 @@ export const transaccionalesResolvers = {
 
     usuarioReporta: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario_reporta),
+
+    usuarioAsignado: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      parent.id_usuario_asignado ? context.loaders.usuarioLoader.load(parent.id_usuario_asignado) : null,
+
+    usuarioResuelve: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      parent.id_usuario_resuelve ? context.loaders.usuarioLoader.load(parent.id_usuario_resuelve) : null,
+
+    notas: async (parent: Incidencia) => 
+      AppDataSource.getRepository(Nota).find({
+        where: { id_incidencia: parent.id_incidencia },
+        order: { fecha_creacion: 'ASC' }
+      }),
+  },
+
+  Nota: {
+    usuarioAutor: (parent: Nota, _: unknown, context: GraphQLContext) =>
+      parent.id_usuario_autor ? context.loaders.usuarioLoader.load(parent.id_usuario_autor) : null,
   },
 };

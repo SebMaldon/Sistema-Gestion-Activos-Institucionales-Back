@@ -160,11 +160,29 @@ export const typeDefs = gql`
     id_incidencia: ID!
     id_bien: ID!
     id_usuario_reporta: Int!
+    id_usuario_asignado: Int
+    id_usuario_resuelve: Int
     descripcion_falla: String!
     fecha_reporte: DateTime!
     estatus_reparacion: String!
+    resolucion_textual: String
+    fecha_resolucion: DateTime
+    unidad: String
     bien: Bien
     usuarioReporta: Usuario
+    usuarioAsignado: Usuario
+    usuarioResuelve: Usuario
+    notas: [Nota!]
+  }
+
+  type Nota {
+    id_nota: ID!
+    id_bien: ID
+    id_incidencia: Int
+    id_usuario_autor: Int
+    contenido_nota: String!
+    fecha_creacion: DateTime!
+    usuarioAutor: Usuario
   }
 
   type IncidenciaEdge {
@@ -260,6 +278,8 @@ export const typeDefs = gql`
       estatus_reparacion: String
       id_bien: ID
       id_usuario_reporta: Int
+      unidad: String
+      search: String
       pagination: PaginationInput
     ): IncidenciasConnection!
     incidencia(id_incidencia: ID!): Incidencia
@@ -428,11 +448,35 @@ export const typeDefs = gql`
     createIncidencia(
       id_bien: ID!
       descripcion_falla: String!
+      unidad: String
     ): Incidencia!
+    
     updateIncidenciaEstatus(
       id_incidencia: ID!
       estatus_reparacion: String!
     ): Incidencia!
+    
+    asignarIncidencia(
+      id_incidencia: ID!
+      id_usuario_asignado: Int!
+    ): Incidencia!
+    
+    pasarAEnProceso(
+      id_incidencia: ID!
+      contenido_nota: String
+    ): Incidencia!
+    
+    agregarNotaSeguimiento(
+      id_incidencia: ID!
+      contenido_nota: String!
+    ): Nota!
+    
+    resolverIncidencia(
+      id_incidencia: ID!
+      estatus_cierre: String!
+      resolucion_textual: String!
+    ): Incidencia!
+    
     deleteIncidencia(id_incidencia: ID!): Boolean!
 
     # Movimientos
