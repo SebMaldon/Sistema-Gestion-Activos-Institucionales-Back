@@ -118,7 +118,6 @@ CREATE TABLE [dbo].[unidades](
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
-
 -- ==========================================
 -- 2. ENTIDADES PRINCIPALES
 -- ==========================================
