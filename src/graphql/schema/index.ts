@@ -21,6 +21,8 @@ export const typeDefs = gql`
   }
 
   # ─── CATÁLOGOS ──────────────────────────────────────────
+
+  # Tabla: Cat_Inmuebles (catálogo propio del sistema)
   type CatInmueble {
     clave_inmueble: ID!
     nombre_ubicacion: String!
@@ -29,16 +31,19 @@ export const typeDefs = gql`
     totalBienes: Int
   }
 
+  # Tabla: marcas
   type Marca {
     clave_marca: ID!
     marca: String
   }
 
+  # Tabla: tipo_dispositivos
   type TipoDispositivo {
     tipo_disp: ID!
     nombre_tipo: String
   }
 
+  # Tabla: Cat_Modelos
   type CatModelo {
     clave_modelo: ID!
     clave_marca: Int
@@ -48,11 +53,13 @@ export const typeDefs = gql`
     tipoDispositivo: TipoDispositivo
   }
 
+  # Tabla: Roles
   type Rol {
     id_rol: ID!
     nombre_rol: String!
   }
 
+  # Tabla: Cat_CategoriasActivo
   type CatCategoriaActivo {
     id_categoria: ID!
     nombre_categoria: String!
@@ -60,13 +67,73 @@ export const typeDefs = gql`
     maneja_serie_individual: Boolean!
   }
 
+  # Tabla: Cat_UnidadesMedida (PK real: id_unidad_medida)
   type CatUnidadMedida {
-    id_unidad: ID!
+    id_unidad_medida: ID!
     nombre_unidad: String!
     abreviatura: String!
   }
 
+  # Tabla: ClasificacionesUnidades
+  type ClasificacionUnidad {
+    id_clas: ID!
+    clasificacion_unidades: String
+  }
+
+  # Tabla: TipoUnidades
+  type TipoUnidad {
+    id_tipo: ID!
+    clasificacion: Int
+    tipo_unidad: String
+    clasificacionUnidad: ClasificacionUnidad
+  }
+
+  # Tabla: unidades (unidades operativas / red)
+  type Unidad {
+    id_unidad: ID!
+    no_ref: String!
+    nombre: String
+    ip: String!
+    encargado: String
+    telefono: String
+    clave: String
+    tipo_unidad: Int
+    bits: Int
+    estatus: Int
+    regimen: Int
+    vlan: Int
+    monitorear: Int
+    proveedor: String
+    velocidad: String
+    tipo_enlace: Int
+    tipoUnidadInfo: TipoUnidad
+  }
+
+  # Tabla: inmuebles (tabla legacy con datos completos)
+  type Inmueble {
+    clave: ID!
+    descripcion: String
+    desc_corta: String
+    encargado: String
+    direccion: String
+    calle: String
+    numero: String
+    colonia: String
+    ciudad: String
+    municipio: String
+    cp: String
+    clave_zona: String
+    telefono: String
+    zona_reporte: String
+    nivel: Int
+    no_inmueble: Int
+    regimen: Int
+    tipo_unidad: Int
+  }
+
   # ─── USUARIOS ───────────────────────────────────────────
+
+  # Tabla: Usuarios
   type Usuario {
     id_usuario: ID!
     matricula: String!
@@ -74,8 +141,10 @@ export const typeDefs = gql`
     tipo_usuario: String
     correo_electronico: String
     id_rol: Int!
+    id_unidad: Int
     estatus: Boolean!
     rol: Rol
+    unidad: Unidad
   }
 
   type AuthPayload {
@@ -85,23 +154,29 @@ export const typeDefs = gql`
   }
 
   # ─── BIENES ─────────────────────────────────────────────
+
+  # Tabla: Bienes
   type Bien {
     id_bien: ID!
     id_categoria: Int!
-    id_unidad: Int!
+    id_unidad_medida: Int!
+    id_unidad: Int
     num_serie: String
     num_inv: String
     cantidad: Float!
     estatus_operativo: String!
     qr_hash: String
     clave_inmueble: String
+    clave_inmueble_ref: String
+    clave_presupuestal: String
     clave_modelo: String
     id_usuario_resguardo: Int
     fecha_adquisicion: Date
     fecha_actualizacion: DateTime!
-    observaciones: String
+    # Relaciones resueltas
     categoria: CatCategoriaActivo
     unidadMedida: CatUnidadMedida
+    unidad: Unidad
     inmueble: CatInmueble
     modelo: CatModelo
     usuarioResguardo: Usuario
@@ -123,12 +198,16 @@ export const typeDefs = gql`
     estatus_operativo: String
     clave_inmueble: String
     id_categoria: Int
+    id_unidad: Int
+    id_unidad_medida: Int
     id_usuario_resguardo: Int
     clave_modelo: String
     search: String
   }
 
   # ─── ESPECIFICACIONES TI ────────────────────────────────
+
+  # Tabla: Especificaciones_TI
   type EspecificacionTI {
     id_bien: ID!
     nom_pc: String
@@ -145,6 +224,8 @@ export const typeDefs = gql`
   }
 
   # ─── GARANTÍAS ──────────────────────────────────────────
+
+  # Tabla: Garantias
   type Garantia {
     id_garantia: ID!
     id_bien: ID!
@@ -156,6 +237,9 @@ export const typeDefs = gql`
   }
 
   # ─── INCIDENCIAS ────────────────────────────────────────
+
+  # Tabla: Incidencias
+  # estatus_reparacion valores: 'Pendiente' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Sin resolver'
   type Incidencia {
     id_incidencia: ID!
     id_bien: ID!
@@ -175,16 +259,6 @@ export const typeDefs = gql`
     notas: [Nota!]
   }
 
-  type Nota {
-    id_nota: ID!
-    id_bien: ID
-    id_incidencia: Int
-    id_usuario_autor: Int
-    contenido_nota: String!
-    fecha_creacion: DateTime!
-    usuarioAutor: Usuario
-  }
-
   type IncidenciaEdge {
     node: Incidencia!
     cursor: String!
@@ -195,7 +269,22 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
+  # ─── NOTAS ──────────────────────────────────────────────
+
+  # Tabla: Notas — puede asociarse a un Bien O a una Incidencia (mutuamente excluyente)
+  type Nota {
+    id_nota: ID!
+    id_bien: ID
+    id_incidencia: Int
+    id_usuario_autor: Int
+    contenido_nota: String!
+    fecha_creacion: DateTime!
+    usuarioAutor: Usuario
+  }
+
   # ─── MOVIMIENTOS ────────────────────────────────────────
+
+  # Tabla: Movimientos_Inventario
   type MovimientoInventario {
     id_movimiento: ID!
     id_bien: ID!
@@ -221,6 +310,18 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
+  # ─── ROTACIÓN ───────────────────────────────────────────
+
+  # Tabla: rotacion
+  type Rotacion {
+    id_rotacion: ID!
+    id_usuario: Int!
+    id_unidad: Int!
+    estatus: Boolean!
+    usuario: Usuario
+    unidad: Unidad
+  }
+
   # ─── DASHBOARD ──────────────────────────────────────────
   type DashboardStats {
     totalBienes: Int!
@@ -239,52 +340,84 @@ export const typeDefs = gql`
   # QUERIES
   # ─────────────────────────────────────────────────────────
   type Query {
-    # Auth
+    # ── Auth
     me: Usuario
 
-    # Catálogos
+    # ── Catálogos — Cat_Inmuebles
     catInmuebles: [CatInmueble!]!
     catInmueble(clave_inmueble: ID!): CatInmueble
+
+    # ── Catálogos — Marcas
     marcas: [Marca!]!
     marca(clave_marca: ID!): Marca
+
+    # ── Catálogos — Tipos Dispositivo
     tiposDispositivo: [TipoDispositivo!]!
     tipoDispositivo(tipo_disp: ID!): TipoDispositivo
+
+    # ── Catálogos — Modelos
     catModelos(clave_marca: Int, tipo_disp: Int): [CatModelo!]!
     catModelo(clave_modelo: ID!): CatModelo
+
+    # ── Catálogos — Roles
     roles: [Rol!]!
+
+    # ── Catálogos — Categorías Activo
     catCategoriasActivo: [CatCategoriaActivo!]!
     catCategoriaActivo(id_categoria: ID!): CatCategoriaActivo
-    catUnidadesMedida: [CatUnidadMedida!]!
 
-    # Usuarios
-    usuarios(estatus: Boolean): [Usuario!]!
+    # ── Catálogos — Unidades de Medida
+    catUnidadesMedida: [CatUnidadMedida!]!
+    catUnidadMedida(id_unidad_medida: ID!): CatUnidadMedida
+
+    # ── Unidades Operativas
+    unidades(estatus: Int): [Unidad!]!
+    unidad(id_unidad: ID!): Unidad
+
+    # ── Inmuebles (tabla legacy)
+    inmuebles: [Inmueble!]!
+    inmueble(clave: ID!): Inmueble
+
+    # ── Clasificaciones de Unidades
+    clasificacionesUnidades: [ClasificacionUnidad!]!
+    tiposUnidad(id_clas: Int): [TipoUnidad!]!
+
+    # ── Usuarios
+    usuarios(estatus: Boolean, id_unidad: Int): [Usuario!]!
     usuario(id_usuario: ID!): Usuario
 
-    # Bienes
+    # ── Bienes
     bienes(filter: BienesFilterInput, pagination: PaginationInput): BienesConnection!
     bien(id_bien: ID!): Bien
     bienByQR(qr_hash: String!): Bien
     bienByNumSerie(num_serie: String!): Bien
+    bienByNumInv(num_inv: String!): Bien
 
-    # Especificaciones TI
+    # ── Especificaciones TI
     especificacionTI(id_bien: ID!): EspecificacionTI
 
-    # Garantías
+    # ── Garantías
     garantias(id_bien: ID, estado_garantia: String): [Garantia!]!
+    garantia(id_garantia: ID!): Garantia
     garantiasPorVencer(diasAlerta: Int): [Garantia!]!
 
-    # Incidencias
+    # ── Incidencias
     incidencias(
       estatus_reparacion: String
       id_bien: ID
       id_usuario_reporta: Int
+      id_usuario_asignado: Int
       unidad: String
       search: String
       pagination: PaginationInput
     ): IncidenciasConnection!
     incidencia(id_incidencia: ID!): Incidencia
 
-    # Movimientos
+    # ── Notas
+    notasBien(id_bien: ID!): [Nota!]!
+    notasIncidencia(id_incidencia: Int!): [Nota!]!
+
+    # ── Movimientos
     movimientos(
       id_bien: ID
       tipo_movimiento: String
@@ -294,7 +427,12 @@ export const typeDefs = gql`
     ): MovimientosConnection!
     movimiento(id_movimiento: ID!): MovimientoInventario
 
-    # Dashboard
+    # ── Rotación
+    rotaciones(estatus: Boolean, id_unidad: Int): [Rotacion!]!
+    rotacion(id_rotacion: ID!): Rotacion
+    rotacionesPorUsuario(id_usuario: Int!): [Rotacion!]!
+
+    # ── Dashboard
     dashboardStats: DashboardStats!
   }
 
@@ -302,11 +440,11 @@ export const typeDefs = gql`
   # MUTATIONS
   # ─────────────────────────────────────────────────────────
   type Mutation {
-    # Auth
+    # ── Auth
     login(matricula: String!, password: String!): AuthPayload!
     changePassword(id_usuario: ID!, currentPassword: String!, newPassword: String!): Boolean!
 
-    # Catálogos - Inmuebles
+    # ── Catálogos — Cat_Inmuebles
     createCatInmueble(
       clave_inmueble: ID!
       nombre_ubicacion: String!
@@ -321,17 +459,17 @@ export const typeDefs = gql`
     ): CatInmueble!
     deleteCatInmueble(clave_inmueble: ID!): Boolean!
 
-    # Catálogos - Marcas
+    # ── Catálogos — Marcas
     createMarca(marca: String!): Marca!
     updateMarca(clave_marca: ID!, marca: String!): Marca!
     deleteMarca(clave_marca: ID!): Boolean!
 
-    # Catálogos - Tipos Dispositivo
+    # ── Catálogos — Tipos Dispositivo
     createTipoDispositivo(nombre_tipo: String!): TipoDispositivo!
     updateTipoDispositivo(tipo_disp: ID!, nombre_tipo: String!): TipoDispositivo!
     deleteTipoDispositivo(tipo_disp: ID!): Boolean!
 
-    # Catálogos - Modelos
+    # ── Catálogos — Modelos
     createCatModelo(
       clave_modelo: ID!
       clave_marca: Int
@@ -346,7 +484,7 @@ export const typeDefs = gql`
     ): CatModelo!
     deleteCatModelo(clave_modelo: ID!): Boolean!
 
-    # Catálogos - Categorías
+    # ── Catálogos — Categorías
     createCatCategoriaActivo(
       nombre_categoria: String!
       es_capitalizable: Boolean!
@@ -358,19 +496,26 @@ export const typeDefs = gql`
       es_capitalizable: Boolean
       maneja_serie_individual: Boolean
     ): CatCategoriaActivo!
+    deleteCatCategoriaActivo(id_categoria: ID!): Boolean!
 
-    # Catálogos - Unidades de Medida
+    # ── Catálogos — Unidades de Medida
     createCatUnidadMedida(nombre_unidad: String!, abreviatura: String!): CatUnidadMedida!
-    updateCatUnidadMedida(id_unidad: ID!, nombre_unidad: String, abreviatura: String): CatUnidadMedida!
+    updateCatUnidadMedida(
+      id_unidad_medida: ID!
+      nombre_unidad: String
+      abreviatura: String
+    ): CatUnidadMedida!
+    deleteCatUnidadMedida(id_unidad_medida: ID!): Boolean!
 
-    # Usuarios
+    # ── Usuarios
     createUsuario(
       matricula: String!
       nombre_completo: String!
       tipo_usuario: String
       correo_electronico: String
-      password: String!
+      password: String
       id_rol: Int
+      id_unidad: Int
     ): Usuario!
     updateUsuario(
       id_usuario: ID!
@@ -378,41 +523,44 @@ export const typeDefs = gql`
       tipo_usuario: String
       correo_electronico: String
       id_rol: Int
+      id_unidad: Int
       estatus: Boolean
     ): Usuario!
     deleteUsuario(id_usuario: ID!): Boolean!
 
-    # Bienes
+    # ── Bienes
     createBien(
       id_categoria: Int!
-      id_unidad: Int!
-      num_serie: String
-      num_inv: String
-      cantidad: Float
-      estatus_operativo: String
-      clave_inmueble: String
-      clave_modelo: String
-      id_usuario_resguardo: Int
-      fecha_adquisicion: Date
-      observaciones: String
-    ): Bien!
-    updateBien(
-      id_bien: ID!
-      id_categoria: Int
+      id_unidad_medida: Int!
       id_unidad: Int
       num_serie: String
       num_inv: String
       cantidad: Float
       estatus_operativo: String
       clave_inmueble: String
+      clave_inmueble_ref: String
       clave_modelo: String
       id_usuario_resguardo: Int
       fecha_adquisicion: Date
-      observaciones: String
+    ): Bien!
+    updateBien(
+      id_bien: ID!
+      id_categoria: Int
+      id_unidad_medida: Int
+      id_unidad: Int
+      num_serie: String
+      num_inv: String
+      cantidad: Float
+      estatus_operativo: String
+      clave_inmueble: String
+      clave_inmueble_ref: String
+      clave_modelo: String
+      id_usuario_resguardo: Int
+      fecha_adquisicion: Date
     ): Bien!
     deleteBien(id_bien: ID!): Boolean!
 
-    # Especificaciones TI
+    # ── Especificaciones TI (upsert: crea o actualiza)
     upsertEspecificacionTI(
       id_bien: ID!
       nom_pc: String
@@ -427,7 +575,7 @@ export const typeDefs = gql`
       modelo_so: String
     ): EspecificacionTI!
 
-    # Garantías
+    # ── Garantías
     createGarantia(
       id_bien: ID!
       fecha_inicio: Date
@@ -444,42 +592,53 @@ export const typeDefs = gql`
     ): Garantia!
     deleteGarantia(id_garantia: ID!): Boolean!
 
-    # Incidencias
+    # ── Incidencias
+    # Crear incidencia (estatus inicial: 'Pendiente')
     createIncidencia(
       id_bien: ID!
       descripcion_falla: String!
       unidad: String
     ): Incidencia!
-    
-    updateIncidenciaEstatus(
-      id_incidencia: ID!
-      estatus_reparacion: String!
-    ): Incidencia!
-    
-    asignarIncidencia(
-      id_incidencia: ID!
-      id_usuario_asignado: Int!
-    ): Incidencia!
-    
+
+    # Pasar a 'En proceso' — opcionalmente agrega nota de inicio
     pasarAEnProceso(
       id_incidencia: ID!
+      id_usuario_asignado: Int
       contenido_nota: String
     ): Incidencia!
-    
+
+    # Agregar nota de seguimiento a una incidencia
     agregarNotaSeguimiento(
       id_incidencia: ID!
       contenido_nota: String!
     ): Nota!
-    
+
+    # Resolver incidencia (estatus_cierre: 'Resuelto' | 'Cerrado' | 'Sin resolver')
     resolverIncidencia(
       id_incidencia: ID!
       estatus_cierre: String!
       resolucion_textual: String!
     ): Incidencia!
-    
+
+    # Cambio de estatus libre (para casos especiales / admin)
+    updateIncidenciaEstatus(
+      id_incidencia: ID!
+      estatus_reparacion: String!
+    ): Incidencia!
+
+    # Asignar responsable a una incidencia
+    asignarIncidencia(
+      id_incidencia: ID!
+      id_usuario_asignado: Int!
+    ): Incidencia!
+
     deleteIncidencia(id_incidencia: ID!): Boolean!
 
-    # Movimientos
+    # ── Notas
+    createNotaBien(id_bien: ID!, contenido_nota: String!): Nota!
+    deleteNota(id_nota: ID!): Boolean!
+
+    # ── Movimientos
     createMovimiento(
       id_bien: ID!
       tipo_movimiento: String!
@@ -497,5 +656,11 @@ export const typeDefs = gql`
       destino: String
       url_formato_pdf: String
     ): MovimientoInventario!
+    deleteMovimiento(id_movimiento: ID!): Boolean!
+
+    # ── Rotación
+    createRotacion(id_usuario: Int!, id_unidad: Int!): Rotacion!
+    updateRotacionEstatus(id_rotacion: ID!, estatus: Boolean!): Rotacion!
+    deleteRotacion(id_rotacion: ID!): Boolean!
   }
 `;

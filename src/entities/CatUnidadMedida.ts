@@ -3,8 +3,8 @@ import { Bien } from './Bien';
 
 @Entity('Cat_UnidadesMedida')
 export class CatUnidadMedida {
-  @PrimaryGeneratedColumn({ name: 'id_unidad' })
-  id_unidad!: number;
+  @PrimaryGeneratedColumn({ name: 'id_unidad_medida' })
+  id_unidad_medida!: number;
 
   @Column({ name: 'nombre_unidad', type: 'varchar', length: 50 })
   nombre_unidad!: string;

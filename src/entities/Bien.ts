@@ -1,12 +1,13 @@
 import {
   Entity, PrimaryColumn, Column,
-  ManyToOne, JoinColumn, OneToOne, OneToMany, CreateDateColumn,
+  ManyToOne, JoinColumn, OneToOne, OneToMany,
 } from 'typeorm';
 import { CatCategoriaActivo } from './CatCategoriaActivo';
 import { CatUnidadMedida } from './CatUnidadMedida';
 import { CatInmueble } from './CatInmueble';
 import { CatModelo } from './CatModelo';
 import { Usuario } from './Usuario';
+import { Unidad } from './Unidad';
 import { EspecificacionTI } from './EspecificacionTI';
 import { Garantia } from './Garantia';
 import { Incidencia } from './Incidencia';
@@ -20,8 +21,11 @@ export class Bien {
   @Column({ name: 'id_categoria', type: 'int' })
   id_categoria!: number;
 
-  @Column({ name: 'id_unidad', type: 'int' })
-  id_unidad!: number;
+  @Column({ name: 'id_unidad_medida', type: 'int' })
+  id_unidad_medida!: number;
+
+  @Column({ name: 'id_unidad', type: 'int', nullable: true })
+  id_unidad?: number;
 
   @Column({ name: 'num_serie', type: 'varchar', length: 50, nullable: true })
   num_serie?: string;
@@ -38,8 +42,17 @@ export class Bien {
   @Column({ name: 'qr_hash', type: 'varchar', length: 255, nullable: true, unique: true })
   qr_hash?: string;
 
+  // FK a Cat_Inmuebles (catálogo propio)
   @Column({ name: 'clave_inmueble', type: 'varchar', length: 50, nullable: true })
   clave_inmueble?: string;
+
+  // FK a la tabla inmuebles (tabla legacy con más detalle)
+  @Column({ name: 'clave_inmueble_ref', type: 'varchar', length: 50, nullable: true })
+  clave_inmueble_ref?: string;
+
+  // Autogenerado por trigger (unidades.clave + inmuebles.clave)
+  @Column({ name: 'clave_presupuestal', type: 'varchar', length: 150, nullable: true })
+  clave_presupuestal?: string;
 
   @Column({ name: 'clave_modelo', type: 'varchar', length: 30, nullable: true })
   clave_modelo?: string;
@@ -50,20 +63,22 @@ export class Bien {
   @Column({ name: 'fecha_adquisicion', type: 'date', nullable: true })
   fecha_adquisicion?: Date;
 
-  @CreateDateColumn({ name: 'fecha_actualizacion' })
+  @Column({ name: 'fecha_actualizacion', type: 'datetime', default: () => 'GETDATE()' })
   fecha_actualizacion!: Date;
 
-  @Column({ name: 'observaciones', type: 'nvarchar', length: 'max', nullable: true })
-  observaciones?: string;
+  // ── Relations ──────────────────────────────────────────────
 
-  // Relations
   @ManyToOne(() => CatCategoriaActivo, (cat) => cat.bienes)
   @JoinColumn({ name: 'id_categoria' })
   categoria?: CatCategoriaActivo;
 
   @ManyToOne(() => CatUnidadMedida, (u) => u.bienes)
-  @JoinColumn({ name: 'id_unidad' })
+  @JoinColumn({ name: 'id_unidad_medida' })
   unidadMedida?: CatUnidadMedida;
+
+  @ManyToOne(() => Unidad, (u) => u.bienes, { nullable: true })
+  @JoinColumn({ name: 'id_unidad' })
+  unidad?: Unidad;
 
   @ManyToOne(() => CatInmueble, (i) => i.bienes, { nullable: true })
   @JoinColumn({ name: 'clave_inmueble' })

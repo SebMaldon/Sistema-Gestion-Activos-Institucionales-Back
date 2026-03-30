@@ -14,6 +14,8 @@ import { EspecificacionTI } from '../entities/EspecificacionTI';
 import { Garantia } from '../entities/Garantia';
 import { Incidencia } from '../entities/Incidencia';
 import { MovimientoInventario } from '../entities/MovimientoInventario';
+import { Nota } from '../entities/Nota';
+import { Unidad } from '../entities/Unidad';
 import { logger } from '../utils/logger';
 
 export const AppDataSource = new DataSource({
@@ -38,8 +40,8 @@ export const AppDataSource = new DataSource({
   },
   entities: [
     CatInmueble, Marca, TipoDispositivo, CatModelo, Rol,
-    CatCategoriaActivo, Usuario, CatUnidadMedida, Bien,
-    EspecificacionTI, Garantia, Incidencia, MovimientoInventario,
+    CatCategoriaActivo, Usuario, CatUnidadMedida, Bien, Unidad,
+    EspecificacionTI, Garantia, Incidencia, MovimientoInventario, Nota,
   ],
 });
 

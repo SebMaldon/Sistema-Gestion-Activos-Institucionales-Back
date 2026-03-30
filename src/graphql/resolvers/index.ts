@@ -6,7 +6,7 @@ import { bienesResolvers } from './bienes.resolver';
 import { transaccionalesResolvers } from './transaccionales.resolver';
 import { movimientosResolvers, dashboardResolvers } from './movimientos.resolver';
 
-// Custom Scalars
+// ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
   name: 'DateTime',
   description: 'ISO 8601 DateTime string',
@@ -43,7 +43,7 @@ const dateScalar = new GraphQLScalarType({
   },
 });
 
-// Merge all resolvers
+// ── Merge all resolvers ──────────────────────────────────
 export const resolvers = {
   DateTime: dateTimeScalar,
   Date: dateScalar,
@@ -67,12 +67,15 @@ export const resolvers = {
     ...movimientosResolvers.Mutation,
   },
 
-  // Type-level field resolvers
+  // ── Type-level field resolvers ───────────────────────────
   CatInmueble: catalogosResolvers.CatInmueble,
   CatModelo: catalogosResolvers.CatModelo,
   Bien: bienesResolvers.Bien,
   EspecificacionTI: bienesResolvers.EspecificacionTI,
   Garantia: transaccionalesResolvers.Garantia,
   Incidencia: transaccionalesResolvers.Incidencia,
+  Nota: transaccionalesResolvers.Nota,
   MovimientoInventario: movimientosResolvers.MovimientoInventario,
+  Rotacion: movimientosResolvers.Rotacion,
+  Usuario: usuariosResolvers.Usuario,
 };

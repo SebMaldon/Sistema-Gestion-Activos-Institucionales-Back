@@ -6,14 +6,20 @@ import { CatModelo } from '../../entities/CatModelo';
 import { Rol } from '../../entities/Rol';
 import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
+import { Unidad } from '../../entities/Unidad';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ConflictError } from '../../utils/errors';
 
+// ── Tipos para tablas legacy (sin entidad TypeORM, consultadas con raw query)
+type Inmueble = Record<string, unknown>;
+type ClasificacionUnidad = Record<string, unknown>;
+type TipoUnidad = Record<string, unknown>;
+
 export const catalogosResolvers = {
   Query: {
-    // ── Inmuebles
+    // ── Cat_Inmuebles
     catInmuebles: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
       return AppDataSource.getRepository(CatInmueble).find({ order: { nombre_ubicacion: 'ASC' } });
@@ -29,24 +35,20 @@ export const catalogosResolvers = {
       AppDataSource.getRepository(Marca).findOne({ where: { clave_marca: parseInt(clave_marca) } }),
 
     // ── Tipos Dispositivo
-    tiposDispositivo: async () => AppDataSource.getRepository(TipoDispositivo).find({ order: { nombre_tipo: 'ASC' } }),
+    tiposDispositivo: async () =>
+      AppDataSource.getRepository(TipoDispositivo).find({ order: { nombre_tipo: 'ASC' } }),
     tipoDispositivo: async (_: unknown, { tipo_disp }: { tipo_disp: string }) =>
       AppDataSource.getRepository(TipoDispositivo).findOne({ where: { tipo_disp: parseInt(tipo_disp) } }),
 
-    // ── Modelos
+    // ── Cat_Modelos
     catModelos: async (_: unknown, { clave_marca, tipo_disp }: { clave_marca?: number; tipo_disp?: number }) => {
-      const qb = AppDataSource.getRepository(CatModelo).createQueryBuilder('m')
-        .leftJoinAndSelect('m.marca', 'marca')
-        .leftJoinAndSelect('m.tipoDispositivo', 'td');
+      const qb = AppDataSource.getRepository(CatModelo).createQueryBuilder('m');
       if (clave_marca) qb.andWhere('m.clave_marca = :clave_marca', { clave_marca });
       if (tipo_disp) qb.andWhere('m.tipo_disp = :tipo_disp', { tipo_disp });
       return qb.orderBy('m.clave_modelo', 'ASC').getMany();
     },
     catModelo: async (_: unknown, { clave_modelo }: { clave_modelo: string }) =>
-      AppDataSource.getRepository(CatModelo).findOne({
-        where: { clave_modelo },
-        relations: ['marca', 'tipoDispositivo'],
-      }),
+      AppDataSource.getRepository(CatModelo).findOne({ where: { clave_modelo } }),
 
     // ── Roles
     roles: async (_: unknown, __: unknown, context: GraphQLContext) => {
@@ -54,26 +56,89 @@ export const catalogosResolvers = {
       return AppDataSource.getRepository(Rol).find();
     },
 
-    // ── Categorías
-    catCategoriasActivo: async () => AppDataSource.getRepository(CatCategoriaActivo).find({ order: { nombre_categoria: 'ASC' } }),
+    // ── Cat_CategoriasActivo
+    catCategoriasActivo: async () =>
+      AppDataSource.getRepository(CatCategoriaActivo).find({ order: { nombre_categoria: 'ASC' } }),
     catCategoriaActivo: async (_: unknown, { id_categoria }: { id_categoria: string }) =>
       AppDataSource.getRepository(CatCategoriaActivo).findOne({ where: { id_categoria: parseInt(id_categoria) } }),
 
-    // ── Unidades de Medida
-    catUnidadesMedida: async () => AppDataSource.getRepository(CatUnidadMedida).find({ order: { nombre_unidad: 'ASC' } }),
+    // ── Cat_UnidadesMedida (PK: id_unidad_medida)
+    catUnidadesMedida: async () =>
+      AppDataSource.getRepository(CatUnidadMedida).find({ order: { nombre_unidad: 'ASC' } }),
+    catUnidadMedida: async (_: unknown, { id_unidad_medida }: { id_unidad_medida: string }) =>
+      AppDataSource.getRepository(CatUnidadMedida).findOne({
+        where: { id_unidad_medida: parseInt(id_unidad_medida) },
+      }),
+
+    // ── Unidades operativas (tabla: unidades)
+    unidades: async (_: unknown, { estatus }: { estatus?: number }, context: GraphQLContext) => {
+      requireAuth(context);
+      const qb = AppDataSource.getRepository(Unidad).createQueryBuilder('u');
+      if (estatus !== undefined) qb.andWhere('u.Estatus = :estatus', { estatus });
+      return qb.orderBy('u.Nombre', 'ASC').getMany();
+    },
+    unidad: async (_: unknown, { id_unidad }: { id_unidad: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Unidad).findOne({ where: { id_unidad: parseInt(id_unidad) } });
+    },
+
+    // ── Inmuebles (tabla legacy — raw query sin entidad TypeORM)
+    inmuebles: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      const rows = await AppDataSource.query(
+        `SELECT clave, descripcion, desc_corta, encargado, direccion, calle, numero,
+                colonia, ciudad, municipio, cp, clave_zona, Telefono, zonaReporte,
+                Nivel, NOInmueble, Regimen, TipoUnidad
+         FROM inmuebles ORDER BY descripcion ASC`
+      ) as Inmueble[];
+      return rows.map(mapInmueble);
+    },
+    inmueble: async (_: unknown, { clave }: { clave: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      const rows = await AppDataSource.query(
+        `SELECT clave, descripcion, desc_corta, encargado, direccion, calle, numero,
+                colonia, ciudad, municipio, cp, clave_zona, Telefono, zonaReporte,
+                Nivel, NOInmueble, Regimen, TipoUnidad
+         FROM inmuebles WHERE clave = @0`,
+        [clave]
+      ) as Inmueble[];
+      return rows[0] ? mapInmueble(rows[0]) : null;
+    },
+
+    // ── ClasificacionesUnidades
+    clasificacionesUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      const rows = await AppDataSource.query(
+        `SELECT IDClas as id_clas, ClasificacionUnidades as clasificacion_unidades FROM ClasificacionesUnidades ORDER BY ClasificacionUnidades ASC`
+      ) as ClasificacionUnidad[];
+      return rows;
+    },
+
+    // ── TipoUnidades
+    tiposUnidad: async (_: unknown, { id_clas }: { id_clas?: number }, context: GraphQLContext) => {
+      requireAuth(context);
+      let sql = `SELECT IDTipo as id_tipo, Clasificación as clasificacion, TipoUnidad as tipo_unidad FROM TipoUnidades`;
+      const params: (number | undefined)[] = [];
+      if (id_clas !== undefined) { sql += ` WHERE Clasificación = @0`; params.push(id_clas); }
+      sql += ` ORDER BY TipoUnidad ASC`;
+      const rows = await AppDataSource.query(sql, params) as TipoUnidad[];
+      return rows;
+    },
   },
 
   Mutation: {
-    // ── Inmuebles
+    // ── Cat_Inmuebles
     createCatInmueble: async (_: unknown, args: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(CatInmueble);
       const exists = await repo.findOne({ where: { clave_inmueble: args.clave_inmueble } });
       if (exists) throw new ConflictError(`Inmueble "${args.clave_inmueble}" ya existe`);
       return repo.save(repo.create(args));
     },
     updateCatInmueble: async (_: unknown, { clave_inmueble, ...updates }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(CatInmueble);
       const item = await repo.findOne({ where: { clave_inmueble } });
       if (!item) throw new NotFoundError('Inmueble');
@@ -81,18 +146,21 @@ export const catalogosResolvers = {
       return repo.save(item);
     },
     deleteCatInmueble: async (_: unknown, { clave_inmueble }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(CatInmueble).delete({ clave_inmueble });
       return true;
     },
 
     // ── Marcas
     createMarca: async (_: unknown, { marca }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       return AppDataSource.getRepository(Marca).save({ marca });
     },
     updateMarca: async (_: unknown, { clave_marca, marca }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(Marca);
       const item = await repo.findOne({ where: { clave_marca: parseInt(clave_marca) } });
       if (!item) throw new NotFoundError('Marca');
@@ -100,18 +168,21 @@ export const catalogosResolvers = {
       return repo.save(item);
     },
     deleteMarca: async (_: unknown, { clave_marca }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(Marca).delete({ clave_marca: parseInt(clave_marca) });
       return true;
     },
 
     // ── Tipos Dispositivo
     createTipoDispositivo: async (_: unknown, { nombre_tipo }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       return AppDataSource.getRepository(TipoDispositivo).save({ nombre_tipo });
     },
     updateTipoDispositivo: async (_: unknown, { tipo_disp, nombre_tipo }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(TipoDispositivo);
       const item = await repo.findOne({ where: { tipo_disp: parseInt(tipo_disp) } });
       if (!item) throw new NotFoundError('Tipo de dispositivo');
@@ -119,21 +190,24 @@ export const catalogosResolvers = {
       return repo.save(item);
     },
     deleteTipoDispositivo: async (_: unknown, { tipo_disp }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(TipoDispositivo).delete({ tipo_disp: parseInt(tipo_disp) });
       return true;
     },
 
-    // ── Modelos
+    // ── Cat_Modelos
     createCatModelo: async (_: unknown, args: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(CatModelo);
       const exists = await repo.findOne({ where: { clave_modelo: args.clave_modelo } });
       if (exists) throw new ConflictError(`Modelo "${args.clave_modelo}" ya existe`);
       return repo.save(repo.create(args));
     },
     updateCatModelo: async (_: unknown, { clave_modelo, ...updates }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
       const repo = AppDataSource.getRepository(CatModelo);
       const item = await repo.findOne({ where: { clave_modelo } });
       if (!item) throw new NotFoundError('Modelo');
@@ -141,55 +215,91 @@ export const catalogosResolvers = {
       return repo.save(item);
     },
     deleteCatModelo: async (_: unknown, { clave_modelo }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(CatModelo).delete({ clave_modelo });
       return true;
     },
 
-    // ── Categorías
+    // ── Cat_CategoriasActivo
     createCatCategoriaActivo: async (_: unknown, args: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       return AppDataSource.getRepository(CatCategoriaActivo).save(args);
     },
     updateCatCategoriaActivo: async (_: unknown, { id_categoria, ...updates }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       const repo = AppDataSource.getRepository(CatCategoriaActivo);
       const item = await repo.findOne({ where: { id_categoria: parseInt(id_categoria) } });
       if (!item) throw new NotFoundError('Categoría');
       repo.merge(item, updates);
       return repo.save(item);
     },
+    deleteCatCategoriaActivo: async (_: unknown, { id_categoria }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(CatCategoriaActivo).delete({ id_categoria: parseInt(id_categoria) });
+      return true;
+    },
 
-    // ── Unidades de Medida
+    // ── Cat_UnidadesMedida (usa id_unidad_medida)
     createCatUnidadMedida: async (_: unknown, args: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       return AppDataSource.getRepository(CatUnidadMedida).save(args);
     },
-    updateCatUnidadMedida: async (_: unknown, { id_unidad, ...updates }: any, context: GraphQLContext) => {
-      requireAuth(context); requireRole(context, [ROLES.ADMIN]);
+    updateCatUnidadMedida: async (_: unknown, { id_unidad_medida, ...updates }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
       const repo = AppDataSource.getRepository(CatUnidadMedida);
-      const item = await repo.findOne({ where: { id_unidad: parseInt(id_unidad) } });
+      const item = await repo.findOne({ where: { id_unidad_medida: parseInt(id_unidad_medida) } });
       if (!item) throw new NotFoundError('Unidad de medida');
       repo.merge(item, updates);
       return repo.save(item);
     },
+    deleteCatUnidadMedida: async (_: unknown, { id_unidad_medida }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(CatUnidadMedida).delete({ id_unidad_medida: parseInt(id_unidad_medida) });
+      return true;
+    },
   },
 
-  // Field resolvers
+  // ── Field resolvers
   CatInmueble: {
-    totalBienes: async (parent: CatInmueble) => {
-      return AppDataSource.getRepository(Bien).count({ where: { clave_inmueble: parent.clave_inmueble } });
-    },
+    totalBienes: async (parent: CatInmueble) =>
+      AppDataSource.getRepository(Bien).count({ where: { clave_inmueble: parent.clave_inmueble } }),
   },
 
   CatModelo: {
-    marca: (parent: CatModelo, _: unknown, context: GraphQLContext) => {
-      if (!parent.clave_marca) return null;
-      return context.loaders.marcaLoader.load(parent.clave_marca);
-    },
-    tipoDispositivo: (parent: CatModelo, _: unknown, context: GraphQLContext) => {
-      if (!parent.tipo_disp) return null;
-      return context.loaders.tipoDispositivoLoader.load(parent.tipo_disp);
-    },
+    marca: (parent: CatModelo, _: unknown, context: GraphQLContext) =>
+      parent.clave_marca ? context.loaders.marcaLoader.load(parent.clave_marca) : null,
+    tipoDispositivo: (parent: CatModelo, _: unknown, context: GraphQLContext) =>
+      parent.tipo_disp ? context.loaders.tipoDispositivoLoader.load(parent.tipo_disp) : null,
   },
 };
+
+// ── Helpers para mapear raw SQL rows a tipos GraphQL ──────
+function mapInmueble(row: Inmueble) {
+  return {
+    clave: row['clave'],
+    descripcion: row['descripcion'],
+    desc_corta: row['desc_corta'],
+    encargado: row['encargado'],
+    direccion: row['direccion'],
+    calle: row['calle'],
+    numero: row['numero'],
+    colonia: row['colonia'],
+    ciudad: row['ciudad'],
+    municipio: row['municipio'],
+    cp: row['cp'],
+    clave_zona: row['clave_zona'],
+    telefono: row['Telefono'],
+    zona_reporte: row['zonaReporte'],
+    nivel: row['Nivel'],
+    no_inmueble: row['NOInmueble'],
+    regimen: row['Regimen'],
+    tipo_unidad: row['TipoUnidad'],
+  };
+}

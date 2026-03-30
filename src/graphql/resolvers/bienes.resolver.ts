@@ -2,15 +2,19 @@ import { v4 as uuidv4 } from 'uuid';
 import { AppDataSource } from '../../config/database';
 import { Bien } from '../../entities/Bien';
 import { EspecificacionTI } from '../../entities/EspecificacionTI';
+import { Nota } from '../../entities/Nota';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
+import { Unidad } from '../../entities/Unidad';
 
 export interface BienesFilter {
   estatus_operativo?: string;
   clave_inmueble?: string;
   id_categoria?: number;
+  id_unidad?: number;
+  id_unidad_medida?: number;
   id_usuario_resguardo?: number;
   clave_modelo?: string;
   search?: string;
@@ -24,24 +28,25 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      const repo = AppDataSource.getRepository(Bien);
-      const qb = repo.createQueryBuilder('b');
+      const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
 
       if (filter?.estatus_operativo) qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
       if (filter?.clave_inmueble) qb.andWhere('b.clave_inmueble = :ci', { ci: filter.clave_inmueble });
       if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
+      if (filter?.id_unidad) qb.andWhere('b.id_unidad = :iu', { iu: filter.id_unidad });
+      if (filter?.id_unidad_medida) qb.andWhere('b.id_unidad_medida = :ium', { ium: filter.id_unidad_medida });
       if (filter?.id_usuario_resguardo) qb.andWhere('b.id_usuario_resguardo = :ur', { ur: filter.id_usuario_resguardo });
       if (filter?.clave_modelo) qb.andWhere('b.clave_modelo = :cm', { cm: filter.clave_modelo });
       if (filter?.search) {
-        qb.andWhere('(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.observaciones LIKE :s)', {
-          s: `%${filter.search}%`,
-        });
+        qb.andWhere(
+          '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s)',
+          { s: `%${filter.search}%` }
+        );
       }
 
       const totalCount = await qb.getCount();
-
       const first = pagination?.first ?? 20;
-      qb.take(Math.min(first, 100)); // Max 100 por página
+      qb.take(Math.min(first, 100));
 
       if (pagination?.after) {
         const cursor = decodeCursor(pagination.after);
@@ -84,6 +89,11 @@ export const bienesResolvers = {
       requireAuth(context);
       return AppDataSource.getRepository(Bien).findOne({ where: { num_serie } });
     },
+
+    bienByNumInv: async (_: unknown, { num_inv }: { num_inv: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Bien).findOne({ where: { num_inv } });
+    },
   },
 
   Mutation: {
@@ -93,6 +103,7 @@ export const bienesResolvers = {
       const repo = AppDataSource.getRepository(Bien);
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
+      // El trigger de BD se encargará de calcular clave_presupuestal
       const bien = repo.create({ ...args, id_bien, qr_hash });
       return repo.save(bien);
     },
@@ -110,6 +121,8 @@ export const bienesResolvers = {
     deleteBien: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
+      // Eliminar dependencias en cascada primero
+      await AppDataSource.getRepository(Nota).delete({ id_bien });
       await AppDataSource.getRepository(Bien).delete({ id_bien });
       return true;
     },
@@ -120,22 +133,23 @@ export const bienesResolvers = {
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {
-        const merged = repo.merge(existing, specs);
-        return repo.save(merged);
-      } else {
-        const created = repo.create({ id_bien, ...specs });
-        return repo.save(created);
+        repo.merge(existing, specs);
+        return repo.save(existing);
       }
+      return repo.save(repo.create({ id_bien, ...specs }));
     },
   },
 
-  // Field resolvers using DataLoaders
+  // ── Field resolvers usando DataLoaders ──────────────────
   Bien: {
     categoria: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.id_categoria ? context.loaders.categoriaLoader.load(parent.id_categoria) : null,
 
     unidadMedida: (parent: Bien, _: unknown, context: GraphQLContext) =>
-      parent.id_unidad ? context.loaders.unidadMedidaLoader.load(parent.id_unidad) : null,
+      parent.id_unidad_medida ? context.loaders.unidadMedidaLoader.load(parent.id_unidad_medida) : null,
+
+    unidad: (parent: Bien, _: unknown, context: GraphQLContext) =>
+      parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
 
     inmueble: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.clave_inmueble ? context.loaders.catInmuebleLoader.load(parent.clave_inmueble) : null,

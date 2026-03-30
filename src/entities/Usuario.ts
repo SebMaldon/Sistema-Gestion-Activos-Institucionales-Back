@@ -4,6 +4,7 @@ import {
 } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { Rol } from './Rol';
+import { Unidad } from './Unidad';
 import { Bien } from './Bien';
 import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
@@ -25,18 +26,27 @@ export class Usuario {
   @Column({ name: 'correo_electronico', type: 'varchar', length: 70, nullable: true })
   correo_electronico?: string;
 
-  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
-  password_hash!: string;
+  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false, nullable: true })
+  password_hash?: string;
 
   @Column({ name: 'id_rol', type: 'int', default: 3 })
   id_rol!: number;
 
+  @Column({ name: 'id_unidad', type: 'int', nullable: true })
+  id_unidad?: number;
+
   @Column({ name: 'estatus', type: 'bit', default: 1 })
   estatus!: boolean;
+
+  // ── Relations ──────────────────────────────────────────────
 
   @ManyToOne(() => Rol, (rol) => rol.usuarios)
   @JoinColumn({ name: 'id_rol' })
   rol?: Rol;
+
+  @ManyToOne(() => Unidad, (u) => u.usuarios, { nullable: true })
+  @JoinColumn({ name: 'id_unidad' })
+  unidad?: Unidad;
 
   @OneToMany(() => Bien, (bien) => bien.usuarioResguardo)
   bienesResguardados?: Bien[];
@@ -52,6 +62,7 @@ export class Usuario {
   }
 
   async validatePassword(plainPassword: string): Promise<boolean> {
+    if (!this.password_hash) return false;
     return bcrypt.compare(plainPassword, this.password_hash);
   }
 }

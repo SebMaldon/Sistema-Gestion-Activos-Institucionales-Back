@@ -9,9 +9,21 @@ import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middlewar
 import { NotFoundError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 
+// ── Tabla rotacion (sin entidad TypeORM — raw queries)
+type RotacionRow = {
+  id_rotacion: number;
+  id_usuario: number;
+  id_unidad: number;
+  estatus: boolean;
+};
+
 export const movimientosResolvers = {
   Query: {
-    movimientos: async (_: unknown, { id_bien, tipo_movimiento, fechaDesde, fechaHasta, pagination }: any, context: GraphQLContext) => {
+    movimientos: async (
+      _: unknown,
+      { id_bien, tipo_movimiento, fechaDesde, fechaHasta, pagination }: any,
+      context: GraphQLContext
+    ) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
 
@@ -59,6 +71,36 @@ export const movimientosResolvers = {
       if (!m) throw new NotFoundError('Movimiento');
       return m;
     },
+
+    // ── Rotación
+    rotaciones: async (_: unknown, { estatus, id_unidad }: { estatus?: boolean; id_unidad?: number }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      let sql = `SELECT id_rotacion, id_usuario, id_unidad, estatus FROM rotacion WHERE 1=1`;
+      const params: unknown[] = [];
+      if (estatus !== undefined) { sql += ` AND estatus = @${params.length}`; params.push(estatus ? 1 : 0); }
+      if (id_unidad !== undefined) { sql += ` AND id_unidad = @${params.length}`; params.push(id_unidad); }
+      sql += ` ORDER BY id_rotacion ASC`;
+      return AppDataSource.query(sql, params) as Promise<RotacionRow[]>;
+    },
+
+    rotacion: async (_: unknown, { id_rotacion }: { id_rotacion: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      const rows = await AppDataSource.query(
+        `SELECT id_rotacion, id_usuario, id_unidad, estatus FROM rotacion WHERE id_rotacion = @0`,
+        [parseInt(id_rotacion)]
+      ) as RotacionRow[];
+      if (!rows[0]) throw new NotFoundError('Rotación');
+      return rows[0];
+    },
+
+    rotacionesPorUsuario: async (_: unknown, { id_usuario }: { id_usuario: number }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.query(
+        `SELECT id_rotacion, id_usuario, id_unidad, estatus FROM rotacion WHERE id_usuario = @0 ORDER BY id_rotacion ASC`,
+        [id_usuario]
+      ) as Promise<RotacionRow[]>;
+    },
   },
 
   Mutation: {
@@ -83,14 +125,75 @@ export const movimientosResolvers = {
       repo.merge(item, updates);
       return repo.save(item);
     },
+
+    deleteMovimiento: async (_: unknown, { id_movimiento }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(MovimientoInventario).delete({ id_movimiento: parseInt(id_movimiento) });
+      return true;
+    },
+
+    // ── Rotación
+    createRotacion: async (_: unknown, { id_usuario, id_unidad }: { id_usuario: number; id_unidad: number }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      // INSERT y luego recuperar el ID generado
+      await AppDataSource.query(
+        `INSERT INTO rotacion (id_usuario, id_unidad, estatus) VALUES (@0, @1, 1)`,
+        [id_usuario, id_unidad]
+      );
+      const idRows = await AppDataSource.query(
+        `SELECT TOP 1 id_rotacion FROM rotacion WHERE id_usuario = @0 AND id_unidad = @1 ORDER BY id_rotacion DESC`,
+        [id_usuario, id_unidad]
+      ) as { id_rotacion: number }[];
+      const id_rotacion = idRows[0]?.id_rotacion;
+      const rows = await AppDataSource.query(
+        `SELECT id_rotacion, id_usuario, id_unidad, estatus FROM rotacion WHERE id_rotacion = @0`,
+        [id_rotacion]
+      ) as RotacionRow[];
+      if (!rows[0]) throw new NotFoundError('Rotación');
+      return rows[0];
+    },
+
+    updateRotacionEstatus: async (_: unknown, { id_rotacion, estatus }: { id_rotacion: string; estatus: boolean }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.query(
+        `UPDATE rotacion SET estatus = @0 WHERE id_rotacion = @1`,
+        [estatus ? 1 : 0, parseInt(id_rotacion)]
+      );
+      const rows = await AppDataSource.query(
+        `SELECT id_rotacion, id_usuario, id_unidad, estatus FROM rotacion WHERE id_rotacion = @0`,
+        [parseInt(id_rotacion)]
+      ) as RotacionRow[];
+      if (!rows[0]) throw new NotFoundError('Rotación');
+      return rows[0];
+    },
+
+    deleteRotacion: async (_: unknown, { id_rotacion }: { id_rotacion: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.query(
+        `DELETE FROM rotacion WHERE id_rotacion = @0`,
+        [parseInt(id_rotacion)]
+      );
+      return true;
+    },
   },
 
+  // ── Field resolvers ──────────────────────────────────────
   MovimientoInventario: {
     bien: (parent: MovimientoInventario) =>
       AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
-
     usuarioAutoriza: (parent: MovimientoInventario, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario_autoriza),
+  },
+
+  Rotacion: {
+    usuario: (parent: RotacionRow, _: unknown, context: GraphQLContext) =>
+      context.loaders.usuarioLoader.load(parent.id_usuario),
+    unidad: (parent: RotacionRow, _: unknown, context: GraphQLContext) =>
+      context.loaders.unidadLoader.load(parent.id_unidad),
   },
 };
 
@@ -116,8 +219,9 @@ export const dashboardResolvers = {
         AppDataSource.getRepository(Bien).count({ where: { estatus_operativo: 'ACTIVO' } }),
         AppDataSource.getRepository(Bien).count({ where: { estatus_operativo: 'INACTIVO' } }),
         AppDataSource.getRepository(Bien).count({ where: { estatus_operativo: 'EN REPARACIÓN' } }),
-        AppDataSource.getRepository(Incidencia).count({ where: { estatus_reparacion: 'PENDIENTE' } }),
-        AppDataSource.getRepository(Incidencia).count({ where: { estatus_reparacion: 'EN PROCESO' } }),
+        // Nota: los valores de estatus_reparacion en la DB usan formato "Pendiente", "En proceso"
+        AppDataSource.getRepository(Incidencia).count({ where: { estatus_reparacion: 'Pendiente' } }),
+        AppDataSource.getRepository(Incidencia).count({ where: { estatus_reparacion: 'En proceso' } }),
         AppDataSource.getRepository(Garantia).count({ where: { estado_garantia: 'VIGENTE' } }),
         AppDataSource.getRepository(Garantia)
           .createQueryBuilder('g')
