@@ -1,0 +1,415 @@
+================================================================
+  GUÍA FRONTEND - LOGIN  |  Sistema Gestión Activos IMSS
+  Actualizado: 2026-03-31  —  Seguridad de backend ACTIVADA ✅
+================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ENDPOINT GRAPHQL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  URL (desarrollo):  http://localhost:4000/graphql
+  Método:            POST
+  Header base:       Content-Type: application/json
+
+  Para rutas protegidas (después del login):
+  Header:            Authorization: Bearer <token>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MUTATION DE LOGIN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+mutation Login($matricula: String!, $password: String!) {
+  login(matricula: $matricula, password: $password) {
+    token
+    expiresIn
+    usuario {
+      id_usuario
+      matricula
+      nombre_completo
+      tipo_usuario
+      correo_electronico
+      id_rol
+      id_unidad
+      estatus
+      rol {
+        id_rol
+        nombre_rol
+      }
+      unidad {
+        id_unidad
+        nombre
+        no_ref
+        clave
+      }
+    }
+  }
+}
+
+  Variables:
+  {
+    "matricula": "ABC12345",
+    "password": "miPassword123"
+  }
+
+  NOTA: La mutation login() NO requiere token.
+  Todas las demás operaciones SÍ requieren header Authorization.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  QUERY "ME" — validar sesión activa (con token)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+query Me {
+  me {
+    id_usuario
+    matricula
+    nombre_completo
+    tipo_usuario
+    id_rol
+    id_unidad
+    estatus
+    rol {
+      id_rol
+      nombre_rol
+    }
+    unidad {
+      id_unidad
+      nombre
+      no_ref
+      clave
+    }
+  }
+}
+
+  Requiere: Authorization: Bearer <token>
+  Uso: al iniciar la app, si hay token guardado, llama "me"
+       para validar que sigue vigente. Si falla → logout.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  RESPUESTA EXITOSA DEL SERVIDOR (estructura AuthPayload)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{
+  "data": {
+    "login": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "expiresIn": "8h",
+      "usuario": {
+        "id_usuario": "1",
+        "matricula": "ABC12345",
+        "nombre_completo": "Juan Pérez López",
+        "tipo_usuario": "admin",
+        "correo_electronico": "juan@imss.gob.mx",
+        "id_rol": 1,
+        "id_unidad": 10,
+        "estatus": true,
+        "rol": { "id_rol": "1", "nombre_rol": "Admin" },
+        "unidad": { "id_unidad": "10", "nombre": "UMF Ejemplo", "no_ref": "U001", "clave": "UMF01" }
+      }
+    }
+  }
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ERRORES DEL SERVIDOR Y SUS CÓDIGOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Código GraphQL                 Cuándo ocurre
+  ─────────────────────────────────────────────────────────
+  AUTHENTICATION_ERROR           Credenciales inválidas,
+                                 usuario no existe, o estatus=0
+  BAD_USER_INPUT                 Matrícula o password vacíos
+  UNAUTHENTICATED                Request sin token (o token expirado)
+                                 en cualquier operación protegida
+  FORBIDDEN                      Token válido pero rol sin permiso
+
+  Leer el código en el front:
+    error.response.errors[0].extensions.code
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  PAQUETES A INSTALAR EN EL FRONT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  npm install @tanstack/react-query @tanstack/react-query-devtools
+  npm install zustand
+  npm install graphql-request graphql
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ESTRUCTURA DE CARPETAS (frontend)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  src/
+    api/
+      client.ts          ← graphql-request client con auth header
+      auth.queries.ts    ← LOGIN_MUTATION + ME_QUERY
+    store/
+      auth.store.ts      ← Zustand (token + usuario + persistencia)
+    hooks/
+      useLogin.ts        ← useMutation de TanStack Query
+      useCurrentUser.ts  ← useQuery para "me"
+    pages/
+      LoginPage.tsx      ← formulario de login
+    components/
+      ProtectedRoute.tsx ← guarda de rutas que requieren auth
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — api/client.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { GraphQLClient } from 'graphql-request';
+import { useAuthStore } from '../store/auth.store';
+
+const GQL_URL = import.meta.env.VITE_GQL_URL ?? 'http://localhost:4000/graphql';
+
+export const gqlClient = new GraphQLClient(GQL_URL, {
+  requestMiddleware: async (request) => {
+    const token = useAuthStore.getState().token;
+    return {
+      ...request,
+      headers: {
+        ...request.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    };
+  },
+});
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — store/auth.store.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+interface UsuarioAutenticado {
+  id_usuario: string;
+  matricula: string;
+  nombre_completo: string;
+  tipo_usuario: string | null;
+  correo_electronico: string | null;
+  id_rol: number;
+  id_unidad: number | null;
+  estatus: boolean;
+  rol: { id_rol: string; nombre_rol: string } | null;
+  unidad: {
+    id_unidad: string;
+    nombre: string;
+    no_ref: string;
+    clave: string;
+  } | null;
+}
+
+interface AuthState {
+  token: string | null;
+  usuario: UsuarioAutenticado | null;
+  expiresIn: string | null;
+  isAuthenticated: boolean;
+  setAuth: (payload: {
+    token: string;
+    usuario: UsuarioAutenticado;
+    expiresIn: string;
+  }) => void;
+  clearAuth: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      token: null,
+      usuario: null,
+      expiresIn: null,
+      isAuthenticated: false,
+
+      setAuth: ({ token, usuario, expiresIn }) =>
+        set({ token, usuario, expiresIn, isAuthenticated: true }),
+
+      clearAuth: () =>
+        set({ token: null, usuario: null, expiresIn: null, isAuthenticated: false }),
+    }),
+    {
+      name: 'imss-auth',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        token: state.token,
+        usuario: state.usuario,
+        expiresIn: state.expiresIn,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — api/auth.queries.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { gql } from 'graphql-request';
+
+export const LOGIN_MUTATION = gql`
+  mutation Login($matricula: String!, $password: String!) {
+    login(matricula: $matricula, password: $password) {
+      token
+      expiresIn
+      usuario {
+        id_usuario
+        matricula
+        nombre_completo
+        tipo_usuario
+        correo_electronico
+        id_rol
+        id_unidad
+        estatus
+        rol { id_rol nombre_rol }
+        unidad { id_unidad nombre no_ref clave }
+      }
+    }
+  }
+`;
+
+export const ME_QUERY = gql`
+  query Me {
+    me {
+      id_usuario
+      matricula
+      nombre_completo
+      tipo_usuario
+      id_rol
+      id_unidad
+      estatus
+      rol { id_rol nombre_rol }
+      unidad { id_unidad nombre no_ref clave }
+    }
+  }
+`;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — hooks/useLogin.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { LOGIN_MUTATION } from '../api/auth.queries';
+import { useAuthStore } from '../store/auth.store';
+
+interface LoginVars {
+  matricula: string;
+  password: string;
+}
+
+export function useLogin() {
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (vars: LoginVars) =>
+      gqlClient.request<{ login: any }>(LOGIN_MUTATION, vars),
+
+    onSuccess: (data) => {
+      const { token, usuario, expiresIn } = data.login;
+      setAuth({ token, usuario, expiresIn });
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+
+    onError: (error: any) => {
+      const code = error?.response?.errors?.[0]?.extensions?.code;
+      // Códigos posibles: AUTHENTICATION_ERROR, BAD_USER_INPUT
+      console.error('Error de login:', code);
+    },
+  });
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — hooks/useCurrentUser.ts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { useQuery } from '@tanstack/react-query';
+import { gqlClient } from '../api/client';
+import { ME_QUERY } from '../api/auth.queries';
+import { useAuthStore } from '../store/auth.store';
+
+export function useCurrentUser() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: () => gqlClient.request<{ me: any }>(ME_QUERY),
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,   // 5 min sin refetch
+    retry: false,
+    select: (data) => data.me,
+    // Si el token expiró, limpiar sesión automáticamente
+    throwOnError: (error: any) => {
+      const code = error?.response?.errors?.[0]?.extensions?.code;
+      if (code === 'UNAUTHENTICATED') {
+        clearAuth();
+      }
+      return false;
+    },
+  });
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — components/ProtectedRoute.tsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '../store/auth.store';
+
+export function ProtectedRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
+// Uso en el router:
+// <Route element={<ProtectedRoute />}>
+//   <Route path="/dashboard" element={<DashboardPage />} />
+//   <Route path="/bienes" element={<BienesPage />} />
+// </Route>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CÓDIGO COMPLETO — main.tsx (setup QueryClient)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import App from './App';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,   // 2 minutos por defecto
+      gcTime: 10 * 60 * 1000,     // 10 minutos en caché
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+
+================================================================
+  ESTADO DEL BACKEND — TODO LISTO ✅
+================================================================
+
+  ✅ auth.middleware.ts  — Seguridad real activada (JWT obligatorio)
+  ✅ auth.resolver.ts    — login() sin requireAuth (público)
+  ✅ context.ts          — buildContext() verifica firma JWT
+  ✅ errors.ts           — UNAUTHENTICATED (401), FORBIDDEN (403)
+  ✅ tsc --noEmit        — 0 errores de TypeScript
+  ✅ Rate limit          — 100 req/min en /graphql
+  ✅ Helmet              — Headers de seguridad activos
+  ✅ MODELO_BD_NUEVO.sql — password_hash, estatus, roles, FKs correctas
+
+  Token: JWT HS256, expira en 8h, payload: {id_usuario, id_rol, matricula}
+  Roles: 1=Admin  2=Supervisor  3=Usuario
+
+================================================================
