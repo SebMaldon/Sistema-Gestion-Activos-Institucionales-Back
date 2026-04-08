@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../config/database';
 import { Garantia } from '../../entities/Garantia';
 import { Incidencia } from '../../entities/Incidencia';
+import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
@@ -39,10 +40,25 @@ export const transaccionalesResolvers = {
         .getMany();
     },
 
+    // ── Tipos de Incidencia
+    tiposIncidencia: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(TipoIncidencia).find({ order: { nombre_tipo: 'ASC' } });
+    },
+
+    tipoIncidencia: async (_: unknown, { id_tipo_incidencia }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      const tipo = await AppDataSource.getRepository(TipoIncidencia).findOne({
+        where: { id_tipo_incidencia: parseInt(id_tipo_incidencia) },
+      });
+      if (!tipo) throw new NotFoundError('TipoIncidencia');
+      return tipo;
+    },
+
     // ── Incidencias
     incidencias: async (
       _: unknown,
-      { estatus_reparacion, id_bien, id_usuario_reporta, id_usuario_asignado, unidad, search, pagination }: any,
+      { estatus_reparacion, id_bien, id_usuario_genera_reporte, id_usuario_reporta, id_usuario_asignado, id_tipo_incidencia, prioridad, unidad, search, pagination }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -50,8 +66,11 @@ export const transaccionalesResolvers = {
 
       if (estatus_reparacion) qb.andWhere('i.estatus_reparacion = :e', { e: estatus_reparacion });
       if (id_bien) qb.andWhere('i.id_bien = :b', { b: id_bien });
+      if (id_usuario_genera_reporte) qb.andWhere('i.id_usuario_genera_reporte = :ug', { ug: id_usuario_genera_reporte });
       if (id_usuario_reporta) qb.andWhere('i.id_usuario_reporta = :u', { u: id_usuario_reporta });
       if (id_usuario_asignado) qb.andWhere('i.id_usuario_asignado = :ua', { ua: id_usuario_asignado });
+      if (id_tipo_incidencia) qb.andWhere('i.id_tipo_incidencia = :ti', { ti: id_tipo_incidencia });
+      if (prioridad) qb.andWhere('i.prioridad = :p', { p: prioridad });
       if (unidad) qb.andWhere('i.unidad = :un', { un: unidad });
       if (search) {
         qb.andWhere('(i.descripcion_falla LIKE :s OR i.unidad LIKE :s OR i.resolucion_textual LIKE :s)', {
@@ -140,19 +159,89 @@ export const transaccionalesResolvers = {
       return true;
     },
 
-    // ── Incidencias
-    createIncidencia: async (_: unknown, { id_bien, descripcion_falla, unidad }: any, context: GraphQLContext) => {
+    // ── Tipos de Incidencia
+    createTipoIncidencia: async (_: unknown, { nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      const repo = AppDataSource.getRepository(TipoIncidencia);
+      return repo.save(repo.create({ nombre_tipo }));
+    },
+
+    updateTipoIncidencia: async (_: unknown, { id_tipo_incidencia, nombre_tipo }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      const repo = AppDataSource.getRepository(TipoIncidencia);
+      const tipo = await repo.findOne({ where: { id_tipo_incidencia: parseInt(id_tipo_incidencia) } });
+      if (!tipo) throw new NotFoundError('TipoIncidencia');
+      tipo.nombre_tipo = nombre_tipo;
+      return repo.save(tipo);
+    },
+
+    deleteTipoIncidencia: async (_: unknown, { id_tipo_incidencia }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(TipoIncidencia).delete({ id_tipo_incidencia: parseInt(id_tipo_incidencia) });
+      return true;
+    },
+
+    // ── Incidencias
+    createIncidencia: async (_: unknown, { id_bien, id_usuario_reporta, id_tipo_incidencia, descripcion_falla, prioridad, unidad }: any, context: GraphQLContext) => {
+      requireAuth(context);
+
+      // ── Asignación automática por rotación ───────────────────────────────
+      // 1. Obtener la unidad (id_unidad) del bien afectado
+      const bien = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien } });
+      let id_usuario_asignado: number | undefined = undefined;
+
+      if (bien?.id_unidad) {
+        // 2. Buscar en rotacion un técnico activo asignado a esa unidad
+        const rotRows = await AppDataSource.query(
+          `SELECT TOP 1 id_usuario FROM rotacion WHERE id_unidad = @0 AND estatus = 1 ORDER BY id_rotacion ASC`,
+          [bien.id_unidad]
+        ) as { id_usuario: number }[];
+
+        if (rotRows.length > 0) {
+          id_usuario_asignado = rotRows[0].id_usuario;
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       const repo = AppDataSource.getRepository(Incidencia);
       return repo.save(
         repo.create({
           id_bien,
+          id_usuario_genera_reporte: context.user!.id_usuario,
+          id_usuario_reporta,
+          id_usuario_asignado,   // asignado automáticamente por rotación (puede ser undefined)
+          id_tipo_incidencia,
           descripcion_falla,
+          prioridad: prioridad ?? 'Media',
           unidad,
-          id_usuario_reporta: context.user!.id_usuario,
-          estatus_reparacion: 'Pendiente',
+          // Si hay técnico asignado automáticamente, la incidencia pasa directo a "En proceso"
+          estatus_reparacion: id_usuario_asignado ? 'En proceso' : 'Pendiente',
         })
       );
+    },
+
+    updateIncidencia: async (
+      _: unknown,
+      { id_incidencia, id_tipo_incidencia, descripcion_falla, prioridad, unidad, id_usuario_reporta, id_usuario_asignado }: any,
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]); // Maestro (1) y Admin (2)
+      const repo = AppDataSource.getRepository(Incidencia);
+      const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
+      if (!item) throw new NotFoundError('Incidencia');
+
+      if (id_tipo_incidencia !== undefined) item.id_tipo_incidencia = id_tipo_incidencia;
+      if (descripcion_falla   !== undefined) item.descripcion_falla  = descripcion_falla;
+      if (prioridad           !== undefined) item.prioridad          = prioridad;
+      if (unidad              !== undefined) item.unidad             = unidad;
+      if (id_usuario_reporta  !== undefined) item.id_usuario_reporta = id_usuario_reporta;
+      if (id_usuario_asignado !== undefined) item.id_usuario_asignado = id_usuario_asignado;
+
+      return repo.save(item);
     },
 
     pasarAEnProceso: async (
@@ -203,7 +292,7 @@ export const transaccionalesResolvers = {
 
     resolverIncidencia: async (
       _: unknown,
-      { id_incidencia, estatus_cierre, resolucion_textual }: any,
+      { id_incidencia, estatus_cierre, resolucion_textual, id_usuario_resuelve }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -214,7 +303,8 @@ export const transaccionalesResolvers = {
       item.estatus_reparacion = estatus_cierre; // 'Resuelto' | 'Cerrado' | 'Sin resolver'
       item.resolucion_textual = resolucion_textual;
       item.fecha_resolucion = new Date();
-      item.id_usuario_resuelve = context.user!.id_usuario;
+      // Si se provee un id_usuario_resuelve específico, usarlo; si no caer en el usuario logueado
+      item.id_usuario_resuelve = id_usuario_resuelve ?? context.user!.id_usuario;
 
       return repo.save(item);
     },
@@ -239,7 +329,7 @@ export const transaccionalesResolvers = {
 
     deleteIncidencia: async (_: unknown, { id_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.ADMIN]); // Solo Maestro (id_rol = 1)
       // Borrar notas primero (la FK no tiene ON DELETE CASCADE)
       await AppDataSource.getRepository(Nota).delete({ id_incidencia: parseInt(id_incidencia) });
       await AppDataSource.getRepository(Incidencia).delete({ id_incidencia: parseInt(id_incidencia) });
@@ -278,8 +368,12 @@ export const transaccionalesResolvers = {
   },
 
   Incidencia: {
-    bien: async (parent: Incidencia) =>
-      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
+    // Antes: findOne por cada fila → N+1. Ahora: DataLoader agrupa todo en 1 query.
+    bien: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      context.loaders.bienLoader.load(parent.id_bien),
+
+    usuarioGeneraReporte: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      context.loaders.usuarioLoader.load(parent.id_usuario_genera_reporte),
 
     usuarioReporta: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario_reporta),
@@ -290,11 +384,13 @@ export const transaccionalesResolvers = {
     usuarioResuelve: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       parent.id_usuario_resuelve ? context.loaders.usuarioLoader.load(parent.id_usuario_resuelve) : null,
 
-    notas: async (parent: Incidencia) =>
-      AppDataSource.getRepository(Nota).find({
-        where: { id_incidencia: parent.id_incidencia },
-        order: { fecha_creacion: 'ASC' },
-      }),
+    // Antes: findOne por cada fila → N+1. Ahora: 1 query para todos.
+    tipoIncidencia: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      context.loaders.tipoIncidenciaLoader.load(parent.id_tipo_incidencia),
+
+    // Antes: find() por cada fila → N+1. Ahora: 1 query agrupa todas las notas.
+    notas: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      context.loaders.notasByIncidenciaLoader.load(parent.id_incidencia),
   },
 
   Nota: {

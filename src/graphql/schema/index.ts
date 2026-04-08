@@ -240,12 +240,16 @@ export const typeDefs = gql`
 
   # Tabla: Incidencias
   # estatus_reparacion valores: 'Pendiente' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Sin resolver'
+  # prioridad valores: 'Baja' | 'Media' | 'Alta' | 'Crítica'
   type Incidencia {
     id_incidencia: ID!
     id_bien: ID!
+    id_usuario_genera_reporte: Int!
     id_usuario_reporta: Int!
     id_usuario_asignado: Int
     id_usuario_resuelve: Int
+    id_tipo_incidencia: Int!
+    prioridad: String!
     descripcion_falla: String!
     fecha_reporte: DateTime!
     estatus_reparacion: String!
@@ -253,9 +257,11 @@ export const typeDefs = gql`
     fecha_resolucion: DateTime
     unidad: String
     bien: Bien
+    usuarioGeneraReporte: Usuario
     usuarioReporta: Usuario
     usuarioAsignado: Usuario
     usuarioResuelve: Usuario
+    tipoIncidencia: TipoIncidencia
     notas: [Nota!]
   }
 
@@ -308,6 +314,14 @@ export const typeDefs = gql`
   type MovimientosConnection {
     edges: [MovimientoEdge!]!
     pageInfo: PageInfo!
+  }
+
+  # ─── TIPOS DE INCIDENCIA ──────────────────────────────────
+
+  # Tabla: Tipo_Incidencias
+  type TipoIncidencia {
+    id_tipo_incidencia: ID!
+    nombre_tipo: String!
   }
 
   # ─── ROTACIÓN ───────────────────────────────────────────
@@ -401,12 +415,19 @@ export const typeDefs = gql`
     garantia(id_garantia: ID!): Garantia
     garantiasPorVencer(diasAlerta: Int): [Garantia!]!
 
+    # ── Tipos de Incidencia
+    tiposIncidencia: [TipoIncidencia!]!
+    tipoIncidencia(id_tipo_incidencia: ID!): TipoIncidencia
+
     # ── Incidencias
     incidencias(
       estatus_reparacion: String
       id_bien: ID
+      id_usuario_genera_reporte: Int
       id_usuario_reporta: Int
       id_usuario_asignado: Int
+      id_tipo_incidencia: Int
+      prioridad: String
       unidad: String
       search: String
       pagination: PaginationInput
@@ -592,12 +613,32 @@ export const typeDefs = gql`
     ): Garantia!
     deleteGarantia(id_garantia: ID!): Boolean!
 
+    # ── Tipos de Incidencia
+    createTipoIncidencia(nombre_tipo: String!): TipoIncidencia!
+    updateTipoIncidencia(id_tipo_incidencia: ID!, nombre_tipo: String!): TipoIncidencia!
+    deleteTipoIncidencia(id_tipo_incidencia: ID!): Boolean!
+
     # ── Incidencias
-    # Crear incidencia (estatus inicial: 'Pendiente')
+    # Crear incidencia — el técnico se asigna automáticamente por rotación
+    # id_usuario_genera_reporte se toma del context.user (usuario autenticado)
     createIncidencia(
       id_bien: ID!
+      id_usuario_reporta: Int!
+      id_tipo_incidencia: Int!
       descripcion_falla: String!
+      prioridad: String
       unidad: String
+    ): Incidencia!
+
+    # Editar campos de una incidencia existente (Maestro y Admin)
+    updateIncidencia(
+      id_incidencia: ID!
+      id_tipo_incidencia: Int
+      descripcion_falla: String
+      prioridad: String
+      unidad: String
+      id_usuario_reporta: Int
+      id_usuario_asignado: Int
     ): Incidencia!
 
     # Pasar a 'En proceso' — opcionalmente agrega nota de inicio
@@ -614,10 +655,12 @@ export const typeDefs = gql`
     ): Nota!
 
     # Resolver incidencia (estatus_cierre: 'Resuelto' | 'Cerrado' | 'Sin resolver')
+    # id_usuario_resuelve: quién físicamente resolvió el problema (del listado de rotación)
     resolverIncidencia(
       id_incidencia: ID!
       estatus_cierre: String!
       resolucion_textual: String!
+      id_usuario_resuelve: Int
     ): Incidencia!
 
     # Cambio de estatus libre (para casos especiales / admin)

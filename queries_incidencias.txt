@@ -1,6 +1,15 @@
 /**
  * EJEMPLOS DE QUERIES PARA INCIDENCIAS - KANBAN
+ * Actualizado según nuevo modelo de BD (MODELO_BD_NUEVO.sql)
  */
+
+# 0. Obtener catálogo de Tipos de Incidencia (para el selector del formulario)
+query GetTiposIncidencia {
+  tiposIncidencia {
+    id_tipo_incidencia
+    nombre_tipo
+  }
+}
 
 # 1. Obtener todas las incidencias (Sin filtros) con sus notas y técnicos asignados
 query GetAllIncidencias {
@@ -9,9 +18,17 @@ query GetAllIncidencias {
       node {
         id_incidencia
         estatus_reparacion
+        prioridad
         descripcion_falla
         unidad
         fecha_reporte
+        tipoIncidencia {
+          nombre_tipo
+        }
+        usuarioGeneraReporte {
+          nombre_completo
+          matricula
+        }
         usuarioReporta {
           nombre_completo
           matricula
@@ -42,12 +59,37 @@ query GetIncidenciasPendientes {
       node {
         id_incidencia
         descripcion_falla
+        prioridad
+        tipoIncidencia {
+          nombre_tipo
+        }
       }
     }
   }
 }
 
-# 3. Búsqueda y filtrado general: por unidad y palabra clave en descripción
+# 3. Filtrar por tipo de incidencia y prioridad
+query FiltrarPorTipoYPrioridad {
+  incidencias(
+    id_tipo_incidencia: 1
+    prioridad: "Alta"
+    pagination: { first: 20 }
+  ) {
+    edges {
+      node {
+        id_incidencia
+        descripcion_falla
+        estatus_reparacion
+        prioridad
+        tipoIncidencia {
+          nombre_tipo
+        }
+      }
+    }
+  }
+}
+
+# 4. Búsqueda y filtrado general: por unidad y palabra clave en descripción
 query SearchIncidencias {
   incidencias(
     unidad: "Almacén General"
@@ -60,24 +102,37 @@ query SearchIncidencias {
         descripcion_falla
         unidad
         estatus_reparacion
+        prioridad
       }
     }
   }
 }
 
-# 4. Obtener el detalle de UNA incidencia en específico (Por Ej. para el Modal de revisión)
+# 5. Obtener el detalle de UNA incidencia en específico (Por Ej. para el Modal de revisión)
 query GetIncidenciaDetail($id: ID!) {
   incidencia(id_incidencia: $id) {
     id_incidencia
     descripcion_falla
     estatus_reparacion
+    prioridad
     unidad
     fecha_reporte
     resolucion_textual
     fecha_resolucion
+    tipoIncidencia {
+      nombre_tipo
+    }
     bien {
       num_serie
       clave_modelo
+    }
+    usuarioGeneraReporte {
+      id_usuario
+      nombre_completo
+    }
+    usuarioReporta {
+      id_usuario
+      nombre_completo
     }
     usuarioAsignado {
       id_usuario

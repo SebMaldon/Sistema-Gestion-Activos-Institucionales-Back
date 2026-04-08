@@ -1,24 +1,50 @@
 /**
  * EJEMPLOS DE MUTACIONES PARA INCIDENCIAS - KANBAN
+ * Actualizado según nuevo modelo de BD (MODELO_BD_NUEVO.sql)
  */
 
-# 1. Crear Nueva Incidencia (Modal inicial)
-# - Note que el estatus queda en "Pendiente" por defecto
-mutation CrearIncidencia {
-  createIncidencia(
-    id_bien: "XXXXX-XXXXX-XXXXX-XXXXX", 
-    descripcion_falla: "Error de calibración en la bandeja de papel 2",
-    unidad: "Hospital General Regional"
-  ) {
-    id_incidencia
-    estatus_reparacion
+# 1. Crear Tipos de Incidencia (catálogo previo)
+mutation CrearTipoIncidencia {
+  createTipoIncidencia(nombre_tipo: "Falla de hardware") {
+    id_tipo_incidencia
+    nombre_tipo
   }
 }
 
-# 2. Asignar la Incidencia a un Técnico (Opcional, antes o en cualquier momento)
+# 2. Crear Nueva Incidencia (Modal inicial)
+# - id_usuario_genera_reporte: tomado del context.user (usuario autenticado que crea el reporte)
+# - id_usuario_reporta: el usuario final que reporta la falla (puede ser diferente)
+# - id_tipo_incidencia: FK al catálogo de tipos
+# - prioridad: 'Baja' | 'Media' | 'Alta' | 'Crítica'  (default: 'Media')
+# - El estatus queda en "Pendiente" por defecto
+mutation CrearIncidencia {
+  createIncidencia(
+    id_bien: "XXXXX-XXXXX-XXXXX-XXXXX"
+    id_usuario_reporta: 5
+    id_tipo_incidencia: 1
+    descripcion_falla: "Error de calibración en la bandeja de papel 2"
+    prioridad: "Alta"
+    unidad: "Hospital General Regional"
+  ) {
+    id_incidencia
+    prioridad
+    estatus_reparacion
+    tipoIncidencia {
+      nombre_tipo
+    }
+    usuarioGeneraReporte {
+      nombre_completo
+    }
+    usuarioReporta {
+      nombre_completo
+    }
+  }
+}
+
+# 3. Asignar la Incidencia a un Técnico (Opcional, antes o en cualquier momento)
 mutation AsignarTecnico {
   asignarIncidencia(
-    id_incidencia: "1", 
+    id_incidencia: "1"
     id_usuario_asignado: 4 # ID del usuario técnico
   ) {
     id_incidencia
@@ -28,11 +54,11 @@ mutation AsignarTecnico {
   }
 }
 
-# 3. Mover la Incidencia a "En proceso" y agregar la primera nota de revisión
-# - Se usa cuando alguien arrastra la tarjeta a "En proceso"
+# 4. Mover la Incidencia a "En proceso" y agregar la primera nota de revisión
+#  - Se usa cuando alguien arrastra la tarjeta a "En proceso"
 mutation EmpezarRevision {
   pasarAEnProceso(
-    id_incidencia: "1",
+    id_incidencia: "1"
     contenido_nota: "Se procedió a revisar la bandeja 2, parece atorada."
   ) {
     id_incidencia
@@ -43,10 +69,10 @@ mutation EmpezarRevision {
   }
 }
 
-# 4. Agregar una nota adicional de seguimiento (Si ya estaba En proceso y solo quieres agregar texto)
+# 5. Agregar una nota adicional de seguimiento
 mutation AgregarNota {
   agregarNotaSeguimiento(
-    id_incidencia: "1",
+    id_incidencia: "1"
     contenido_nota: "Reemplazado el cable de rodillos, reensamblando."
   ) {
     id_nota
@@ -55,12 +81,12 @@ mutation AgregarNota {
   }
 }
 
-# 5. Resolver Incidencia (Modal/Sección final al mover a Resuelto o Cerrar)
-# - Puede ser "Resuelto", "Cerrado automaticamente" o "Cerrado sin resolver"
+# 6. Resolver Incidencia (Modal/Sección final al mover a Resuelto o Cerrar)
+# - Puede ser "Resuelto", "Cerrado" o "Sin resolver"
 mutation FinalizarIncidencia {
   resolverIncidencia(
-    id_incidencia: "1",
-    estatus_cierre: "Resuelto",
+    id_incidencia: "1"
+    estatus_cierre: "Resuelto"
     resolucion_textual: "Se cambió pieza defectuosa y se calibraron rodillos. Exitosa."
   ) {
     id_incidencia
@@ -73,10 +99,10 @@ mutation FinalizarIncidencia {
   }
 }
 
-# 6. Actualizar estatus genérico o manualmente sin resolver (Retorno a pendiente, etc.)
+# 7. Cambiar estatus genérico o manualmente (Retorno a pendiente, etc.)
 mutation CambiarStatus {
   updateIncidenciaEstatus(
-    id_incidencia: "1",
+    id_incidencia: "1"
     estatus_reparacion: "Pendiente"
   ) {
     id_incidencia

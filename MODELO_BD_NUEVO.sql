@@ -208,12 +208,21 @@ CREATE TABLE Garantias (
 );
 GO
 
+CREATE TABLE Tipo_Incidencias (
+    id_tipo_incidencia int IDENTITY(1,1) PRIMARY KEY,
+    nombre_tipo varchar(100) NOT NULL UNIQUE,
+);
+GO
+
 CREATE TABLE Incidencias (
     id_incidencia INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
-    id_usuario_reporta INT NOT NULL,
-    id_usuario_asignado INT NULL,       
-    id_usuario_resuelve INT NULL,       
+    id_usuario_genera_reporte INT NOT NULL, -- Es el admministrador o usuario que crea la incidencia, se mantiene para trazabilidad
+    id_usuario_reporta INT NOT NULL, -- Es el usuario que reporta la falla, puede ser el mismo que genera el reporte o un usuario final
+    id_usuario_asignado INT NULL,  -- Es el técnico o responsable asignado para resolver la incidencia, puede ser NULL si aún no se ha asignado
+    id_usuario_resuelve INT NULL, -- Es el técnico o responsable que finalmente resuelve la incidencia, puede ser NULL si aún no se ha resuelto
+    id_tipo_incidencia INT NOT NULL, -- FK a la tabla de tipos de incidencias
+    prioridad VARCHAR(20) DEFAULT 'Media', -- Nueva columna para indicar la prioridad de la incidencia
     descripcion_falla NVARCHAR(MAX) NOT NULL,
     fecha_reporte DATETIME DEFAULT GETDATE(),
     estatus_reparacion VARCHAR(50) DEFAULT 'Pendiente', 
@@ -221,9 +230,11 @@ CREATE TABLE Incidencias (
     fecha_resolucion DATETIME NULL,          
     unidad VARCHAR(60),
     CONSTRAINT FK_Incidencias_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
+    CONSTRAINT FK_Incidencias_UsuGeneraReporte FOREIGN KEY (id_usuario_genera_reporte) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Incidencias_UsuReporta FOREIGN KEY (id_usuario_reporta) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Incidencias_UsuAsignado FOREIGN KEY (id_usuario_asignado) REFERENCES Usuarios(id_usuario),
-    CONSTRAINT FK_Incidencias_UsuResuelve FOREIGN KEY (id_usuario_resuelve) REFERENCES Usuarios(id_usuario)
+    CONSTRAINT FK_Incidencias_UsuResuelve FOREIGN KEY (id_usuario_resuelve) REFERENCES Usuarios(id_usuario),
+    CONSTRAINT FK_Incidencias_TipoIncidencia FOREIGN KEY (id_tipo_incidencia) REFERENCES Tipo_Incidencias(id_tipo_incidencia)
 );
 GO
 

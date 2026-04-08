@@ -13,6 +13,7 @@ import { Bien } from '../entities/Bien';
 import { EspecificacionTI } from '../entities/EspecificacionTI';
 import { Garantia } from '../entities/Garantia';
 import { Incidencia } from '../entities/Incidencia';
+import { TipoIncidencia } from '../entities/TipoIncidencia';
 import { MovimientoInventario } from '../entities/MovimientoInventario';
 import { Nota } from '../entities/Nota';
 import { Unidad } from '../entities/Unidad';
@@ -41,7 +42,7 @@ export const AppDataSource = new DataSource({
   entities: [
     CatInmueble, Marca, TipoDispositivo, CatModelo, Rol,
     CatCategoriaActivo, Usuario, CatUnidadMedida, Bien, Unidad,
-    EspecificacionTI, Garantia, Incidencia, MovimientoInventario, Nota,
+    EspecificacionTI, Garantia, Incidencia, TipoIncidencia, MovimientoInventario, Nota,
   ],
 });
 

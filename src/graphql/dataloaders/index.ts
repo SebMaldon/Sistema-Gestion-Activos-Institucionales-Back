@@ -12,6 +12,9 @@ import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
 import { Unidad } from '../../entities/Unidad';
 import { Rol } from '../../entities/Rol';
+import { Bien } from '../../entities/Bien';
+import { TipoIncidencia } from '../../entities/TipoIncidencia';
+import { Nota } from '../../entities/Nota';
 
 function toMap<K, V>(items: V[], keyFn: (item: V) => K): Map<K, V> {
   return new Map<K, V>(items.map((item) => [keyFn(item), item] as [K, V]));
@@ -122,6 +125,41 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
+  // ── Bienes por id_bien (string) — elimina N+1 en Incidencia.bien
+  const bienLoader = new DataLoader<string, Bien | undefined>(async (keys) => {
+    const items = await AppDataSource.getRepository(Bien).find({
+      where: { id_bien: In(keys as string[]) },
+    });
+    const map = toMap<string, Bien>(items, (b) => b.id_bien);
+    return keys.map((k) => map.get(k));
+  });
+
+  // ── TiposIncidencia por id (int) — elimina N+1 en Incidencia.tipoIncidencia
+  const tipoIncidenciaLoader = new DataLoader<number, TipoIncidencia | undefined>(async (keys) => {
+    const items = await AppDataSource.getRepository(TipoIncidencia).find({
+      where: { id_tipo_incidencia: In(keys as number[]) },
+    });
+    const map = toMap<number, TipoIncidencia>(items, (t) => t.id_tipo_incidencia);
+    return keys.map((k) => map.get(k));
+  });
+
+  // ── Notas agrupadas por id_incidencia — elimina N+1 en Incidencia.notas
+  const notasByIncidenciaLoader = new DataLoader<number, Nota[]>(async (keys) => {
+    const items = await AppDataSource.getRepository(Nota).find({
+      where: { id_incidencia: In(keys as number[]) },
+      order: { fecha_creacion: 'ASC' },
+    });
+    const map = new Map<number, Nota[]>();
+    items.forEach((n: Nota) => {
+      // id_incidencia es opcional (una nota puede pertenecer a un bien en vez de a una incidencia)
+      if (n.id_incidencia == null) return;
+      const arr = map.get(n.id_incidencia) ?? [];
+      arr.push(n);
+      map.set(n.id_incidencia, arr);
+    });
+    return keys.map((k) => map.get(k) ?? []);
+  });
+
   return {
     marcaLoader,
     tipoDispositivoLoader,
@@ -134,6 +172,9 @@ export function createDataLoaders() {
     unidadMedidaLoader,
     unidadLoader,
     rolLoader,
+    bienLoader,
+    tipoIncidenciaLoader,
+    notasByIncidenciaLoader,
   };
 }
 
