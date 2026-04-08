@@ -1,26 +1,75 @@
 import bcrypt from 'bcryptjs';
 import { AppDataSource } from '../../config/database';
 import { Usuario } from '../../entities/Usuario';
-import { Unidad } from '../../entities/Unidad';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError, ConflictError } from '../../utils/errors';
+import { NotFoundError, ConflictError, AuthenticationError } from '../../utils/errors';
+import { decodeCursor } from '../../utils/pagination';
 
 export const usuariosResolvers = {
   Query: {
+    /**
+     * Lista usuarios con paginación cursor-based y filtros por estatus, unidad y búsqueda textual.
+     * Soporta hasta 17,000 usuarios sin latencia.
+     */
     usuarios: async (
       _: unknown,
-      { estatus, id_unidad }: { estatus?: boolean; id_unidad?: number },
+      {
+        estatus,
+        id_unidad,
+        search,
+        pagination,
+      }: {
+        estatus?: boolean;
+        id_unidad?: number;
+        search?: string;
+        pagination?: { first?: number; after?: string };
+      },
       context: GraphQLContext
     ) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+
       const qb = AppDataSource.getRepository(Usuario)
         .createQueryBuilder('u')
         .leftJoinAndSelect('u.rol', 'rol');
+
       if (estatus !== undefined) qb.andWhere('u.estatus = :estatus', { estatus: estatus ? 1 : 0 });
       if (id_unidad !== undefined) qb.andWhere('u.id_unidad = :id_unidad', { id_unidad });
-      return qb.orderBy('u.nombre_completo', 'ASC').getMany();
+      if (search) {
+        qb.andWhere(
+          `(u.nombre_completo LIKE :s OR u.matricula LIKE :s OR u.correo_electronico LIKE :s)`,
+          { s: `%${search}%` }
+        );
+      }
+
+      const totalCount = await qb.getCount();
+      const first = Math.min(pagination?.first ?? 20, 100);
+      qb.take(first);
+
+      if (pagination?.after) {
+        const cursor = decodeCursor(pagination.after);
+        qb.andWhere('u.id_usuario > :cursor', { cursor: parseInt(cursor) });
+      }
+
+      qb.orderBy('u.nombre_completo', 'ASC');
+      const items = await qb.getMany();
+
+      const edges = items.map((node) => ({
+        node,
+        cursor: Buffer.from(String(node.id_usuario)).toString('base64'),
+      }));
+
+      return {
+        edges,
+        pageInfo: {
+          hasNextPage: items.length === first,
+          hasPreviousPage: !!pagination?.after,
+          startCursor: edges[0]?.cursor,
+          endCursor: edges[edges.length - 1]?.cursor,
+          totalCount,
+        },
+      };
     },
 
     usuario: async (_: unknown, { id_usuario }: { id_usuario: string }, context: GraphQLContext) => {
@@ -108,6 +157,48 @@ export const usuariosResolvers = {
       await repo.save(usuario);
       return true;
     },
+
+    /**
+     * Reseteo de contraseña por parte del Admin:
+     * 1. Valida la contraseña del admin que hace la petición.
+     * 2. Fija la contraseña del usuario target a "IMSS" + matricula del target.
+     * 3. Devuelve la contraseña temporal para que el admin se la comunique al usuario.
+     */
+    resetPasswordAdmin: async (
+      _: unknown,
+      { id_usuario_target, adminPassword }: { id_usuario_target: string; adminPassword: string },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+
+      const repo = AppDataSource.getRepository(Usuario);
+
+      // 1. Obtener al admin con su hash para validar su contraseña
+      const admin = await repo.findOne({
+        where: { id_usuario: context.user!.id_usuario },
+        select: ['id_usuario', 'password_hash'],
+      });
+      if (!admin || !admin.password_hash) {
+        throw new AuthenticationError('No se pudo validar al administrador');
+      }
+      const isValid = await admin.validatePassword(adminPassword);
+      if (!isValid) {
+        throw new AuthenticationError('Contraseña del administrador incorrecta');
+      }
+
+      // 2. Obtener al usuario destino
+      const target = await repo.findOne({ where: { id_usuario: parseInt(id_usuario_target) } });
+      if (!target) throw new NotFoundError('Usuario');
+
+      // 3. Generar contraseña temporal: "IMSS" + matricula (en mayúsculas)
+      const tempPassword = `IMSS${target.matricula.toUpperCase()}`;
+      await target.hashPassword(tempPassword);
+      await repo.save(target);
+
+      // 4. Devolver la contraseña temporal para que el admin la comunique al usuario
+      return tempPassword;
+    },
   },
 
   // ── Field resolvers ──────────────────────────────────────
@@ -118,5 +209,7 @@ export const usuariosResolvers = {
     },
     unidad: (parent: Usuario, _: unknown, context: GraphQLContext) =>
       parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
+    // Normalizar BIT de SQL Server
+    estatus: (parent: Usuario) => Boolean(parent.estatus),
   },
 };

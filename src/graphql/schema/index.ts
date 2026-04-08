@@ -332,8 +332,22 @@ export const typeDefs = gql`
     id_usuario: Int!
     id_unidad: Int!
     estatus: Boolean!
+    posicion: Int!
+    es_turno_actual: Boolean!
     usuario: Usuario
     unidad: Unidad
+  }
+
+  # ─── USUARIOS (Paginación) ─────────────────────────────
+
+  type UsuarioEdge {
+    node: Usuario!
+    cursor: String!
+  }
+
+  type UsuariosConnection {
+    edges: [UsuarioEdge!]!
+    pageInfo: PageInfo!
   }
 
   # ─── DASHBOARD ──────────────────────────────────────────
@@ -397,7 +411,12 @@ export const typeDefs = gql`
     tiposUnidad(id_clas: Int): [TipoUnidad!]!
 
     # ── Usuarios
-    usuarios(estatus: Boolean, id_unidad: Int): [Usuario!]!
+    usuarios(
+      estatus: Boolean
+      id_unidad: Int
+      search: String
+      pagination: PaginationInput
+    ): UsuariosConnection!
     usuario(id_usuario: ID!): Usuario
 
     # ── Bienes
@@ -548,6 +567,11 @@ export const typeDefs = gql`
       estatus: Boolean
     ): Usuario!
     deleteUsuario(id_usuario: ID!): Boolean!
+    # Reseteo de contraseña por admin: el admin valida su password y fija una contraseña temporal al usuario
+    resetPasswordAdmin(
+      id_usuario_target: ID!
+      adminPassword: String!
+    ): String!  # Devuelve la contraseña temporal para que el admin la comunique al usuario
 
     # ── Bienes
     createBien(
@@ -704,6 +728,8 @@ export const typeDefs = gql`
     # ── Rotación
     createRotacion(id_usuario: Int!, id_unidad: Int!): Rotacion!
     updateRotacionEstatus(id_rotacion: ID!, estatus: Boolean!): Rotacion!
+    # Reordenar la cola: recibe array de id_rotacion en el nuevo orden
+    reordenarRotacion(id_unidad: Int!, orden: [Int!]!): [Rotacion!]!
     deleteRotacion(id_rotacion: ID!): Boolean!
   }
 `;

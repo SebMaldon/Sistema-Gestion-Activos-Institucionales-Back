@@ -187,6 +187,7 @@ CREATE TABLE rotacion (
     id_usuario INT NOT NULL, -- FK apuntando al nuevo campo de Usuarios
     id_unidad INT NOT NULL,                -- FK apuntando a la tabla unidades
     estatus BIT DEFAULT 1,                 -- 1 = Activo, 0 = Inactivo
+	posicion INT DEFAULT 0,
     CONSTRAINT FK_Rotacion_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Rotacion_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
 );

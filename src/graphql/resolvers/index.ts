@@ -60,11 +60,11 @@ export const resolvers = {
 
   Mutation: {
     ...authResolvers.Mutation,
-    ...usuariosResolvers.Mutation,
+    ...usuariosResolvers.Mutation,   // incluye resetPasswordAdmin
     ...catalogosResolvers.Mutation,
     ...bienesResolvers.Mutation,
     ...transaccionalesResolvers.Mutation,
-    ...movimientosResolvers.Mutation,
+    ...movimientosResolvers.Mutation, // incluye reordenarRotacion
   },
 
   // ── Type-level field resolvers ───────────────────────────
