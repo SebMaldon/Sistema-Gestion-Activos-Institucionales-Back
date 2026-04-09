@@ -425,6 +425,7 @@ export const typeDefs = gql`
     bienByQR(qr_hash: String!): Bien
     bienByNumSerie(num_serie: String!): Bien
     bienByNumInv(num_inv: String!): Bien
+    bienByTermino(termino: String!): Bien
 
     # ── Especificaciones TI
     especificacionTI(id_bien: ID!): EspecificacionTI

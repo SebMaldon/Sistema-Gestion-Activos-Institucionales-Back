@@ -94,6 +94,16 @@ export const bienesResolvers = {
       requireAuth(context);
       return AppDataSource.getRepository(Bien).findOne({ where: { num_inv } });
     },
+
+    bienByTermino: async (_: unknown, { termino }: { termino: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Bien)
+        .createQueryBuilder('b')
+        .leftJoinAndSelect('b.especificacionTI', 'e')
+        .where('b.num_serie = :termino', { termino })
+        .orWhere('e.dir_ip = :termino', { termino })
+        .getOne();
+    },
   },
 
   Mutation: {
