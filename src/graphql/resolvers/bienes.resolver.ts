@@ -3,9 +3,11 @@ import { AppDataSource } from '../../config/database';
 import { Bien } from '../../entities/Bien';
 import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { Nota } from '../../entities/Nota';
+import { Incidencia } from '../../entities/Incidencia';
+import { MovimientoInventario } from '../../entities/MovimientoInventario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ForbiddenError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Unidad } from '../../entities/Unidad';
 
@@ -109,7 +111,8 @@ export const bienesResolvers = {
   Mutation: {
     createBien: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      // Roles 1 (Admin) y 2 (Maestro) pueden crear bienes
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Bien);
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
@@ -120,18 +123,39 @@ export const bienesResolvers = {
 
     updateBien: async (_: unknown, { id_bien, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      // Roles 1 (Admin) y 2 (Maestro) pueden editar bienes
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Bien);
       const bien = await repo.findOne({ where: { id_bien } });
       if (!bien) throw new NotFoundError('Bien');
+      // Forzar actualización de fecha_actualizacion en cada UPDATE
+      updates.fecha_actualizacion = new Date();
       repo.merge(bien, updates);
       return repo.save(bien);
     },
 
     deleteBien: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
-      // Eliminar dependencias en cascada primero
+      // Solo el rol Maestro (2) puede eliminar bienes
+      requireRole(context, [ROLES.MAESTRO]);
+
+      // Verificar que no tenga incidencias asociadas
+      const incidenciasCount = await AppDataSource.getRepository(Incidencia).count({ where: { id_bien } });
+      if (incidenciasCount > 0) {
+        throw new ForbiddenError(
+          `No se puede eliminar el bien porque tiene ${incidenciasCount} incidencia(s) registrada(s). Resuelva o elimine las incidencias primero.`
+        );
+      }
+
+      // Verificar que no tenga movimientos asociados
+      const movimientosCount = await AppDataSource.getRepository(MovimientoInventario).count({ where: { id_bien } });
+      if (movimientosCount > 0) {
+        throw new ForbiddenError(
+          `No se puede eliminar el bien porque tiene ${movimientosCount} movimiento(s) de inventario registrado(s).`
+        );
+      }
+
+      // Sin dependencias: eliminar notas primero y luego el bien
       await AppDataSource.getRepository(Nota).delete({ id_bien });
       await AppDataSource.getRepository(Bien).delete({ id_bien });
       return true;
@@ -139,7 +163,7 @@ export const bienesResolvers = {
 
     upsertEspecificacionTI: async (_: unknown, { id_bien, ...specs }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {

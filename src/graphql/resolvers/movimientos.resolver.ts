@@ -30,7 +30,7 @@ export const movimientosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       const qb = AppDataSource.getRepository(MovimientoInventario).createQueryBuilder('m');
 
@@ -80,7 +80,7 @@ export const movimientosResolvers = {
     // ── Rotación
     rotaciones: async (_: unknown, { estatus, id_unidad }: { estatus?: boolean; id_unidad?: number }, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       let sql = `${SELECT_ROT} WHERE 1=1`;
       const params: unknown[] = [];
       if (estatus !== undefined) { sql += ` AND estatus = @${params.length}`; params.push(estatus ? 1 : 0); }
@@ -111,7 +111,7 @@ export const movimientosResolvers = {
   Mutation: {
     createMovimiento: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(MovimientoInventario);
       return repo.save(
         repo.create({

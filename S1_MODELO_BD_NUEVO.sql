@@ -364,6 +364,7 @@ ALTER TABLE [dbo].[Bienes] CHECK CONSTRAINT [FK_Bienes_InmueblesRef];
 GO
 
 -- Trigger para generar clave presupuestal en Bienes automaticamente
+-- y actualizar fecha_actualizacion en cada UPDATE
 CREATE TRIGGER trg_Bienes_ClavePresupuestal
 ON Bienes
 AFTER INSERT, UPDATE
@@ -375,7 +376,15 @@ BEGIN
     IF EXISTS (SELECT 1 FROM inserted)
     BEGIN
         UPDATE B
-        SET B.clave_presupuestal = ISNULL(U.clave, '') + ISNULL(I.clave, '')
+        SET
+            B.clave_presupuestal = ISNULL(U.clave, '') + ISNULL(I.clave, ''),
+            -- Actualizar la fecha de modificacion solo en UPDATEs
+            -- (en INSERT ya se establece via DEFAULT GETDATE())
+            B.fecha_actualizacion = CASE
+                WHEN EXISTS (SELECT 1 FROM deleted d WHERE d.id_bien = B.id_bien)
+                THEN GETDATE()
+                ELSE B.fecha_actualizacion
+            END
         FROM Bienes B
         INNER JOIN inserted ins ON B.id_bien = ins.id_bien
         LEFT JOIN unidades U ON B.id_unidad = U.id_unidad

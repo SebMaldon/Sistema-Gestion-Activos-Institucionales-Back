@@ -28,7 +28,7 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       const qb = AppDataSource.getRepository(Usuario)
         .createQueryBuilder('u')
@@ -138,7 +138,7 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id_usuario: parseInt(id_usuario) } });
       if (!usuario) throw new NotFoundError('Usuario');

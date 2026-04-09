@@ -138,13 +138,13 @@ export const transaccionalesResolvers = {
     // ── Garantías
     createGarantia: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       return AppDataSource.getRepository(Garantia).save(args);
     },
 
     updateGarantia: async (_: unknown, { id_garantia, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Garantia);
       const item = await repo.findOne({ where: { id_garantia: parseInt(id_garantia) } });
       if (!item) throw new NotFoundError('Garantía');
@@ -162,14 +162,14 @@ export const transaccionalesResolvers = {
     // ── Tipos de Incidencia
     createTipoIncidencia: async (_: unknown, { nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(TipoIncidencia);
       return repo.save(repo.create({ nombre_tipo }));
     },
 
     updateTipoIncidencia: async (_: unknown, { id_tipo_incidencia, nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(TipoIncidencia);
       const tipo = await repo.findOne({ where: { id_tipo_incidencia: parseInt(id_tipo_incidencia) } });
       if (!tipo) throw new NotFoundError('TipoIncidencia');
@@ -250,7 +250,7 @@ export const transaccionalesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]); // Maestro (1) y Admin (2)
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]); // Maestro (1) y Admin (2)
       const repo = AppDataSource.getRepository(Incidencia);
       const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
       if (!item) throw new NotFoundError('Incidencia');
