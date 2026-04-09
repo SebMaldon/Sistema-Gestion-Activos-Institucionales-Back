@@ -652,6 +652,7 @@ export const typeDefs = gql`
       descripcion_falla: String!
       prioridad: String
       unidad: String
+      id_unidad_select: Int
     ): Incidencia!
 
     # Editar campos de una incidencia existente (Maestro y Admin)
