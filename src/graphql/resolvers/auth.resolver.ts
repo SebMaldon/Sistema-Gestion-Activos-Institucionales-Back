@@ -47,6 +47,7 @@ export const authResolvers = {
         id_usuario: usuario.id_usuario,
         id_rol: usuario.id_rol,
         matricula: usuario.matricula,
+        id_unidad: usuario.id_unidad,
       };
 
       const token = jwt.sign(payload, env.jwt.secret, { expiresIn: env.jwt.expiresIn } as jwt.SignOptions);

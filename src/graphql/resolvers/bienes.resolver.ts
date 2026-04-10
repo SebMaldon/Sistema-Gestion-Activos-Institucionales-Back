@@ -16,6 +16,7 @@ export interface BienesFilter {
   clave_inmueble?: string;
   id_categoria?: number;
   id_unidad?: number;
+  id_ubicacion?: number;
   id_unidad_medida?: number;
   id_usuario_resguardo?: number;
   clave_modelo?: string;
@@ -36,6 +37,7 @@ export const bienesResolvers = {
       if (filter?.clave_inmueble) qb.andWhere('b.clave_inmueble = :ci', { ci: filter.clave_inmueble });
       if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
       if (filter?.id_unidad) qb.andWhere('b.id_unidad = :iu', { iu: filter.id_unidad });
+      if (filter?.id_ubicacion) qb.andWhere('b.id_ubicacion = :iub', { iub: filter.id_ubicacion });
       if (filter?.id_unidad_medida) qb.andWhere('b.id_unidad_medida = :ium', { ium: filter.id_unidad_medida });
       if (filter?.id_usuario_resguardo) qb.andWhere('b.id_usuario_resguardo = :ur', { ur: filter.id_usuario_resguardo });
       if (filter?.clave_modelo) qb.andWhere('b.clave_modelo = :cm', { cm: filter.clave_modelo });
@@ -184,6 +186,13 @@ export const bienesResolvers = {
 
     unidad: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
+
+    ubicacion: async (parent: Bien) =>
+      parent.id_ubicacion
+        ? AppDataSource.getRepository((await import('../../entities/Ubicacion')).Ubicacion).findOne({
+            where: { id_ubicacion: parent.id_ubicacion },
+          })
+        : null,
 
     inmueble: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.clave_inmueble ? context.loaders.catInmuebleLoader.load(parent.clave_inmueble) : null,
