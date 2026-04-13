@@ -44,7 +44,7 @@ export const usuariosResolvers = {
       }
 
       const totalCount = await qb.getCount();
-      const first = Math.min(pagination?.first ?? 20, 100);
+      const first = Math.min(pagination?.first ?? 20, 20000);
       qb.take(first);
 
       if (pagination?.after) {
