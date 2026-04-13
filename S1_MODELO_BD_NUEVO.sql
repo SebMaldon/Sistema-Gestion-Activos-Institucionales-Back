@@ -201,6 +201,7 @@ CREATE TABLE rotacion (
     id_unidad INT NOT NULL,                -- FK apuntando a la tabla unidades
     estatus BIT DEFAULT 1,                 -- 1 = Activo, 0 = Inactivo
 	posicion INT DEFAULT 0,
+	es_turno_actual BIT ,
     CONSTRAINT FK_Rotacion_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Rotacion_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
 );

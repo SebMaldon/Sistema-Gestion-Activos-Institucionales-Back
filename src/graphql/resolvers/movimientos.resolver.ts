@@ -198,12 +198,22 @@ export const movimientosResolvers = {
           [idNum]
         ) as RotacionRow[];
         if (current[0]?.es_turno_actual) {
-          // Buscar al siguiente técnico activo en la misma unidad (posicion mayor)
-          const siguiente = await AppDataSource.query(
-            `${SELECT_ROT} WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1
+          // Buscar al siguiente en la lista (posicion mayor)
+          let siguiente = await AppDataSource.query(
+            `${SELECT_ROT} WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1 AND posicion > @2
              ORDER BY posicion ASC`,
-            [current[0].id_unidad, idNum]
+            [current[0].id_unidad, idNum, current[0].posicion]
           ) as RotacionRow[];
+
+          // Si no hay nadie adelante, dar la vuelta
+          if (!siguiente[0]) {
+            siguiente = await AppDataSource.query(
+              `${SELECT_ROT} WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1
+               ORDER BY posicion ASC`,
+              [current[0].id_unidad, idNum]
+            ) as RotacionRow[];
+          }
+
           // Quitar el puntero del actual y ponerlo al siguiente
           await AppDataSource.query(
             `UPDATE rotacion SET es_turno_actual = 0 WHERE id_rotacion = @0`,
@@ -274,11 +284,20 @@ export const movimientosResolvers = {
         [idNum]
       ) as RotacionRow[];
       if (current[0]?.es_turno_actual) {
-        const siguiente = await AppDataSource.query(
-          `${SELECT_ROT} WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1
+        let siguiente = await AppDataSource.query(
+          `${SELECT_ROT} WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1 AND posicion > @2
            ORDER BY posicion ASC`,
-          [current[0].id_unidad, idNum]
+          [current[0].id_unidad, idNum, current[0].posicion]
         ) as RotacionRow[];
+
+        if (!siguiente[0]) {
+          siguiente = await AppDataSource.query(
+            `${SELECT_ROT} WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1
+             ORDER BY posicion ASC`,
+            [current[0].id_unidad, idNum]
+          ) as RotacionRow[];
+        }
+
         if (siguiente[0]) {
           await AppDataSource.query(
             `UPDATE rotacion SET es_turno_actual = 1 WHERE id_rotacion = @0`,
