@@ -104,7 +104,11 @@ export const bienesResolvers = {
       return AppDataSource.getRepository(Bien)
         .createQueryBuilder('b')
         .leftJoinAndSelect('b.especificacionTI', 'e')
-        .where('b.num_serie = :termino', { termino })
+        // TRY_CONVERT evita el error de conversión cuando el término no es un UUID válido
+        .where('(TRY_CONVERT(uniqueidentifier, :termino) IS NOT NULL AND b.id_bien = TRY_CONVERT(uniqueidentifier, :termino))', { termino })
+        .orWhere('b.qr_hash = :termino', { termino })
+        .orWhere('b.num_serie = :termino', { termino })
+        .orWhere('b.num_inv = :termino', { termino })
         .orWhere('e.dir_ip = :termino', { termino })
         .getOne();
     },
