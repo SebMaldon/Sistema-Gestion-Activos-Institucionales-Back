@@ -6,7 +6,7 @@ import { Nota } from '../../entities/Nota';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 
 export const transaccionalesResolvers = {
@@ -139,6 +139,14 @@ export const transaccionalesResolvers = {
     createGarantia: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      
+      if (!args.estado_garantia || args.estado_garantia.trim() === '') {
+        throw new ValidationError('Por favor, indica el estado de la garantía.');
+      }
+      if (args.fecha_inicio && args.fecha_fin && new Date(args.fecha_fin) < new Date(args.fecha_inicio)) {
+        throw new ValidationError('La fecha de fin no puede ser anterior a la fecha de inicio.');
+      }
+
       return AppDataSource.getRepository(Garantia).save(args);
     },
 
@@ -148,6 +156,16 @@ export const transaccionalesResolvers = {
       const repo = AppDataSource.getRepository(Garantia);
       const item = await repo.findOne({ where: { id_garantia: parseInt(id_garantia) } });
       if (!item) throw new NotFoundError('Garantía');
+
+      if (updates.estado_garantia !== undefined && updates.estado_garantia.trim() === '') {
+        throw new ValidationError('El estado de la garantía no puede estar vacío.');
+      }
+      const startDate = updates.fecha_inicio !== undefined ? updates.fecha_inicio : item.fecha_inicio;
+      const endDate = updates.fecha_fin !== undefined ? updates.fecha_fin : item.fecha_fin;
+      if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+        throw new ValidationError('La fecha de fin no puede ser anterior a la fecha de inicio.');
+      }
+
       repo.merge(item, updates);
       return repo.save(item);
     },
@@ -187,6 +205,16 @@ export const transaccionalesResolvers = {
     // ── Incidencias
     createIncidencia: async (_: unknown, { id_bien, id_usuario_reporta, id_tipo_incidencia, descripcion_falla, prioridad, unidad, id_unidad_select }: any, context: GraphQLContext) => {
       requireAuth(context);
+
+      if (!descripcion_falla || descripcion_falla.trim() === '') {
+        throw new ValidationError('Por favor, ingresa una descripción de la falla para continuar.');
+      }
+      if (!id_bien || typeof id_bien !== 'string' || id_bien.trim() === '') {
+        throw new ValidationError('Debe vincular un bien a la incidencia.');
+      }
+      if (!id_tipo_incidencia) {
+        throw new ValidationError('Debe seleccionar un tipo de incidencia.');
+      }
 
       // ── Asignación automática y avance de rotación ────────────────────────
       const bien = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien } });
@@ -251,6 +279,11 @@ export const transaccionalesResolvers = {
     ) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]); // Maestro (1) y Admin (2)
+      
+      if (descripcion_falla !== undefined && descripcion_falla.trim() === '') {
+        throw new ValidationError('La descripción de la falla no puede estar vacía al actualizar.');
+      }
+
       const repo = AppDataSource.getRepository(Incidencia);
       const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
       if (!item) throw new NotFoundError('Incidencia');
@@ -317,6 +350,11 @@ export const transaccionalesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
+      
+      if ((estatus_cierre === 'Resuelto' || estatus_cierre === 'Cerrado') && (!resolucion_textual || resolucion_textual.trim() === '')) {
+        throw new ValidationError('Por favor, detalla la resolución textual antes de marcar como ' + estatus_cierre + '.');
+      }
+
       const repo = AppDataSource.getRepository(Incidencia);
       const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
       if (!item) throw new NotFoundError('Incidencia');

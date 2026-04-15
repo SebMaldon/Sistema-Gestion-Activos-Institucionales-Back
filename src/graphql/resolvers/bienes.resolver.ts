@@ -7,7 +7,7 @@ import { Incidencia } from '../../entities/Incidencia';
 import { MovimientoInventario } from '../../entities/MovimientoInventario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError, ForbiddenError } from '../../utils/errors';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Unidad } from '../../entities/Unidad';
 
@@ -119,6 +119,13 @@ export const bienesResolvers = {
       requireAuth(context);
       // Roles 1 (Admin) y 2 (Maestro) pueden crear bienes
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      
+      if (!args.id_categoria) throw new ValidationError('Debe seleccionar la categoría del bien.');
+      if (!args.id_unidad_medida) throw new ValidationError('Debe especificar la unidad de medida.');
+      if (!args.estatus_operativo || args.estatus_operativo.trim() === '') {
+        throw new ValidationError('El estatus operativo es obligatorio.');
+      }
+
       const repo = AppDataSource.getRepository(Bien);
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
@@ -131,6 +138,11 @@ export const bienesResolvers = {
       requireAuth(context);
       // Roles 1 (Admin) y 2 (Maestro) pueden editar bienes
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      if (updates.estatus_operativo !== undefined && updates.estatus_operativo.trim() === '') {
+        throw new ValidationError('El estatus operativo no puede estar vacío al actualizar.');
+      }
+
       const repo = AppDataSource.getRepository(Bien);
       const bien = await repo.findOne({ where: { id_bien } });
       if (!bien) throw new NotFoundError('Bien');
@@ -170,6 +182,11 @@ export const bienesResolvers = {
     upsertEspecificacionTI: async (_: unknown, { id_bien, ...specs }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      
+      if (!id_bien || id_bien.trim() === '') {
+        throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
+      }
+
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {
