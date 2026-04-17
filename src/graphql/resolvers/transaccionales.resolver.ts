@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../config/database';
 import { Garantia } from '../../entities/Garantia';
 import { Incidencia } from '../../entities/Incidencia';
+import { Proveedor } from '../../entities/Proveedor';
 import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
 import { Bien } from '../../entities/Bien';
@@ -203,7 +204,7 @@ export const transaccionalesResolvers = {
     },
 
     // ── Incidencias
-    createIncidencia: async (_: unknown, { id_bien, id_usuario_reporta, id_tipo_incidencia, descripcion_falla, prioridad, unidad, id_unidad_select }: any, context: GraphQLContext) => {
+    createIncidencia: async (_: unknown, { id_bien, id_tipo_incidencia, descripcion_falla, prioridad, id_unidad, alias, requerimiento }: any, context: GraphQLContext) => {
       requireAuth(context);
 
       if (!descripcion_falla || descripcion_falla.trim() === '') {
@@ -216,65 +217,25 @@ export const transaccionalesResolvers = {
         throw new ValidationError('Debe seleccionar un tipo de incidencia.');
       }
 
-      // ── Asignación automática y avance de rotación ────────────────────────
-      const bien = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien } });
-      let id_usuario_asignado: number | undefined = undefined;
-
-      // Usamos el id de la unidad seleccionada expresamente en el dropdown, o como fallback el id de la unidad atada al bien.
-      const targetUnidadId = id_unidad_select ?? bien?.id_unidad;
-
-      if (targetUnidadId) {
-        // Obtener todos los técnicos activos en rotación para la unidad, ordenados por su posición de cola
-        const rotaciones = await AppDataSource.query(
-          `SELECT id_rotacion, id_usuario, es_turno_actual FROM rotacion WHERE id_unidad = @0 AND estatus = 1 ORDER BY posicion ASC`,
-          [targetUnidadId]
-        ) as { id_rotacion: number; id_usuario: number; es_turno_actual: boolean | number }[];
-
-        if (rotaciones.length > 0) {
-          // Determinar quién tiene el turno (si ninguno lo tiene, tomar el primero)
-          let currentIndex = rotaciones.findIndex(r => r.es_turno_actual === true || r.es_turno_actual === 1);
-          if (currentIndex === -1) currentIndex = 0;
-
-          id_usuario_asignado = rotaciones[currentIndex].id_usuario;
-
-          // Si hay más de un técnico activo en la lista, avanzar la cola al siguiente
-          if (rotaciones.length > 1) {
-            const nextIndex = (currentIndex + 1) % rotaciones.length;
-            const nextRotacionId = rotaciones[nextIndex].id_rotacion;
-
-            // Restablecer el turno para todos en esa unidad
-            await AppDataSource.query(`UPDATE rotacion SET es_turno_actual = 0 WHERE id_unidad = @0`, [targetUnidadId]);
-            // Asignar turno al siguiente en la lista
-            await AppDataSource.query(`UPDATE rotacion SET es_turno_actual = 1 WHERE id_rotacion = @0`, [nextRotacionId]);
-            
-          } else if (rotaciones.length === 1 && (rotaciones[0].es_turno_actual === false || rotaciones[0].es_turno_actual === 0)) {
-            // Caso donde solo hay 1 técnico, aseguramos que mantenga su bandera en 1 siempre
-            await AppDataSource.query(`UPDATE rotacion SET es_turno_actual = 1 WHERE id_rotacion = @0`, [rotaciones[0].id_rotacion]);
-          }
-        }
-      }
-      // ─────────────────────────────────────────────────────────────────────
-
       const repo = AppDataSource.getRepository(Incidencia);
       return repo.save(
         repo.create({
           id_bien,
           id_usuario_genera_reporte: context.user!.id_usuario,
-          id_usuario_reporta,
-          id_usuario_asignado,   // asignado automáticamente por rotación (puede ser undefined)
           id_tipo_incidencia,
           descripcion_falla,
           prioridad: prioridad ?? 'Media',
-          unidad,
-          // Si hay técnico asignado automáticamente, la incidencia pasa directo a "En proceso"
-          estatus_reparacion: id_usuario_asignado ? 'En proceso' : 'Pendiente',
+          id_unidad,
+          alias,
+          requerimiento,
+          estatus_reparacion: 'Pendiente',
         })
       );
     },
 
     updateIncidencia: async (
       _: unknown,
-      { id_incidencia, id_tipo_incidencia, descripcion_falla, prioridad, unidad, id_usuario_reporta, id_usuario_asignado }: any,
+      { id_incidencia, id_tipo_incidencia, descripcion_falla, prioridad, id_unidad, alias, requerimiento }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -291,16 +252,16 @@ export const transaccionalesResolvers = {
       if (id_tipo_incidencia !== undefined) item.id_tipo_incidencia = id_tipo_incidencia;
       if (descripcion_falla   !== undefined) item.descripcion_falla  = descripcion_falla;
       if (prioridad           !== undefined) item.prioridad          = prioridad;
-      if (unidad              !== undefined) item.unidad             = unidad;
-      if (id_usuario_reporta  !== undefined) item.id_usuario_reporta = id_usuario_reporta;
-      if (id_usuario_asignado !== undefined) item.id_usuario_asignado = id_usuario_asignado;
+      if (id_unidad           !== undefined) item.id_unidad          = id_unidad;
+      if (alias               !== undefined) item.alias              = alias;
+      if (requerimiento       !== undefined) item.requerimiento      = requerimiento;
 
       return repo.save(item);
     },
 
     pasarAEnProceso: async (
       _: unknown,
-      { id_incidencia, id_usuario_asignado, contenido_nota }: any,
+      { id_incidencia, contenido_nota }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -309,7 +270,6 @@ export const transaccionalesResolvers = {
       if (!item) throw new NotFoundError('Incidencia');
 
       item.estatus_reparacion = 'En proceso';
-      if (id_usuario_asignado) item.id_usuario_asignado = id_usuario_asignado;
       await repo.save(item);
 
       if (contenido_nota) {
@@ -377,15 +337,6 @@ export const transaccionalesResolvers = {
       return repo.save(item);
     },
 
-    asignarIncidencia: async (_: unknown, { id_incidencia, id_usuario_asignado }: any, context: GraphQLContext) => {
-      requireAuth(context);
-      const repo = AppDataSource.getRepository(Incidencia);
-      const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
-      if (!item) throw new NotFoundError('Incidencia');
-      item.id_usuario_asignado = id_usuario_asignado;
-      return repo.save(item);
-    },
-
     deleteIncidencia: async (_: unknown, { id_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]); // Solo Maestro (id_rol = 1)
@@ -424,6 +375,8 @@ export const transaccionalesResolvers = {
   Garantia: {
     bien: async (parent: Garantia) =>
       AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
+    proveedorObj: async (parent: Garantia) =>
+      parent.id_proveedor ? AppDataSource.getRepository(Proveedor).findOne({ where: { id_proveedor: parent.id_proveedor } }) : null,
   },
 
   Incidencia: {
@@ -434,14 +387,11 @@ export const transaccionalesResolvers = {
     usuarioGeneraReporte: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario_genera_reporte),
 
-    usuarioReporta: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
-      context.loaders.usuarioLoader.load(parent.id_usuario_reporta),
-
-    usuarioAsignado: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
-      parent.id_usuario_asignado ? context.loaders.usuarioLoader.load(parent.id_usuario_asignado) : null,
-
     usuarioResuelve: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       parent.id_usuario_resuelve ? context.loaders.usuarioLoader.load(parent.id_usuario_resuelve) : null,
+
+    unidad: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
+      parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
 
     // Antes: findOne por cada fila → N+1. Ahora: 1 query para todos.
     tipoIncidencia: (parent: Incidencia, _: unknown, context: GraphQLContext) =>

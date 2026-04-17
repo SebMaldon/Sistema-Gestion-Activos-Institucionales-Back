@@ -59,6 +59,13 @@ export const typeDefs = gql`
     nombre_rol: String!
   }
 
+  # Tabla: Proveedores
+  type Proveedor {
+    id_proveedor: ID!
+    nombre_proveedor: String!
+    informacion_contacto: String
+  }
+
   # Tabla: Cat_CategoriasActivo
   type CatCategoriaActivo {
     id_categoria: ID!
@@ -303,9 +310,10 @@ export const typeDefs = gql`
     id_bien: ID!
     fecha_inicio: Date
     fecha_fin: Date!
-    proveedor: String
+    id_proveedor: Int
     estado_garantia: String!
     bien: Bien
+    proveedorObj: Proveedor
   }
 
   # ─── INCIDENCIAS ────────────────────────────────────────
@@ -317,8 +325,6 @@ export const typeDefs = gql`
     id_incidencia: ID!
     id_bien: ID!
     id_usuario_genera_reporte: Int!
-    id_usuario_reporta: Int!
-    id_usuario_asignado: Int
     id_usuario_resuelve: Int
     id_tipo_incidencia: Int!
     prioridad: String!
@@ -327,13 +333,14 @@ export const typeDefs = gql`
     estatus_reparacion: String!
     resolucion_textual: String
     fecha_resolucion: DateTime
-    unidad: String
+    alias: String
+    requerimiento: String
+    id_unidad: Int
     bien: Bien
     usuarioGeneraReporte: Usuario
-    usuarioReporta: Usuario
-    usuarioAsignado: Usuario
     usuarioResuelve: Usuario
     tipoIncidencia: TipoIncidencia
+    unidad: Unidad
     notas: [Nota!]
   }
 
@@ -396,20 +403,6 @@ export const typeDefs = gql`
     nombre_tipo: String!
   }
 
-  # ─── ROTACIÓN ───────────────────────────────────────────
-
-  # Tabla: rotacion
-  type Rotacion {
-    id_rotacion: ID!
-    id_usuario: Int!
-    id_unidad: Int!
-    estatus: Boolean!
-    posicion: Int!
-    es_turno_actual: Boolean!
-    usuario: Usuario
-    unidad: Unidad
-  }
-
   # ─── USUARIOS (Paginación) ─────────────────────────────
 
   type UsuarioEdge {
@@ -461,6 +454,10 @@ export const typeDefs = gql`
 
     # ── Catálogos — Roles
     roles: [Rol!]!
+
+    # ── Catálogos — Proveedores
+    proveedores: [Proveedor!]!
+    proveedor(id_proveedor: ID!): Proveedor
 
     # ── Catálogos — Categorías Activo
     catCategoriasActivo: [CatCategoriaActivo!]!
@@ -521,11 +518,9 @@ export const typeDefs = gql`
       estatus_reparacion: String
       id_bien: ID
       id_usuario_genera_reporte: Int
-      id_usuario_reporta: Int
-      id_usuario_asignado: Int
       id_tipo_incidencia: Int
       prioridad: String
-      unidad: String
+      id_unidad: Int
       search: String
       pagination: PaginationInput
     ): IncidenciasConnection!
@@ -545,10 +540,6 @@ export const typeDefs = gql`
     ): MovimientosConnection!
     movimiento(id_movimiento: ID!): MovimientoInventario
 
-    # ── Rotación
-    rotaciones(estatus: Boolean, id_unidad: Int): [Rotacion!]!
-    rotacion(id_rotacion: ID!): Rotacion
-    rotacionesPorUsuario(id_usuario: Int!): [Rotacion!]!
 
     # ── Bitácora
     bitacora(
@@ -716,19 +707,24 @@ export const typeDefs = gql`
       modelo_so: String
     ): EspecificacionTI!
 
+    # ── Proveedores
+    createProveedor(nombre_proveedor: String!, informacion_contacto: String): Proveedor!
+    updateProveedor(id_proveedor: ID!, nombre_proveedor: String, informacion_contacto: String): Proveedor!
+    deleteProveedor(id_proveedor: ID!): Boolean!
+
     # ── Garantías
     createGarantia(
       id_bien: ID!
       fecha_inicio: Date
       fecha_fin: Date!
-      proveedor: String
+      id_proveedor: Int
       estado_garantia: String
     ): Garantia!
     updateGarantia(
       id_garantia: ID!
       fecha_inicio: Date
       fecha_fin: Date
-      proveedor: String
+      id_proveedor: Int
       estado_garantia: String
     ): Garantia!
     deleteGarantia(id_garantia: ID!): Boolean!
@@ -739,16 +735,16 @@ export const typeDefs = gql`
     deleteTipoIncidencia(id_tipo_incidencia: ID!): Boolean!
 
     # ── Incidencias
-    # Crear incidencia — el técnico se asigna automáticamente por rotación
+    # Crear incidencia
     # id_usuario_genera_reporte se toma del context.user (usuario autenticado)
     createIncidencia(
       id_bien: ID!
-      id_usuario_reporta: Int!
       id_tipo_incidencia: Int!
       descripcion_falla: String!
       prioridad: String
-      unidad: String
-      id_unidad_select: Int
+      id_unidad: Int
+      alias: String
+      requerimiento: String
     ): Incidencia!
 
     # Editar campos de una incidencia existente (Maestro y Admin)
@@ -757,15 +753,14 @@ export const typeDefs = gql`
       id_tipo_incidencia: Int
       descripcion_falla: String
       prioridad: String
-      unidad: String
-      id_usuario_reporta: Int
-      id_usuario_asignado: Int
+      id_unidad: Int
+      alias: String
+      requerimiento: String
     ): Incidencia!
 
     # Pasar a 'En proceso' — opcionalmente agrega nota de inicio
     pasarAEnProceso(
       id_incidencia: ID!
-      id_usuario_asignado: Int
       contenido_nota: String
     ): Incidencia!
 
@@ -776,7 +771,7 @@ export const typeDefs = gql`
     ): Nota!
 
     # Resolver incidencia (estatus_cierre: 'Resuelto' | 'Cerrado' | 'Sin resolver')
-    # id_usuario_resuelve: quién físicamente resolvió el problema (del listado de rotación)
+    # id_usuario_resuelve: quién físicamente resolvió el problema
     resolverIncidencia(
       id_incidencia: ID!
       estatus_cierre: String!
@@ -788,12 +783,6 @@ export const typeDefs = gql`
     updateIncidenciaEstatus(
       id_incidencia: ID!
       estatus_reparacion: String!
-    ): Incidencia!
-
-    # Asignar responsable a una incidencia
-    asignarIncidencia(
-      id_incidencia: ID!
-      id_usuario_asignado: Int!
     ): Incidencia!
 
     deleteIncidencia(id_incidencia: ID!): Boolean!
@@ -821,13 +810,6 @@ export const typeDefs = gql`
       url_formato_pdf: String
     ): MovimientoInventario!
     deleteMovimiento(id_movimiento: ID!): Boolean!
-
-    # ── Rotación
-    createRotacion(id_usuario: Int!, id_unidad: Int!): Rotacion!
-    updateRotacionEstatus(id_rotacion: ID!, estatus: Boolean!): Rotacion!
-    # Reordenar la cola: recibe array de id_rotacion en el nuevo orden
-    reordenarRotacion(id_unidad: Int!, orden: [Int!]!): [Rotacion!]!
-    deleteRotacion(id_rotacion: ID!): Boolean!
 
     # ── Ubicaciones
     createUbicacion(id_unidad: Int!, nombre_ubicacion: String!): Ubicacion!

@@ -51,8 +51,6 @@ export class Usuario {
   @OneToMany(() => Bien, (bien) => bien.usuarioResguardo)
   bienesResguardados?: Bien[];
 
-  @OneToMany(() => Incidencia, (inc) => inc.usuarioReporta)
-  incidencias?: Incidencia[];
 
   @OneToMany(() => MovimientoInventario, (mov) => mov.usuarioAutoriza)
   movimientosAutorizados?: MovimientoInventario[];

@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Bien } from './Bien';
+import { Proveedor } from './Proveedor';
 
 @Entity('Garantias')
 export class Garantia {
@@ -15,8 +16,8 @@ export class Garantia {
   @Column({ name: 'fecha_fin', type: 'date' })
   fecha_fin!: Date;
 
-  @Column({ name: 'proveedor', type: 'varchar', length: 100, nullable: true })
-  proveedor?: string;
+  @Column({ name: 'id_proveedor', type: 'int', nullable: true })
+  id_proveedor?: number;
 
   @Column({ name: 'estado_garantia', type: 'varchar', length: 20, default: 'VIGENTE' })
   estado_garantia!: string;
@@ -24,4 +25,8 @@ export class Garantia {
   @ManyToOne(() => Bien, (bien) => bien.garantias)
   @JoinColumn({ name: 'id_bien' })
   bien?: Bien;
+
+  @ManyToOne(() => Proveedor)
+  @JoinColumn({ name: 'id_proveedor' })
+  proveedorObj?: Proveedor;
 }

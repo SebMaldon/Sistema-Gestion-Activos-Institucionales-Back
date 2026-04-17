@@ -176,6 +176,15 @@ CREATE TABLE Bienes (
 GO
 
 
+-- ==========================================
+-- Proveedores (para garantias)
+-- ==========================================
+CREATE TABLE Proveedores (
+    id_proveedor INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_proveedor VARCHAR(150) NOT NULL,
+	informacion_contacto VARCHAR(MAX)
+);
+GO
 
 -- Especificaciones TI
 CREATE TABLE Especificaciones_TI (
@@ -194,19 +203,6 @@ CREATE TABLE Especificaciones_TI (
 );
 GO
 
--- NUEVA TABLA: Rotaci�n
-CREATE TABLE rotacion (
-    id_rotacion INT IDENTITY(1,1) PRIMARY KEY,
-    id_usuario INT NOT NULL, -- FK apuntando al nuevo campo de Usuarios
-    id_unidad INT NOT NULL,                -- FK apuntando a la tabla unidades
-    estatus BIT DEFAULT 1,                 -- 1 = Activo, 0 = Inactivo
-	posicion INT DEFAULT 0,
-	es_turno_actual BIT ,
-    CONSTRAINT FK_Rotacion_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
-    CONSTRAINT FK_Rotacion_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
-);
-GO
-
 
 -- ==========================================
 -- 3. ENTIDADES TRANSACCIONALES
@@ -217,9 +213,10 @@ CREATE TABLE Garantias (
     id_bien UNIQUEIDENTIFIER NOT NULL,
     fecha_inicio DATE,
     fecha_fin DATE NOT NULL,
-    proveedor VARCHAR(100),
+    id_proveedor INT,
     estado_garantia VARCHAR(20) DEFAULT 'VIGENTE',
-    CONSTRAINT FK_Garantias_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien)
+    CONSTRAINT FK_Garantias_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
+	CONSTRAINT FK_Garantias_Proveedores FOREIGN KEY (id_proveedor) REFERENCES Proveedores(id_proveedor)
 );
 GO
 
@@ -233,23 +230,21 @@ CREATE TABLE Incidencias (
     id_incidencia INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
     id_usuario_genera_reporte INT NOT NULL, -- Es el admministrador o usuario que crea la incidencia, se mantiene para trazabilidad
-    id_usuario_reporta INT NOT NULL, -- Es el usuario que reporta la falla, puede ser el mismo que genera el reporte o un usuario final
-    id_usuario_asignado INT NULL,  -- Es el técnico o responsable asignado para resolver la incidencia, puede ser NULL si aún no se ha asignado
     id_usuario_resuelve INT NULL, -- Es el técnico o responsable que finalmente resuelve la incidencia, puede ser NULL si aún no se ha resuelto
     id_tipo_incidencia INT NOT NULL, -- FK a la tabla de tipos de incidencias
-    prioridad VARCHAR(20) DEFAULT 'Media', -- Nueva columna para indicar la prioridad de la incidencia
     descripcion_falla NVARCHAR(MAX) NOT NULL,
     fecha_reporte DATETIME DEFAULT GETDATE(),
     estatus_reparacion VARCHAR(50) DEFAULT 'Pendiente', 
     resolucion_textual NVARCHAR(MAX) NULL,   
-    fecha_resolucion DATETIME NULL,          
-    unidad VARCHAR(60),
+    fecha_resolucion DATETIME NULL,
+	alias VARCHAR(MAX),
+	requerimiento VARCHAR(MAX),
+    id_unidad INT,
     CONSTRAINT FK_Incidencias_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
     CONSTRAINT FK_Incidencias_UsuGeneraReporte FOREIGN KEY (id_usuario_genera_reporte) REFERENCES Usuarios(id_usuario),
-    CONSTRAINT FK_Incidencias_UsuReporta FOREIGN KEY (id_usuario_reporta) REFERENCES Usuarios(id_usuario),
-    CONSTRAINT FK_Incidencias_UsuAsignado FOREIGN KEY (id_usuario_asignado) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Incidencias_UsuResuelve FOREIGN KEY (id_usuario_resuelve) REFERENCES Usuarios(id_usuario),
-    CONSTRAINT FK_Incidencias_TipoIncidencia FOREIGN KEY (id_tipo_incidencia) REFERENCES Tipo_Incidencias(id_tipo_incidencia)
+    CONSTRAINT FK_Incidencias_TipoIncidencia FOREIGN KEY (id_tipo_incidencia) REFERENCES Tipo_Incidencias(id_tipo_incidencia),
+	CONSTRAINT FK_Incidencias_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
 );
 GO
 

@@ -1,4 +1,5 @@
 import { AppDataSource } from '../../config/database';
+import { Proveedor } from '../../entities/Proveedor';
 import { CatInmueble } from '../../entities/CatInmueble';
 import { Marca } from '../../entities/Marca';
 import { TipoDispositivo } from '../../entities/TipoDispositivo';
@@ -54,6 +55,16 @@ export const catalogosResolvers = {
     roles: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
       return AppDataSource.getRepository(Rol).find();
+    },
+
+    // ── Proveedores
+    proveedores: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Proveedor).find({ order: { nombre_proveedor: 'ASC' } });
+    },
+    proveedor: async (_: unknown, { id_proveedor }: { id_proveedor: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Proveedor).findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
     },
 
     // ── Cat_CategoriasActivo
@@ -171,6 +182,32 @@ export const catalogosResolvers = {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(Marca).delete({ clave_marca: parseInt(clave_marca) });
+      return true;
+    },
+
+    // ── Proveedores
+    createProveedor: async (_: unknown, { nombre_proveedor, informacion_contacto }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Proveedor);
+      return repo.save(repo.create({ nombre_proveedor, informacion_contacto }));
+    },
+    updateProveedor: async (_: unknown, { id_proveedor, nombre_proveedor, informacion_contacto }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Proveedor);
+      const item = await repo.findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
+      if (!item) throw new NotFoundError('Proveedor');
+      
+      if (nombre_proveedor !== undefined) item.nombre_proveedor = nombre_proveedor;
+      if (informacion_contacto !== undefined) item.informacion_contacto = informacion_contacto;
+      
+      return repo.save(item);
+    },
+    deleteProveedor: async (_: unknown, { id_proveedor }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(Proveedor).delete({ id_proveedor: parseInt(id_proveedor) });
       return true;
     },
 
