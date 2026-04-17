@@ -131,6 +131,75 @@ export const typeDefs = gql`
     tipo_unidad: Int
   }
 
+  # ─── UBICACIONES ────────────────────────────────────────
+
+  # Tabla: Ubicaciones (departamentos/áreas por unidad operativa)
+  type Ubicacion {
+    id_ubicacion: ID!
+    id_unidad: Int!
+    nombre_ubicacion: String!
+    unidad: Unidad
+  }
+
+  # ─── BITÁCORA ───────────────────────────────────────────
+
+  # Tabla: Bitacora (log de acciones del sistema)
+  type Bitacora {
+    id_bitacora: ID!
+    id_usuario: Int!
+    accion: String!
+    tabla_afectada: String!
+    registro_afectado: String
+    detalles_movimiento: String
+    fecha_movimiento: DateTime!
+    usuario: Usuario
+  }
+
+  type BitacoraEdge {
+    node: Bitacora!
+    cursor: String!
+  }
+
+  type BitacoraConnection {
+    edges: [BitacoraEdge!]!
+    pageInfo: PageInfo!
+  }
+
+  # ─── NOTIFICACIONES ─────────────────────────────────────
+
+  # Tabla: Notificaciones_Mensajes
+  type NotificacionMensaje {
+    id_notificacion: ID!
+    titulo: String!
+    mensaje: String!
+    # 'GLOBAL' | 'ROL' | 'UNIDAD' | 'PERSONAL'
+    tipo_audiencia: String!
+    id_audiencia: Int
+    fecha_creacion: DateTime!
+  }
+
+  # Tabla: Notificaciones_Lecturas
+  type NotificacionLectura {
+    id_notificacion: Int!
+    id_usuario: Int!
+    leida: Boolean!
+    fecha_lectura: DateTime
+    oculta: Boolean!
+  }
+
+  # Tipo fusionado para el frontend: mensaje + estado de lectura del usuario
+  type MiNotificacion {
+    id_notificacion: ID!
+    titulo: String!
+    mensaje: String!
+    tipo_audiencia: String!
+    id_audiencia: Int
+    fecha_creacion: DateTime!
+    leida: Boolean!
+    fecha_lectura: DateTime
+    oculta: Boolean!
+  }
+
   # ─── USUARIOS ───────────────────────────────────────────
 
   # Tabla: Usuarios
@@ -161,6 +230,7 @@ export const typeDefs = gql`
     id_categoria: Int!
     id_unidad_medida: Int!
     id_unidad: Int
+    id_ubicacion: Int
     num_serie: String
     num_inv: String
     cantidad: Float!
@@ -177,6 +247,7 @@ export const typeDefs = gql`
     categoria: CatCategoriaActivo
     unidadMedida: CatUnidadMedida
     unidad: Unidad
+    ubicacion: Ubicacion
     inmueble: CatInmueble
     modelo: CatModelo
     usuarioResguardo: Usuario
@@ -199,6 +270,7 @@ export const typeDefs = gql`
     clave_inmueble: String
     id_categoria: Int
     id_unidad: Int
+    id_ubicacion: Int
     id_unidad_medida: Int
     id_usuario_resguardo: Int
     clave_modelo: String
@@ -404,6 +476,11 @@ export const typeDefs = gql`
     clasificacionesUnidades: [ClasificacionUnidad!]!
     tiposUnidad(id_clas: Int): [TipoUnidad!]!
 
+    # ── Ubicaciones (departamentos por unidad)
+    ubicaciones(id_unidad: Int): [Ubicacion!]!
+    ubicacion(id_ubicacion: ID!): Ubicacion
+    ubicacionesPorUnidad(id_unidad: Int!): [Ubicacion!]!
+
     # ── Usuarios
     usuarios(
       estatus: Boolean
@@ -463,6 +540,22 @@ export const typeDefs = gql`
     rotaciones(estatus: Boolean, id_unidad: Int): [Rotacion!]!
     rotacion(id_rotacion: ID!): Rotacion
     rotacionesPorUsuario(id_usuario: Int!): [Rotacion!]!
+
+    # ── Bitácora
+    bitacora(
+      accion: String
+      tabla_afectada: String
+      id_usuario: Int
+      fechaDesde: DateTime
+      fechaHasta: DateTime
+      pagination: PaginationInput
+    ): BitacoraConnection!
+    bitacoraEntrada(id_bitacora: ID!): Bitacora
+
+    # ── Notificaciones
+    misNotificaciones(mostrarOcultas: Boolean): [MiNotificacion!]!
+    notificacionesNoLeidas: Int!
+    todasNotificaciones: [NotificacionMensaje!]!
 
     # ── Dashboard
     dashboardStats: DashboardStats!
@@ -570,6 +663,7 @@ export const typeDefs = gql`
       id_categoria: Int!
       id_unidad_medida: Int!
       id_unidad: Int
+      id_ubicacion: Int
       num_serie: String
       num_inv: String
       cantidad: Float
@@ -585,6 +679,7 @@ export const typeDefs = gql`
       id_categoria: Int
       id_unidad_medida: Int
       id_unidad: Int
+      id_ubicacion: Int
       num_serie: String
       num_inv: String
       cantidad: Float
@@ -718,5 +813,22 @@ export const typeDefs = gql`
     # Reordenar la cola: recibe array de id_rotacion en el nuevo orden
     reordenarRotacion(id_unidad: Int!, orden: [Int!]!): [Rotacion!]!
     deleteRotacion(id_rotacion: ID!): Boolean!
+
+    # ── Ubicaciones
+    createUbicacion(id_unidad: Int!, nombre_ubicacion: String!): Ubicacion!
+    updateUbicacion(id_ubicacion: ID!, nombre_ubicacion: String): Ubicacion!
+    deleteUbicacion(id_ubicacion: ID!): Boolean!
+
+    # ── Notificaciones
+    createNotificacion(
+      titulo: String!
+      mensaje: String!
+      tipo_audiencia: String!
+      id_audiencia: Int
+    ): NotificacionMensaje!
+    marcarLeida(id_notificacion: Int!): Boolean!
+    marcarTodasLeidas: Boolean!
+    ocultarNotificacion(id_notificacion: Int!): Boolean!
+    deleteNotificacion(id_notificacion: Int!): Boolean!
   }
 `;

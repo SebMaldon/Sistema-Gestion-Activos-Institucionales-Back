@@ -18,6 +18,11 @@ import { MovimientoInventario } from '../entities/MovimientoInventario';
 import { Nota } from '../entities/Nota';
 import { Unidad } from '../entities/Unidad';
 import { Rotacion } from '../entities/Rotacion';
+// ── Entidades nuevas (esquema actualizado)
+import { Ubicacion } from '../entities/Ubicacion';
+import { Bitacora } from '../entities/Bitacora';
+import { NotificacionMensaje } from '../entities/NotificacionMensaje';
+import { NotificacionLectura } from '../entities/NotificacionLectura';
 import { logger } from '../utils/logger';
 
 export const AppDataSource = new DataSource({
@@ -44,6 +49,8 @@ export const AppDataSource = new DataSource({
     CatInmueble, Marca, TipoDispositivo, CatModelo, Rol,
     CatCategoriaActivo, Usuario, CatUnidadMedida, Bien, Unidad,
     EspecificacionTI, Garantia, Incidencia, TipoIncidencia, MovimientoInventario, Nota, Rotacion,
+    // Entidades nuevas
+    Ubicacion, Bitacora, NotificacionMensaje, NotificacionLectura,
   ],
 });
 

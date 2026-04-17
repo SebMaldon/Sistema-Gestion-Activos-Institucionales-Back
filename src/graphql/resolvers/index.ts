@@ -5,6 +5,9 @@ import { catalogosResolvers } from './catalogos.resolver';
 import { bienesResolvers } from './bienes.resolver';
 import { transaccionalesResolvers } from './transaccionales.resolver';
 import { movimientosResolvers, dashboardResolvers } from './movimientos.resolver';
+import { ubicacionesResolvers } from './ubicaciones.resolver';
+import { bitacoraResolvers } from './bitacora.resolver';
+import { notificacionesResolvers } from './notificaciones.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -56,6 +59,9 @@ export const resolvers = {
     ...transaccionalesResolvers.Query,
     ...movimientosResolvers.Query,
     ...dashboardResolvers.Query,
+    ...ubicacionesResolvers.Query,
+    ...bitacoraResolvers.Query,
+    ...notificacionesResolvers.Query,
   },
 
   Mutation: {
@@ -65,6 +71,8 @@ export const resolvers = {
     ...bienesResolvers.Mutation,
     ...transaccionalesResolvers.Mutation,
     ...movimientosResolvers.Mutation, // incluye reordenarRotacion
+    ...ubicacionesResolvers.Mutation,
+    ...notificacionesResolvers.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────
@@ -78,4 +86,6 @@ export const resolvers = {
   MovimientoInventario: movimientosResolvers.MovimientoInventario,
   Rotacion: movimientosResolvers.Rotacion,
   Usuario: usuariosResolvers.Usuario,
+  Ubicacion: ubicacionesResolvers.Ubicacion,
+  Bitacora: bitacoraResolvers.Bitacora,
 };

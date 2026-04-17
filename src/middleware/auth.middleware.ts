@@ -24,9 +24,10 @@ export function requireRole(context: GraphQLContext, allowedRoles: number[]): vo
   }
 }
 
-// Roles: 1 = Admin, 2 = Supervisor, 3 = Usuario
+// Roles reales de BD: 1=Administrador, 2=Maestro, 3=Usuario Estándar, 4=Sin Acceso
 export const ROLES = {
   ADMIN: 1,
-  SUPERVISOR: 2,
+  MAESTRO: 2,
   USUARIO: 3,
+  SIN_ACCESO: 4,
 } as const;

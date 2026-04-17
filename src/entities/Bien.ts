@@ -8,6 +8,7 @@ import { CatInmueble } from './CatInmueble';
 import { CatModelo } from './CatModelo';
 import { Usuario } from './Usuario';
 import { Unidad } from './Unidad';
+import { Ubicacion } from './Ubicacion';
 import { EspecificacionTI } from './EspecificacionTI';
 import { Garantia } from './Garantia';
 import { Incidencia } from './Incidencia';
@@ -26,6 +27,9 @@ export class Bien {
 
   @Column({ name: 'id_unidad', type: 'int', nullable: true })
   id_unidad?: number;
+
+  @Column({ name: 'id_ubicacion', type: 'int', nullable: true })
+  id_ubicacion?: number;
 
   @Column({ name: 'num_serie', type: 'varchar', length: 50, nullable: true })
   num_serie?: string;
@@ -79,6 +83,10 @@ export class Bien {
   @ManyToOne(() => Unidad, (u) => u.bienes, { nullable: true })
   @JoinColumn({ name: 'id_unidad' })
   unidad?: Unidad;
+
+  @ManyToOne(() => Ubicacion, (ub) => ub.bienes, { nullable: true })
+  @JoinColumn({ name: 'id_ubicacion' })
+  ubicacion?: Ubicacion;
 
   @ManyToOne(() => CatInmueble, (i) => i.bienes, { nullable: true })
   @JoinColumn({ name: 'clave_inmueble' })

@@ -3,9 +3,11 @@ import { AppDataSource } from '../../config/database';
 import { Bien } from '../../entities/Bien';
 import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { Nota } from '../../entities/Nota';
+import { Incidencia } from '../../entities/Incidencia';
+import { MovimientoInventario } from '../../entities/MovimientoInventario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError } from '../../utils/errors';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Unidad } from '../../entities/Unidad';
 
@@ -14,6 +16,7 @@ export interface BienesFilter {
   clave_inmueble?: string;
   id_categoria?: number;
   id_unidad?: number;
+  id_ubicacion?: number;
   id_unidad_medida?: number;
   id_usuario_resguardo?: number;
   clave_modelo?: string;
@@ -34,6 +37,7 @@ export const bienesResolvers = {
       if (filter?.clave_inmueble) qb.andWhere('b.clave_inmueble = :ci', { ci: filter.clave_inmueble });
       if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
       if (filter?.id_unidad) qb.andWhere('b.id_unidad = :iu', { iu: filter.id_unidad });
+      if (filter?.id_ubicacion) qb.andWhere('b.id_ubicacion = :iub', { iub: filter.id_ubicacion });
       if (filter?.id_unidad_medida) qb.andWhere('b.id_unidad_medida = :ium', { ium: filter.id_unidad_medida });
       if (filter?.id_usuario_resguardo) qb.andWhere('b.id_usuario_resguardo = :ur', { ur: filter.id_usuario_resguardo });
       if (filter?.clave_modelo) qb.andWhere('b.clave_modelo = :cm', { cm: filter.clave_modelo });
@@ -100,7 +104,11 @@ export const bienesResolvers = {
       return AppDataSource.getRepository(Bien)
         .createQueryBuilder('b')
         .leftJoinAndSelect('b.especificacionTI', 'e')
-        .where('b.num_serie = :termino', { termino })
+        // TRY_CONVERT evita el error de conversión cuando el término no es un UUID válido
+        .where('(TRY_CONVERT(uniqueidentifier, :termino) IS NOT NULL AND b.id_bien = TRY_CONVERT(uniqueidentifier, :termino))', { termino })
+        .orWhere('b.qr_hash = :termino', { termino })
+        .orWhere('b.num_serie = :termino', { termino })
+        .orWhere('b.num_inv = :termino', { termino })
         .orWhere('e.dir_ip = :termino', { termino })
         .getOne();
     },
@@ -109,7 +117,15 @@ export const bienesResolvers = {
   Mutation: {
     createBien: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      // Roles 1 (Admin) y 2 (Maestro) pueden crear bienes
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      
+      if (!args.id_categoria) throw new ValidationError('Debe seleccionar la categoría del bien.');
+      if (!args.id_unidad_medida) throw new ValidationError('Debe especificar la unidad de medida.');
+      if (!args.estatus_operativo || args.estatus_operativo.trim() === '') {
+        throw new ValidationError('El estatus operativo es obligatorio.');
+      }
+
       const repo = AppDataSource.getRepository(Bien);
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
@@ -120,18 +136,44 @@ export const bienesResolvers = {
 
     updateBien: async (_: unknown, { id_bien, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      // Roles 1 (Admin) y 2 (Maestro) pueden editar bienes
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      if (updates.estatus_operativo !== undefined && updates.estatus_operativo.trim() === '') {
+        throw new ValidationError('El estatus operativo no puede estar vacío al actualizar.');
+      }
+
       const repo = AppDataSource.getRepository(Bien);
       const bien = await repo.findOne({ where: { id_bien } });
       if (!bien) throw new NotFoundError('Bien');
+      // Forzar actualización de fecha_actualizacion en cada UPDATE
+      updates.fecha_actualizacion = new Date();
       repo.merge(bien, updates);
       return repo.save(bien);
     },
 
     deleteBien: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
-      // Eliminar dependencias en cascada primero
+      // Solo el rol Maestro (2) puede eliminar bienes
+      requireRole(context, [ROLES.MAESTRO]);
+
+      // Verificar que no tenga incidencias asociadas
+      const incidenciasCount = await AppDataSource.getRepository(Incidencia).count({ where: { id_bien } });
+      if (incidenciasCount > 0) {
+        throw new ForbiddenError(
+          `No se puede eliminar el bien porque tiene ${incidenciasCount} incidencia(s) registrada(s). Resuelva o elimine las incidencias primero.`
+        );
+      }
+
+      // Verificar que no tenga movimientos asociados
+      const movimientosCount = await AppDataSource.getRepository(MovimientoInventario).count({ where: { id_bien } });
+      if (movimientosCount > 0) {
+        throw new ForbiddenError(
+          `No se puede eliminar el bien porque tiene ${movimientosCount} movimiento(s) de inventario registrado(s).`
+        );
+      }
+
+      // Sin dependencias: eliminar notas primero y luego el bien
       await AppDataSource.getRepository(Nota).delete({ id_bien });
       await AppDataSource.getRepository(Bien).delete({ id_bien });
       return true;
@@ -139,7 +181,12 @@ export const bienesResolvers = {
 
     upsertEspecificacionTI: async (_: unknown, { id_bien, ...specs }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      
+      if (!id_bien || id_bien.trim() === '') {
+        throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
+      }
+
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {
@@ -160,6 +207,13 @@ export const bienesResolvers = {
 
     unidad: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
+
+    ubicacion: async (parent: Bien) =>
+      parent.id_ubicacion
+        ? AppDataSource.getRepository((await import('../../entities/Ubicacion')).Ubicacion).findOne({
+            where: { id_ubicacion: parent.id_ubicacion },
+          })
+        : null,
 
     inmueble: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.clave_inmueble ? context.loaders.catInmuebleLoader.load(parent.clave_inmueble) : null,

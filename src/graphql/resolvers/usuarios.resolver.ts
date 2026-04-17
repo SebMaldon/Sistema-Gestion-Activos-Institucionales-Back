@@ -6,6 +6,39 @@ import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middlewar
 import { NotFoundError, ConflictError, AuthenticationError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 
+/**
+ * Desactiva al usuario de cualquier rotación en la que participe.
+ * Si tenía el turno actual en alguna unidad, avanza el turno al siguiente técnico.
+ */
+const desactivarEnRotacion = async (id_usuario: number) => {
+  const rotaciones = await AppDataSource.query(
+    `SELECT id_rotacion, id_unidad, posicion, es_turno_actual FROM rotacion WHERE id_usuario = @0 AND estatus = 1`,
+    [id_usuario]
+  );
+  for (const rot of rotaciones) {
+    if (rot.es_turno_actual) {
+      // Buscar al siguiente en la unidad (con posicion mayor)
+      let siguiente = await AppDataSource.query(
+        `SELECT TOP 1 id_rotacion FROM rotacion WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1 AND posicion > @2 ORDER BY posicion ASC`,
+        [rot.id_unidad, rot.id_rotacion, rot.posicion]
+      );
+      if (!siguiente[0]) {
+        // Dar la vuelta
+        siguiente = await AppDataSource.query(
+          `SELECT TOP 1 id_rotacion FROM rotacion WHERE id_unidad = @0 AND estatus = 1 AND id_rotacion != @1 ORDER BY posicion ASC`,
+          [rot.id_unidad, rot.id_rotacion]
+        );
+      }
+      await AppDataSource.query(`UPDATE rotacion SET es_turno_actual = 0 WHERE id_rotacion = @0`, [rot.id_rotacion]);
+      if (siguiente[0]) {
+        await AppDataSource.query(`UPDATE rotacion SET es_turno_actual = 1 WHERE id_rotacion = @0`, [siguiente[0].id_rotacion]);
+      }
+    }
+    // Desactivar de la rotación
+    await AppDataSource.query(`UPDATE rotacion SET estatus = 0 WHERE id_rotacion = @0`, [rot.id_rotacion]);
+  }
+};
+
 export const usuariosResolvers = {
   Query: {
     /**
@@ -28,7 +61,7 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       const qb = AppDataSource.getRepository(Usuario)
         .createQueryBuilder('u')
@@ -44,7 +77,7 @@ export const usuariosResolvers = {
       }
 
       const totalCount = await qb.getCount();
-      const first = Math.min(pagination?.first ?? 20, 100);
+      const first = Math.min(pagination?.first ?? 20, 20000);
       qb.take(first);
 
       if (pagination?.after) {
@@ -138,10 +171,16 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id_usuario: parseInt(id_usuario) } });
       if (!usuario) throw new NotFoundError('Usuario');
+      
+      // Si se desactiva explícitamente, quitar de todas las colas de rotación
+      if (updates.estatus === false && usuario.estatus === true) {
+        await desactivarEnRotacion(usuario.id_usuario);
+      }
+
       repo.merge(usuario, updates);
       return repo.save(usuario);
     },
@@ -152,6 +191,11 @@ export const usuariosResolvers = {
       const repo = AppDataSource.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id_usuario: parseInt(id_usuario) } });
       if (!usuario) throw new NotFoundError('Usuario');
+      
+      if (usuario.estatus === true) {
+        await desactivarEnRotacion(usuario.id_usuario);
+      }
+
       // Soft-delete: deshabilitar en lugar de borrar físicamente
       usuario.estatus = false;
       await repo.save(usuario);

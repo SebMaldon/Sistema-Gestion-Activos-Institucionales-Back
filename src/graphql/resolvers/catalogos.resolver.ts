@@ -144,7 +144,7 @@ export const catalogosResolvers = {
     // ── Cat_Inmuebles
     createCatInmueble: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatInmueble);
       const exists = await repo.findOne({ where: { clave_inmueble: args.clave_inmueble } });
       if (exists) throw new ConflictError(`Inmueble "${args.clave_inmueble}" ya existe`);
@@ -152,7 +152,7 @@ export const catalogosResolvers = {
     },
     updateCatInmueble: async (_: unknown, { clave_inmueble, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatInmueble);
       const item = await repo.findOne({ where: { clave_inmueble } });
       if (!item) throw new NotFoundError('Inmueble');
@@ -169,12 +169,12 @@ export const catalogosResolvers = {
     // ── Marcas
     createMarca: async (_: unknown, { marca }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       return AppDataSource.getRepository(Marca).save({ marca });
     },
     updateMarca: async (_: unknown, { clave_marca, marca }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Marca);
       const item = await repo.findOne({ where: { clave_marca: parseInt(clave_marca) } });
       if (!item) throw new NotFoundError('Marca');
@@ -191,12 +191,12 @@ export const catalogosResolvers = {
     // ── Tipos Dispositivo
     createTipoDispositivo: async (_: unknown, { nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       return AppDataSource.getRepository(TipoDispositivo).save({ nombre_tipo });
     },
     updateTipoDispositivo: async (_: unknown, { tipo_disp, nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(TipoDispositivo);
       const item = await repo.findOne({ where: { tipo_disp: parseInt(tipo_disp) } });
       if (!item) throw new NotFoundError('Tipo de dispositivo');
@@ -213,7 +213,7 @@ export const catalogosResolvers = {
     // ── Cat_Modelos
     createCatModelo: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatModelo);
       const exists = await repo.findOne({ where: { clave_modelo: args.clave_modelo } });
       if (exists) throw new ConflictError(`Modelo "${args.clave_modelo}" ya existe`);
@@ -221,7 +221,7 @@ export const catalogosResolvers = {
     },
     updateCatModelo: async (_: unknown, { clave_modelo, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.SUPERVISOR]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatModelo);
       const item = await repo.findOne({ where: { clave_modelo } });
       if (!item) throw new NotFoundError('Modelo');
