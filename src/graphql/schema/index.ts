@@ -240,16 +240,12 @@ export const typeDefs = gql`
 
   # Tabla: Incidencias
   # estatus_reparacion valores: 'Pendiente' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Sin resolver'
-  # prioridad valores: 'Baja' | 'Media' | 'Alta' | 'Crítica'
   type Incidencia {
     id_incidencia: ID!
     id_bien: ID!
     id_usuario_genera_reporte: Int!
-    id_usuario_reporta: Int!
-    id_usuario_asignado: Int
     id_usuario_resuelve: Int
     id_tipo_incidencia: Int!
-    prioridad: String!
     descripcion_falla: String!
     fecha_reporte: DateTime!
     estatus_reparacion: String!
@@ -258,8 +254,6 @@ export const typeDefs = gql`
     unidad: String
     bien: Bien
     usuarioGeneraReporte: Usuario
-    usuarioReporta: Usuario
-    usuarioAsignado: Usuario
     usuarioResuelve: Usuario
     tipoIncidencia: TipoIncidencia
     notas: [Nota!]
@@ -399,7 +393,7 @@ export const typeDefs = gql`
     catUnidadMedida(id_unidad_medida: ID!): CatUnidadMedida
 
     # ── Unidades Operativas
-    unidades(estatus: Int): [Unidad!]!
+    unidades(estatus: Int, soloConRotacion: Boolean): [Unidad!]!
     unidad(id_unidad: ID!): Unidad
 
     # ── Inmuebles (tabla legacy)
@@ -444,10 +438,7 @@ export const typeDefs = gql`
       estatus_reparacion: String
       id_bien: ID
       id_usuario_genera_reporte: Int
-      id_usuario_reporta: Int
-      id_usuario_asignado: Int
       id_tipo_incidencia: Int
-      prioridad: String
       unidad: String
       search: String
       pagination: PaginationInput
@@ -648,10 +639,8 @@ export const typeDefs = gql`
     # id_usuario_genera_reporte se toma del context.user (usuario autenticado)
     createIncidencia(
       id_bien: ID!
-      id_usuario_reporta: Int!
       id_tipo_incidencia: Int!
       descripcion_falla: String!
-      prioridad: String
       unidad: String
       id_unidad_select: Int
     ): Incidencia!
@@ -661,16 +650,12 @@ export const typeDefs = gql`
       id_incidencia: ID!
       id_tipo_incidencia: Int
       descripcion_falla: String
-      prioridad: String
       unidad: String
-      id_usuario_reporta: Int
-      id_usuario_asignado: Int
     ): Incidencia!
 
     # Pasar a 'En proceso' — opcionalmente agrega nota de inicio
     pasarAEnProceso(
       id_incidencia: ID!
-      id_usuario_asignado: Int
       contenido_nota: String
     ): Incidencia!
 
@@ -695,10 +680,10 @@ export const typeDefs = gql`
       estatus_reparacion: String!
     ): Incidencia!
 
-    # Asignar responsable a una incidencia
+    # Reservado para futura lógica si se requiere asignar responsable
     asignarIncidencia(
       id_incidencia: ID!
-      id_usuario_asignado: Int!
+      id_usuario_resuelve: Int!
     ): Incidencia!
 
     deleteIncidencia(id_incidencia: ID!): Boolean!

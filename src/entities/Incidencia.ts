@@ -15,21 +15,11 @@ export class Incidencia {
   @Column({ name: 'id_usuario_genera_reporte', type: 'int' })
   id_usuario_genera_reporte!: number;
 
-  // Usuario final que reporta la falla (puede ser el mismo que genera el reporte)
-  @Column({ name: 'id_usuario_reporta', type: 'int' })
-  id_usuario_reporta!: number;
-
-  @Column({ name: 'id_usuario_asignado', type: 'int', nullable: true })
-  id_usuario_asignado?: number;
-
   @Column({ name: 'id_usuario_resuelve', type: 'int', nullable: true })
   id_usuario_resuelve?: number;
 
   @Column({ name: 'id_tipo_incidencia', type: 'int' })
   id_tipo_incidencia!: number;
-
-  @Column({ name: 'prioridad', type: 'varchar', length: 20, default: 'Media' })
-  prioridad!: string;
 
   @Column({ name: 'descripcion_falla', type: 'nvarchar', length: 'max' })
   descripcion_falla!: string;
@@ -58,14 +48,6 @@ export class Incidencia {
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'id_usuario_genera_reporte' })
   usuarioGeneraReporte?: Usuario;
-
-  @ManyToOne(() => Usuario, (usuario) => usuario.incidencias)
-  @JoinColumn({ name: 'id_usuario_reporta' })
-  usuarioReporta?: Usuario;
-
-  @ManyToOne(() => Usuario)
-  @JoinColumn({ name: 'id_usuario_asignado' })
-  usuarioAsignado?: Usuario;
 
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'id_usuario_resuelve' })
