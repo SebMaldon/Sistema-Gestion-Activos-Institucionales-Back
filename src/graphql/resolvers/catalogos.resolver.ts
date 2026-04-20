@@ -1,4 +1,5 @@
 import { AppDataSource } from '../../config/database';
+import { Proveedor } from '../../entities/Proveedor';
 import { CatInmueble } from '../../entities/CatInmueble';
 import { Marca } from '../../entities/Marca';
 import { TipoDispositivo } from '../../entities/TipoDispositivo';
@@ -56,6 +57,16 @@ export const catalogosResolvers = {
       return AppDataSource.getRepository(Rol).find();
     },
 
+    // ── Proveedores
+    proveedores: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Proveedor).find({ order: { nombre_proveedor: 'ASC' } });
+    },
+    proveedor: async (_: unknown, { id_proveedor }: { id_proveedor: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Proveedor).findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
+    },
+
     // ── Cat_CategoriasActivo
     catCategoriasActivo: async () =>
       AppDataSource.getRepository(CatCategoriaActivo).find({ order: { nombre_categoria: 'ASC' } }),
@@ -71,23 +82,10 @@ export const catalogosResolvers = {
       }),
 
     // ── Unidades operativas (tabla: unidades)
-    unidades: async (_: unknown, { estatus, soloConRotacion }: { estatus?: number; soloConRotacion?: boolean }, context: GraphQLContext) => {
+    unidades: async (_: unknown, { estatus }: { estatus?: number }, context: GraphQLContext) => {
       requireAuth(context);
       const qb = AppDataSource.getRepository(Unidad).createQueryBuilder('u');
       if (estatus !== undefined) qb.andWhere('u.Estatus = :estatus', { estatus });
-      
-      if (soloConRotacion) {
-        // Filtra unidades que tengan al menos ALGO en la tabla de rotación con estatus activo
-        qb.andWhere(sub => {
-          const subQuery = sub.subQuery()
-            .select('1')
-            .from('rotacion', 'r')
-            .where('r.id_unidad = u.id_unidad AND r.estatus = 1')
-            .limit(1)
-            .getQuery();
-          return `EXISTS (${subQuery})`;
-        });
-      }
 
       return qb.orderBy('u.Nombre', 'ASC').getMany();
     },
@@ -185,6 +183,32 @@ export const catalogosResolvers = {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(Marca).delete({ clave_marca: parseInt(clave_marca) });
+      return true;
+    },
+
+    // ── Proveedores
+    createProveedor: async (_: unknown, { nombre_proveedor, informacion_contacto }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Proveedor);
+      return repo.save(repo.create({ nombre_proveedor, informacion_contacto }));
+    },
+    updateProveedor: async (_: unknown, { id_proveedor, nombre_proveedor, informacion_contacto }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Proveedor);
+      const item = await repo.findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
+      if (!item) throw new NotFoundError('Proveedor');
+      
+      if (nombre_proveedor !== undefined) item.nombre_proveedor = nombre_proveedor;
+      if (informacion_contacto !== undefined) item.informacion_contacto = informacion_contacto;
+      
+      return repo.save(item);
+    },
+    deleteProveedor: async (_: unknown, { id_proveedor }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(Proveedor).delete({ id_proveedor: parseInt(id_proveedor) });
       return true;
     },
 

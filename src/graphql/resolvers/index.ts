@@ -70,7 +70,7 @@ export const resolvers = {
     ...catalogosResolvers.Mutation,
     ...bienesResolvers.Mutation,
     ...transaccionalesResolvers.Mutation,
-    ...movimientosResolvers.Mutation, // incluye reordenarRotacion
+    ...movimientosResolvers.Mutation,
     ...ubicacionesResolvers.Mutation,
     ...notificacionesResolvers.Mutation,
   },
@@ -84,7 +84,6 @@ export const resolvers = {
   Incidencia: transaccionalesResolvers.Incidencia,
   Nota: transaccionalesResolvers.Nota,
   MovimientoInventario: movimientosResolvers.MovimientoInventario,
-  Rotacion: movimientosResolvers.Rotacion,
   Usuario: usuariosResolvers.Usuario,
   Ubicacion: ubicacionesResolvers.Ubicacion,
   Bitacora: bitacoraResolvers.Bitacora,

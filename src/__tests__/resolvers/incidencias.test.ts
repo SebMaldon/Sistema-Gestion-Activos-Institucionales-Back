@@ -40,7 +40,6 @@ describe('Incidencias Resolver', () => {
     it('Debe fallar si no se proporciona descripcion de la falla', async () => {
       const args = {
         id_bien: 'bien-123',
-        id_usuario_reporta: 1,
         id_tipo_incidencia: 1,
         descripcion_falla: '', // Vacio
       };
@@ -56,7 +55,6 @@ describe('Incidencias Resolver', () => {
 
     it('Debe fallar si no hay un bien asociado', async () => {
       const args = {
-        id_usuario_reporta: 1,
         id_tipo_incidencia: 1,
         descripcion_falla: 'Mi PC no enciende',
         id_bien: '',
@@ -70,9 +68,9 @@ describe('Incidencias Resolver', () => {
     it('Debe crear la incidencia correctamente si todos los datos obligatorios existen', async () => {
       const args = {
         id_bien: 'bien-123',
-        id_usuario_reporta: 2,
         id_tipo_incidencia: 1,
         descripcion_falla: 'Falla de red',
+        alias: 'PC-CONTABILIDAD',
       };
 
       mockRepo.findOne.mockResolvedValue({ id_bien: 'bien-123' }); // Mock finding Bien
@@ -121,11 +119,12 @@ describe('Incidencias Resolver', () => {
   });
   describe('updateIncidencia', () => {
     it('Debe actualizar la incidencia correctamente', async () => {
-      const args = { id_incidencia: 10, prioridad: 'Alta', descripcion_falla: 'Actualizado' };
-      mockRepo.findOne.mockResolvedValue({ id_incidencia: 10, prioridad: 'Media', descripcion_falla: 'Original' });
+      const args = { id_incidencia: 10, alias: 'PC-RRHH', descripcion_falla: 'Actualizado' };
+      mockRepo.findOne.mockResolvedValue({ id_incidencia: 10, alias: 'PC-LOGISTICA', descripcion_falla: 'Original' });
       mockRepo.save.mockImplementation(async (data: any) => data);
 
       const result = await transaccionalesResolvers.Mutation.updateIncidencia(null, args, mockContext as any);
+      expect(result.alias).toBe('PC-RRHH');
       expect(mockRepo.save).toHaveBeenCalled();
     });
 

@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { Bien } from './Bien';
 import { Usuario } from './Usuario';
 import { TipoIncidencia } from './TipoIncidencia';
+import { Unidad } from './Unidad';
 
 @Entity('Incidencias')
 export class Incidencia {
@@ -36,8 +37,14 @@ export class Incidencia {
   @Column({ name: 'fecha_resolucion', type: 'datetime', nullable: true })
   fecha_resolucion?: Date;
 
-  @Column({ name: 'unidad', type: 'varchar', length: 60, nullable: true })
-  unidad?: string;
+  @Column({ name: 'alias', type: 'nvarchar', length: 'max', nullable: true })
+  alias?: string;
+
+  @Column({ name: 'requerimiento', type: 'nvarchar', length: 'max', nullable: true })
+  requerimiento?: string;
+
+  @Column({ name: 'id_unidad', type: 'int', nullable: true })
+  id_unidad?: number;
 
   // ── Relations ──────────────────────────────────────────────
 
@@ -56,6 +63,10 @@ export class Incidencia {
   @ManyToOne(() => TipoIncidencia)
   @JoinColumn({ name: 'id_tipo_incidencia' })
   tipoIncidencia?: TipoIncidencia;
+
+  @ManyToOne(() => Unidad)
+  @JoinColumn({ name: 'id_unidad' })
+  unidad?: Unidad;
 
   // Will be handled via field resolver
   notas?: any[];

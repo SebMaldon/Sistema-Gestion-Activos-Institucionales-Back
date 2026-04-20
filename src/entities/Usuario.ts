@@ -52,7 +52,6 @@ export class Usuario {
   bienesResguardados?: Bien[];
 
 
-
   @OneToMany(() => MovimientoInventario, (mov) => mov.usuarioAutoriza)
   movimientosAutorizados?: MovimientoInventario[];
 

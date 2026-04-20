@@ -17,8 +17,8 @@ import { TipoIncidencia } from '../entities/TipoIncidencia';
 import { MovimientoInventario } from '../entities/MovimientoInventario';
 import { Nota } from '../entities/Nota';
 import { Unidad } from '../entities/Unidad';
-import { Rotacion } from '../entities/Rotacion';
 // ── Entidades nuevas (esquema actualizado)
+import { Proveedor } from '../entities/Proveedor';
 import { Ubicacion } from '../entities/Ubicacion';
 import { Bitacora } from '../entities/Bitacora';
 import { NotificacionMensaje } from '../entities/NotificacionMensaje';
@@ -48,8 +48,9 @@ export const AppDataSource = new DataSource({
   entities: [
     CatInmueble, Marca, TipoDispositivo, CatModelo, Rol,
     CatCategoriaActivo, Usuario, CatUnidadMedida, Bien, Unidad,
-    EspecificacionTI, Garantia, Incidencia, TipoIncidencia, MovimientoInventario, Nota, Rotacion,
+    EspecificacionTI, Garantia, Incidencia, TipoIncidencia, MovimientoInventario, Nota,
     // Entidades nuevas
+    Proveedor,
     Ubicacion, Bitacora, NotificacionMensaje, NotificacionLectura,
   ],
 });
