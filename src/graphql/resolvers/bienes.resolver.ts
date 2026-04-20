@@ -34,7 +34,7 @@ export const bienesResolvers = {
       const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
 
       if (filter?.estatus_operativo) qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
-      if (filter?.clave_inmueble) qb.andWhere('b.clave_inmueble = :ci', { ci: filter.clave_inmueble });
+      if (filter?.clave_inmueble) qb.andWhere('b.clave_inmueble_ref = :ci', { ci: filter.clave_inmueble });
       if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
       if (filter?.id_unidad) qb.andWhere('b.id_unidad = :iu', { iu: filter.id_unidad });
       if (filter?.id_ubicacion) qb.andWhere('b.id_ubicacion = :iub', { iub: filter.id_ubicacion });
@@ -216,7 +216,7 @@ export const bienesResolvers = {
         : null,
 
     inmueble: (parent: Bien, _: unknown, context: GraphQLContext) =>
-      parent.clave_inmueble ? context.loaders.catInmuebleLoader.load(parent.clave_inmueble) : null,
+      parent.clave_inmueble_ref ? context.loaders.catInmuebleLoader.load(parent.clave_inmueble_ref) : null,
 
     modelo: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.clave_modelo ? context.loaders.catModeloLoader.load(parent.clave_modelo) : null,

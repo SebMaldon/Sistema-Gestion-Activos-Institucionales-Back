@@ -89,7 +89,7 @@ export class Bien {
   ubicacion?: Ubicacion;
 
   @ManyToOne(() => CatInmueble, (i) => i.bienes, { nullable: true })
-  @JoinColumn({ name: 'clave_inmueble' })
+  @JoinColumn({ name: 'clave_inmueble_ref' })
   inmueble?: CatInmueble;
 
   @ManyToOne(() => CatModelo, (m) => m.bienes, { nullable: true })
