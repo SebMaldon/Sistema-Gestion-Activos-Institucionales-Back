@@ -46,10 +46,6 @@ export class Bien {
   @Column({ name: 'qr_hash', type: 'varchar', length: 255, nullable: true, unique: true })
   qr_hash?: string;
 
-  // FK a Cat_Inmuebles (catálogo propio)
-  @Column({ name: 'clave_inmueble', type: 'varchar', length: 50, nullable: true })
-  clave_inmueble?: string;
-
   // FK a la tabla inmuebles (tabla legacy con más detalle)
   @Column({ name: 'clave_inmueble_ref', type: 'varchar', length: 50, nullable: true })
   clave_inmueble_ref?: string;

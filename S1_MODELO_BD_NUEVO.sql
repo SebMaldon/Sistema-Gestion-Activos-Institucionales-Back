@@ -158,7 +158,6 @@ CREATE TABLE Bienes (
     cantidad DECIMAL(10,2) DEFAULT 1, 
     estatus_operativo VARCHAR(50) DEFAULT 'ACTIVO',
     qr_hash VARCHAR(255) UNIQUE,
-    clave_inmueble VARCHAR(50),
     clave_inmueble_ref VARCHAR(50), -- FK para la tabla inmuebles
     clave_presupuestal VARCHAR(150), -- Clave presupuestal autogenerada
     clave_modelo VARCHAR(30),
@@ -168,7 +167,6 @@ CREATE TABLE Bienes (
     CONSTRAINT FK_Bienes_Categorias FOREIGN KEY (id_categoria) REFERENCES Cat_CategoriasActivo(id_categoria),
     CONSTRAINT FK_Bienes_UnidadMedida FOREIGN KEY (id_unidad_medida) REFERENCES Cat_UnidadesMedida(id_unidad_medida),
     CONSTRAINT FK_Bienes_UnidadOperativa FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad),
-    CONSTRAINT FK_Bienes_Inmuebles FOREIGN KEY (clave_inmueble) REFERENCES Cat_Inmuebles(clave_inmueble),
     CONSTRAINT FK_Bienes_Modelos FOREIGN KEY (clave_modelo) REFERENCES Cat_Modelos(clave_modelo),
     CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario),
 	CONSTRAINT FK_Bienes_Ubicaciones FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion)

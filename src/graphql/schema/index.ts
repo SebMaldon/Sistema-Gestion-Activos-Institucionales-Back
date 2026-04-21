@@ -243,7 +243,6 @@ export const typeDefs = gql`
     cantidad: Float!
     estatus_operativo: String!
     qr_hash: String
-    clave_inmueble: String
     clave_inmueble_ref: String
     clave_presupuestal: String
     clave_modelo: String
@@ -274,7 +273,7 @@ export const typeDefs = gql`
 
   input BienesFilterInput {
     estatus_operativo: String
-    clave_inmueble: String
+    clave_inmueble_ref: String
     id_categoria: Int
     id_unidad: Int
     id_ubicacion: Int
@@ -665,7 +664,6 @@ export const typeDefs = gql`
       num_inv: String
       cantidad: Float
       estatus_operativo: String
-      clave_inmueble: String
       clave_inmueble_ref: String
       clave_modelo: String
       id_usuario_resguardo: Int
@@ -681,7 +679,6 @@ export const typeDefs = gql`
       num_inv: String
       cantidad: Float
       estatus_operativo: String
-      clave_inmueble: String
       clave_inmueble_ref: String
       clave_modelo: String
       id_usuario_resguardo: Int

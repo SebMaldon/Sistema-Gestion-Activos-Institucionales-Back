@@ -13,7 +13,7 @@ import { Unidad } from '../../entities/Unidad';
 
 export interface BienesFilter {
   estatus_operativo?: string;
-  clave_inmueble?: string;
+  clave_inmueble_ref?: string;
   id_categoria?: number;
   id_unidad?: number;
   id_ubicacion?: number;
@@ -34,7 +34,7 @@ export const bienesResolvers = {
       const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
 
       if (filter?.estatus_operativo) qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
-      if (filter?.clave_inmueble) qb.andWhere('b.clave_inmueble_ref = :ci', { ci: filter.clave_inmueble });
+      if (filter?.clave_inmueble_ref) qb.andWhere('b.clave_inmueble_ref = :ci', { ci: filter.clave_inmueble_ref });
       if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
       if (filter?.id_unidad) qb.andWhere('b.id_unidad = :iu', { iu: filter.id_unidad });
       if (filter?.id_ubicacion) qb.andWhere('b.id_ubicacion = :iub', { iub: filter.id_ubicacion });
@@ -119,7 +119,7 @@ export const bienesResolvers = {
       requireAuth(context);
       // Roles 1 (Admin) y 2 (Maestro) pueden crear bienes
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      
+
       if (!args.id_categoria) throw new ValidationError('Debe seleccionar la categoría del bien.');
       if (!args.id_unidad_medida) throw new ValidationError('Debe especificar la unidad de medida.');
       if (!args.estatus_operativo || args.estatus_operativo.trim() === '') {
@@ -182,7 +182,7 @@ export const bienesResolvers = {
     upsertEspecificacionTI: async (_: unknown, { id_bien, ...specs }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      
+
       if (!id_bien || id_bien.trim() === '') {
         throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
       }
@@ -211,8 +211,8 @@ export const bienesResolvers = {
     ubicacion: async (parent: Bien) =>
       parent.id_ubicacion
         ? AppDataSource.getRepository((await import('../../entities/Ubicacion')).Ubicacion).findOne({
-            where: { id_ubicacion: parent.id_ubicacion },
-          })
+          where: { id_ubicacion: parent.id_ubicacion },
+        })
         : null,
 
     inmueble: (parent: Bien, _: unknown, context: GraphQLContext) =>

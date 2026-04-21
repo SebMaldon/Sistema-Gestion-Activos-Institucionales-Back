@@ -307,7 +307,7 @@ export const catalogosResolvers = {
   // ── Field resolvers
   CatInmueble: {
     totalBienes: async (parent: CatInmueble) =>
-      AppDataSource.getRepository(Bien).count({ where: { clave_inmueble: parent.clave_inmueble } }),
+      AppDataSource.getRepository(Bien).count({ where: { clave_inmueble_ref: parent.clave_inmueble } }),
   },
 
   CatModelo: {
