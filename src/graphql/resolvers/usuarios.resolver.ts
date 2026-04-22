@@ -149,15 +149,21 @@ export const usuariosResolvers = {
 
     deleteUsuario: async (_: unknown, { id_usuario }: { id_usuario: string }, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id_usuario: parseInt(id_usuario) } });
       if (!usuario) throw new NotFoundError('Usuario');
       
-      // Soft-delete: deshabilitar en lugar de borrar físicamente
-      usuario.estatus = false;
-      await repo.save(usuario);
-      return true;
+      try {
+        await repo.delete({ id_usuario: parseInt(id_usuario) });
+        return true;
+      } catch (error: any) {
+        // Código 547 en SQL Server corresponde a violación de llave foránea (FK constraint)
+        if (error?.number === 547 || error?.code === 'EREQUEST') {
+          throw new ConflictError('No se puede eliminar el usuario porque tiene activos, incidencias o bitácoras asociadas.');
+        }
+        throw error;
+      }
     },
 
     /**
