@@ -147,13 +147,26 @@ export const typeDefs = gql`
     ciudad: String
     municipio: String
     cp: String
+    ppal: String
     clave_zona: String
+    clave_a: Int
     telefono: String
     zona_reporte: String
     nivel: Int
     no_inmueble: Int
     regimen: Int
     tipo_unidad: Int
+    tipoUnidadInfo: TipoUnidadCatalog
+  }
+
+  type InmuebleEdge {
+    node: Inmueble!
+    cursor: String!
+  }
+
+  type InmueblesConnection {
+    edges: [InmuebleEdge!]!
+    pageInfo: PageInfo!
   }
 
   # ─── UBICACIONES ────────────────────────────────────────
@@ -489,7 +502,8 @@ export const typeDefs = gql`
     unidad(id_unidad: ID!): Unidad
 
     # ── Inmuebles (tabla legacy)
-    inmuebles: [Inmueble!]!
+    inmuebles(search: String, pagination: PaginationInput): InmueblesConnection!
+    catLegacyInmuebles: [Inmueble!]!
     inmueble(clave: ID!): Inmueble
 
     # ── Clasificaciones de Unidades
@@ -599,6 +613,55 @@ export const typeDefs = gql`
       jefatura_asignada: String
     ): CatInmueble!
     deleteCatInmueble(clave_inmueble: ID!): Boolean!
+
+    # ── Inmuebles (legacy)
+    createInmueble(
+      clave: ID!
+      descripcion: String
+      desc_corta: String
+      encargado: String
+      direccion: String
+      calle: String
+      numero: String
+      colonia: String
+      ciudad: String
+      municipio: String
+      cp: String
+      ppal: String
+      clave_zona: String!
+      clave_a: Int
+      telefono: String
+      zona_reporte: String
+      nivel: Int
+      no_inmueble: Int
+      regimen: Int
+      tipo_unidad: Int
+    ): Inmueble!
+
+    updateInmueble(
+      clave: ID!
+      descripcion: String
+      desc_corta: String
+      encargado: String
+      direccion: String
+      calle: String
+      numero: String
+      colonia: String
+      ciudad: String
+      municipio: String
+      cp: String
+      ppal: String
+      clave_zona: String
+      clave_a: Int
+      telefono: String
+      zona_reporte: String
+      nivel: Int
+      no_inmueble: Int
+      regimen: Int
+      tipo_unidad: Int
+    ): Inmueble!
+
+    deleteInmueble(clave: ID!): Boolean!
 
     # ── Catálogos — Marcas
     createMarca(marca: String!): Marca!

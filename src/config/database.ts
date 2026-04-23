@@ -23,6 +23,7 @@ import { Ubicacion } from '../entities/Ubicacion';
 import { Bitacora } from '../entities/Bitacora';
 import { NotificacionMensaje } from '../entities/NotificacionMensaje';
 import { NotificacionLectura } from '../entities/NotificacionLectura';
+import { Inmueble } from '../entities/Inmueble';
 import { logger } from '../utils/logger';
 
 export const AppDataSource = new DataSource({
@@ -52,6 +53,7 @@ export const AppDataSource = new DataSource({
     // Entidades nuevas
     Proveedor,
     Ubicacion, Bitacora, NotificacionMensaje, NotificacionLectura,
+    Inmueble,
   ],
 });
 
