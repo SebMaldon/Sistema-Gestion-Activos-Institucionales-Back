@@ -113,7 +113,25 @@ export const typeDefs = gql`
     proveedor: String
     velocidad: String
     tipo_enlace: Int
+    ip_init: Int
+    fecha_migracion: DateTime
     tipoUnidadInfo: TipoUnidad
+  }
+
+  type TipoUnidadCatalog {
+    id_tipo: Int!
+    tipo_unidad: String!
+    clasificacion: Int
+  }
+
+  type UnidadEdge {
+    node: Unidad!
+    cursor: String!
+  }
+
+  type UnidadesConnection {
+    edges: [UnidadEdge!]!
+    pageInfo: PageInfo!
   }
 
   # Tabla: inmuebles (tabla legacy con datos completos)
@@ -465,7 +483,9 @@ export const typeDefs = gql`
     catUnidadMedida(id_unidad_medida: ID!): CatUnidadMedida
 
     # ── Unidades Operativas
-    unidades(estatus: Int): [Unidad!]!
+    unidades(estatus: Int, search: String, pagination: PaginationInput): UnidadesConnection!
+    catUnidades: [Unidad!]!
+    catTipoUnidades: [TipoUnidadCatalog!]!
     unidad(id_unidad: ID!): Unidad
 
     # ── Inmuebles (tabla legacy)
@@ -819,5 +839,47 @@ export const typeDefs = gql`
     marcarTodasLeidas: Boolean!
     ocultarNotificacion(id_notificacion: Int!): Boolean!
     deleteNotificacion(id_notificacion: Int!): Boolean!
+
+    # ── Unidades
+    createUnidad(
+      no_ref: String!
+      nombre: String
+      ip: String!
+      encargado: String
+      telefono: String
+      clave: String
+      tipo_unidad: Int
+      bits: Int
+      ip_init: Int
+      estatus: Int
+      regimen: Int
+      vlan: Int
+      monitorear: Int
+      proveedor: String
+      fecha_migracion: DateTime
+      velocidad: String
+      tipo_enlace: Int
+    ): Unidad!
+    updateUnidad(
+      id_unidad: Int!
+      no_ref: String
+      nombre: String
+      ip: String
+      encargado: String
+      telefono: String
+      clave: String
+      tipo_unidad: Int
+      bits: Int
+      ip_init: Int
+      estatus: Int
+      regimen: Int
+      vlan: Int
+      monitorear: Int
+      proveedor: String
+      fecha_migracion: DateTime
+      velocidad: String
+      tipo_enlace: Int
+    ): Unidad!
+    deleteUnidad(id_unidad: Int!): Boolean!
   }
 `;

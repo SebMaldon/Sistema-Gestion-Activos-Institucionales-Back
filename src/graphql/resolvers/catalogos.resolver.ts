@@ -12,6 +12,8 @@ import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ConflictError } from '../../utils/errors';
+import { decodeCursor } from '../../utils/pagination';
+
 
 // ── Tipos para tablas legacy (sin entidad TypeORM, consultadas con raw query)
 type Inmueble = Record<string, unknown>;
@@ -82,12 +84,64 @@ export const catalogosResolvers = {
       }),
 
     // ── Unidades operativas (tabla: unidades)
-    unidades: async (_: unknown, { estatus }: { estatus?: number }, context: GraphQLContext) => {
+    unidades: async (
+      _: unknown,
+      {
+        estatus,
+        search,
+        pagination,
+      }: {
+        estatus?: number;
+        search?: string;
+        pagination?: { first?: number; after?: string };
+      },
+      context: GraphQLContext
+    ) => {
       requireAuth(context);
       const qb = AppDataSource.getRepository(Unidad).createQueryBuilder('u');
-      if (estatus !== undefined) qb.andWhere('u.Estatus = :estatus', { estatus });
+      
+      if (estatus !== undefined) qb.andWhere('u.estatus = :estatus', { estatus });
+      if (search) {
+        qb.andWhere('(u.nombre LIKE :search OR u.no_ref LIKE :search OR u.ip LIKE :search)', { search: `%${search}%` });
+      }
 
-      return qb.orderBy('u.Nombre', 'ASC').getMany();
+      const totalCount = await qb.getCount();
+      const first = Math.min(pagination?.first ?? 10, 100);
+      qb.take(first);
+
+      if (pagination?.after) {
+        const cursor = decodeCursor(pagination.after);
+        qb.andWhere('u.id_unidad > :cursor', { cursor: parseInt(cursor) });
+      }
+
+      const items = await qb.orderBy('u.id_unidad', 'ASC').getMany();
+
+      const edges = items.map((node) => ({
+        node,
+        cursor: Buffer.from(String(node.id_unidad)).toString('base64'),
+      }));
+
+      return {
+        edges,
+        pageInfo: {
+          hasNextPage: items.length === first,
+          hasPreviousPage: !!pagination?.after,
+          startCursor: edges[0]?.cursor,
+          endCursor: edges[edges.length - 1]?.cursor,
+          totalCount,
+        },
+      };
+    },
+    catUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Unidad).find({
+        order: { nombre: 'ASC' }
+      });
+    },
+    catTipoUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      const rows = await AppDataSource.query('SELECT IDTipo as id_tipo, TipoUnidad as tipo_unidad, Clasificación as clasificacion FROM TipoUnidades');
+      return rows;
     },
     unidad: async (_: unknown, { id_unidad }: { id_unidad: string }, context: GraphQLContext) => {
       requireAuth(context);
@@ -300,6 +354,29 @@ export const catalogosResolvers = {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
       await AppDataSource.getRepository(CatUnidadMedida).delete({ id_unidad_medida: parseInt(id_unidad_medida) });
+      return true;
+    },
+    
+    // ── Unidades
+    createUnidad: async (_: unknown, args: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Unidad);
+      return repo.save(repo.create(args));
+    },
+    updateUnidad: async (_: unknown, { id_unidad, ...updates }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Unidad);
+      const item = await repo.findOne({ where: { id_unidad } });
+      if (!item) throw new NotFoundError('Unidad');
+      repo.merge(item, updates);
+      return repo.save(item);
+    },
+    deleteUnidad: async (_: unknown, { id_unidad }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN]);
+      await AppDataSource.getRepository(Unidad).delete({ id_unidad });
       return true;
     },
   },
