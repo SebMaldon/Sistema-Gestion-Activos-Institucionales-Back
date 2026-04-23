@@ -253,7 +253,7 @@ export const catalogosResolvers = {
     // ── Inmuebles (legacy)
     createInmueble: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Inmueble);
       const exists = await repo.findOne({ where: { clave: args.clave } });
       if (exists) throw new ConflictError(`Inmueble con clave "${args.clave}" ya existe`);
@@ -261,7 +261,7 @@ export const catalogosResolvers = {
     },
     updateInmueble: async (_: unknown, { clave, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Inmueble);
       const item = await repo.findOne({ where: { clave } });
       if (!item) throw new NotFoundError('Inmueble');
@@ -270,7 +270,7 @@ export const catalogosResolvers = {
     },
     deleteInmueble: async (_: unknown, { clave }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       await AppDataSource.getRepository(Inmueble).delete({ clave });
       return true;
     },
@@ -417,13 +417,13 @@ export const catalogosResolvers = {
     // ── Unidades
     createUnidad: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Unidad);
       return repo.save(repo.create(args));
     },
     updateUnidad: async (_: unknown, { id_unidad, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Unidad);
       const item = await repo.findOne({ where: { id_unidad } });
       if (!item) throw new NotFoundError('Unidad');
@@ -432,7 +432,7 @@ export const catalogosResolvers = {
     },
     deleteUnidad: async (_: unknown, { id_unidad }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       await AppDataSource.getRepository(Unidad).delete({ id_unidad });
       return true;
     },
