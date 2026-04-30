@@ -329,6 +329,7 @@ export const typeDefs = gql`
     puerto_red: String
     switch_red: String
     modelo_so: String
+    id_monitor: ID
     bien: Bien
   }
 
@@ -782,6 +783,7 @@ export const typeDefs = gql`
       puerto_red: String
       switch_red: String
       modelo_so: String
+      id_monitor: ID
     ): EspecificacionTI!
 
     # ── Proveedores

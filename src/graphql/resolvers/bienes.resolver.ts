@@ -187,6 +187,54 @@ export const bienesResolvers = {
         throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
       }
 
+      if (specs.id_monitor && specs.id_monitor.trim() !== '') {
+        const bienRepo = AppDataSource.getRepository(Bien);
+        
+        // 1. Validar que el bien principal sea PC (tipo de dispositivo 4)
+        const bienPrincipal = await bienRepo.createQueryBuilder('b')
+          .leftJoinAndSelect('b.modelo', 'm')
+          .where('b.id_bien = :id', { id: id_bien })
+          .getOne();
+
+        if (!bienPrincipal) {
+          throw new ValidationError('El bien principal no existe.');
+        }
+
+        if (bienPrincipal.modelo?.tipo_disp !== 4) {
+          throw new ValidationError('Solo los bienes de tipo PC (tipo de dispositivo 4) pueden tener un monitor ligado.');
+        }
+
+        // 2. Buscar si existe el monitor
+        const monitorExistente = await bienRepo.findOne({ where: { id_bien: specs.id_monitor } });
+
+        if (monitorExistente) {
+          // Si existe, actualizar sus datos con los del bien principal
+          monitorExistente.id_unidad = bienPrincipal.id_unidad;
+          monitorExistente.id_ubicacion = bienPrincipal.id_ubicacion;
+          monitorExistente.clave_inmueble_ref = bienPrincipal.clave_inmueble_ref;
+          monitorExistente.id_usuario_resguardo = bienPrincipal.id_usuario_resguardo;
+          monitorExistente.fecha_actualizacion = new Date();
+          await bienRepo.save(monitorExistente);
+        } else {
+          // Si no existe, crearlo con datos por defecto
+          const nuevoMonitor = bienRepo.create({
+            id_bien: specs.id_monitor,
+            id_categoria: 1, // Equipo de Cómputo
+            id_unidad_medida: 1, // Pieza
+            id_unidad: bienPrincipal.id_unidad,
+            id_ubicacion: bienPrincipal.id_ubicacion,
+            cantidad: 1,
+            estatus_operativo: 'ACTIVO',
+            clave_inmueble_ref: bienPrincipal.clave_inmueble_ref,
+            clave_modelo: '_Mon_Sin_Modelo_',
+            id_usuario_resguardo: bienPrincipal.id_usuario_resguardo,
+            qr_hash: Buffer.from(`IMSS-${specs.id_monitor}`).toString('base64'),
+            fecha_actualizacion: new Date()
+          });
+          await bienRepo.save(nuevoMonitor);
+        }
+      }
+
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {
