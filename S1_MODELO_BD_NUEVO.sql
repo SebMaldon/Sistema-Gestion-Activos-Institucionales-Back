@@ -163,13 +163,14 @@ CREATE TABLE Bienes (
     clave_modelo VARCHAR(30),
     id_usuario_resguardo INT,
     fecha_adquisicion DATE,
-    fecha_actualizacion DATETIME DEFAULT GETDATE(),
+    fecha_actualizacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     CONSTRAINT FK_Bienes_Categorias FOREIGN KEY (id_categoria) REFERENCES Cat_CategoriasActivo(id_categoria),
     CONSTRAINT FK_Bienes_UnidadMedida FOREIGN KEY (id_unidad_medida) REFERENCES Cat_UnidadesMedida(id_unidad_medida),
     CONSTRAINT FK_Bienes_UnidadOperativa FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad),
     CONSTRAINT FK_Bienes_Modelos FOREIGN KEY (clave_modelo) REFERENCES Cat_Modelos(clave_modelo),
     CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario),
-	CONSTRAINT FK_Bienes_Ubicaciones FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion)
+	CONSTRAINT FK_Bienes_Ubicaciones FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion),
+	CONSTRAINT FK_Bienes_Inmueble FOREIGN KEY (clave_inmueble_ref) REFERENCES Cat_Inmuebles(clave_inmueble),
 );
 GO
 
@@ -197,6 +198,7 @@ CREATE TABLE Especificaciones_TI (
     puerto_red VARCHAR(15),
     switch_red VARCHAR(50),
     modelo_so VARCHAR(50),
+	id_monitor UNIQUEIDENTIFIER,
     CONSTRAINT FK_Especificaciones_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
 );
 GO
@@ -231,7 +233,7 @@ CREATE TABLE Incidencias (
     id_usuario_resuelve INT NULL, -- Es el técnico o responsable que finalmente resuelve la incidencia, puede ser NULL si aún no se ha resuelto
     id_tipo_incidencia INT NOT NULL, -- FK a la tabla de tipos de incidencias
     descripcion_falla NVARCHAR(MAX) NOT NULL,
-    fecha_reporte DATETIME DEFAULT GETDATE(),
+    fecha_reporte DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     estatus_reparacion VARCHAR(50) DEFAULT 'Pendiente', 
     resolucion_textual NVARCHAR(MAX) NULL,   
     fecha_resolucion DATETIME NULL,
@@ -253,7 +255,7 @@ CREATE TABLE Movimientos_Inventario (
     tipo_movimiento VARCHAR(30), 
     cantidad_movida DECIMAL(10,2) DEFAULT 1, 
     num_remision VARCHAR(50),
-    fecha_movimiento DATETIME DEFAULT GETDATE(),
+    fecha_movimiento DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     origen VARCHAR(100),
     destino VARCHAR(100),
     url_formato_pdf VARCHAR(255),
@@ -268,7 +270,7 @@ CREATE TABLE Notas (
     id_incidencia INT NULL,
     id_usuario_autor INT NULL, 
     contenido_nota VARCHAR(MAX) NOT NULL,
-    fecha_creacion DATETIME DEFAULT GETDATE(),
+    fecha_creacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     
     CONSTRAINT FK_Notas_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
     CONSTRAINT FK_Notas_Incidencias FOREIGN KEY (id_incidencia) REFERENCES Incidencias(id_incidencia),
@@ -389,7 +391,7 @@ BEGIN
             -- (en INSERT ya se establece via DEFAULT GETDATE())
             B.fecha_actualizacion = CASE
                 WHEN EXISTS (SELECT 1 FROM deleted d WHERE d.id_bien = B.id_bien)
-                THEN GETDATE()
+                THEN CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME)
                 ELSE B.fecha_actualizacion
             END
         FROM Bienes B
@@ -411,7 +413,7 @@ CREATE TABLE Bitacora (
     tabla_afectada VARCHAR(100) NOT NULL,    -- Ej: 'Bienes', 'Usuarios', 'Ubicaciones'
     registro_afectado VARCHAR(100) NULL,     -- ID del registro que fue modificado/creado
     detalles_movimiento NVARCHAR(MAX) NULL,  -- Descripción textual o un JSON con los valores viejos/nuevos
-    fecha_movimiento DATETIME DEFAULT GETDATE(),
+    fecha_movimiento DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     CONSTRAINT FK_Bitacora_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
 );
 GO
@@ -428,7 +430,7 @@ CREATE TABLE Notificaciones_Mensajes (
     -- Guarda el ID correspondiente al tipo_audiencia. 
     -- Si es GLOBAL, puede ser NULL. Si es ROL, guarda el id_rol, etc.
     id_audiencia INT NULL, 
-    fecha_creacion DATETIME DEFAULT GETDATE(),
+    fecha_creacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
 );
 GO
 
