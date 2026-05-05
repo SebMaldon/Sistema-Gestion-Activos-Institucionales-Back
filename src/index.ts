@@ -19,6 +19,8 @@ import { GraphQLContext, buildContext } from './middleware/context';
 import { connectDatabase } from './config/database';
 import { env } from './config/environment';
 import { logger } from './utils/logger';
+import { sessionContext } from './utils/asyncLocalStorage';
+import { asyncContextPlugin } from './utils/apolloPlugin';
 
 async function bootstrap() {
   // 1. Conectar a la base de datos
@@ -73,6 +75,7 @@ async function bootstrap() {
         embed: true,
         includeCookies: true,
       }),
+      asyncContextPlugin,
     ],
     formatError: (formattedError, _error) => {
       logger.error('GraphQL Error:', {
@@ -80,9 +83,7 @@ async function bootstrap() {
         code: formattedError.extensions?.code,
         path: formattedError.path,
       });
-      // No exponer stack traces en producción
       if (!env.isDev) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { stacktrace, ...rest } = formattedError.extensions || {};
         return { ...formattedError, extensions: rest };
       }

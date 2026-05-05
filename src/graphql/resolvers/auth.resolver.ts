@@ -6,6 +6,7 @@ import { GraphQLContext } from '../../middleware/context';
 import { requireAuth } from '../../middleware/auth.middleware';
 import { AuthenticationError, NotFoundError, ValidationError } from '../../utils/errors';
 import { logger } from '../../utils/logger';
+import { registrarBitacora } from './bitacora.resolver';
 
 export const authResolvers = {
   Query: {
@@ -53,6 +54,15 @@ export const authResolvers = {
       const token = jwt.sign(payload, env.jwt.secret, { expiresIn: env.jwt.expiresIn } as jwt.SignOptions);
 
       logger.info(`Login exitoso: ${matricula} (rol: ${usuario.id_rol})`);
+      
+      // Registrar en bitácora
+      await registrarBitacora(
+        usuario.id_usuario,
+        'LOGIN',
+        'Usuarios',
+        String(usuario.id_usuario),
+        { info: `Sesión iniciada correctamente por ${usuario.nombre_completo || usuario.matricula}` }
+      );
 
       return {
         token,

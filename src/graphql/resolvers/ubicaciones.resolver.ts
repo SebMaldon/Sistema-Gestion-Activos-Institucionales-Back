@@ -75,7 +75,11 @@ export const ubicacionesResolvers = {
     ) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(Ubicacion).delete({ id_ubicacion: parseInt(id_ubicacion) });
+      const repo = AppDataSource.getRepository(Ubicacion);
+      const item = await repo.findOne({ where: { id_ubicacion: parseInt(id_ubicacion) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
   },

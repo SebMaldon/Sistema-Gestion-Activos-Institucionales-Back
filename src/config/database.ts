@@ -26,6 +26,8 @@ import { NotificacionLectura } from '../entities/NotificacionLectura';
 import { Inmueble } from '../entities/Inmueble';
 import { logger } from '../utils/logger';
 
+import { BitacoraSubscriber } from '../subscribers/BitacoraSubscriber';
+
 export const AppDataSource = new DataSource({
   type: 'mssql',
   host: env.db.host,
@@ -54,6 +56,9 @@ export const AppDataSource = new DataSource({
     Proveedor,
     Ubicacion, Bitacora, NotificacionMensaje, NotificacionLectura,
     Inmueble,
+  ],
+  subscribers: [
+    BitacoraSubscriber,
   ],
 });
 

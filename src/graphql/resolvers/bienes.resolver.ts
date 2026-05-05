@@ -174,8 +174,18 @@ export const bienesResolvers = {
       }
 
       // Sin dependencias: eliminar notas primero y luego el bien
-      await AppDataSource.getRepository(Nota).delete({ id_bien });
-      await AppDataSource.getRepository(Bien).delete({ id_bien });
+      const notaRepo = AppDataSource.getRepository(Nota);
+      const bienRepo = AppDataSource.getRepository(Bien);
+
+      const notas = await notaRepo.find({ where: { id_bien } });
+      if (notas.length > 0) {
+        await notaRepo.remove(notas);
+      }
+
+      const bien = await bienRepo.findOne({ where: { id_bien } });
+      if (bien) {
+        await bienRepo.remove(bien);
+      }
       return true;
     },
 

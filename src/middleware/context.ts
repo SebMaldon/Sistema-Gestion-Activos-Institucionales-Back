@@ -6,6 +6,8 @@ import { AppDataSource } from '../config/database';
 import { Usuario } from '../entities/Usuario';
 import { createDataLoaders, DataLoaders } from '../graphql/dataloaders';
 
+import { sessionContext } from '../utils/asyncLocalStorage';
+
 export interface JwtPayload {
   id_usuario: number;
   id_rol: number;
@@ -30,8 +32,11 @@ export async function buildContext({ req }: { req: Request }): Promise<GraphQLCo
 
   try {
     const payload = jwt.verify(token, env.jwt.secret) as JwtPayload;
+    
+    // Almacenar el ID del usuario en el contexto asíncrono global
     return { user: payload, loaders };
-  } catch {
+  } catch (error) {
+    console.error('[Context] Error verifying token:', error);
     return { loaders };
   }
 }

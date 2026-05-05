@@ -11,9 +11,11 @@ import { Unidad } from '../../entities/Unidad';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError, ConflictError } from '../../utils/errors';
+import { NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 import { Inmueble } from '../../entities/Inmueble';
+import { Usuario } from '../../entities/Usuario';
+import { Ubicacion } from '../../entities/Ubicacion';
 
 
 // ── Tipos para tablas legacy (consultadas con raw query o entidad)
@@ -246,7 +248,16 @@ export const catalogosResolvers = {
     deleteCatInmueble: async (_: unknown, { clave_inmueble }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(CatInmueble).delete({ clave_inmueble });
+      const repo = AppDataSource.getRepository(CatInmueble);
+      const item = await repo.findOne({ where: { clave_inmueble } });
+      if (!item) throw new NotFoundError('Inmueble (Cat)');
+
+      const bienesCount = await AppDataSource.getRepository(Bien).count({ where: { clave_inmueble_ref: clave_inmueble } });
+      if (bienesCount > 0) {
+        throw new ForbiddenError(`No se puede eliminar el inmueble porque tiene ${bienesCount} activo(s) vinculados.`);
+      }
+
+      await repo.remove(item);
       return true;
     },
 
@@ -271,7 +282,17 @@ export const catalogosResolvers = {
     deleteInmueble: async (_: unknown, { clave }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      await AppDataSource.getRepository(Inmueble).delete({ clave });
+      const repo = AppDataSource.getRepository(Inmueble);
+      const item = await repo.findOne({ where: { clave } });
+      if (!item) throw new NotFoundError('Inmueble');
+
+      // Aunque es legacy, verificamos si hay bienes que usen esta clave
+      const bienesCount = await AppDataSource.getRepository(Bien).count({ where: { clave_inmueble_ref: clave } });
+      if (bienesCount > 0) {
+        throw new ForbiddenError(`No se puede eliminar el inmueble legacy porque tiene ${bienesCount} activo(s) vinculados.`);
+      }
+
+      await repo.remove(item);
       return true;
     },
 
@@ -293,7 +314,11 @@ export const catalogosResolvers = {
     deleteMarca: async (_: unknown, { clave_marca }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(Marca).delete({ clave_marca: parseInt(clave_marca) });
+      const repo = AppDataSource.getRepository(Marca);
+      const item = await repo.findOne({ where: { clave_marca: parseInt(clave_marca) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -319,7 +344,11 @@ export const catalogosResolvers = {
     deleteProveedor: async (_: unknown, { id_proveedor }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(Proveedor).delete({ id_proveedor: parseInt(id_proveedor) });
+      const repo = AppDataSource.getRepository(Proveedor);
+      const item = await repo.findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -341,7 +370,11 @@ export const catalogosResolvers = {
     deleteTipoDispositivo: async (_: unknown, { tipo_disp }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(TipoDispositivo).delete({ tipo_disp: parseInt(tipo_disp) });
+      const repo = AppDataSource.getRepository(TipoDispositivo);
+      const item = await repo.findOne({ where: { tipo_disp: parseInt(tipo_disp) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -366,7 +399,11 @@ export const catalogosResolvers = {
     deleteCatModelo: async (_: unknown, { clave_modelo }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(CatModelo).delete({ clave_modelo });
+      const repo = AppDataSource.getRepository(CatModelo);
+      const item = await repo.findOne({ where: { clave_modelo } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -388,7 +425,11 @@ export const catalogosResolvers = {
     deleteCatCategoriaActivo: async (_: unknown, { id_categoria }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(CatCategoriaActivo).delete({ id_categoria: parseInt(id_categoria) });
+      const repo = AppDataSource.getRepository(CatCategoriaActivo);
+      const item = await repo.findOne({ where: { id_categoria: parseInt(id_categoria) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -410,7 +451,11 @@ export const catalogosResolvers = {
     deleteCatUnidadMedida: async (_: unknown, { id_unidad_medida }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(CatUnidadMedida).delete({ id_unidad_medida: parseInt(id_unidad_medida) });
+      const repo = AppDataSource.getRepository(CatUnidadMedida);
+      const item = await repo.findOne({ where: { id_unidad_medida: parseInt(id_unidad_medida) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
     
@@ -433,7 +478,31 @@ export const catalogosResolvers = {
     deleteUnidad: async (_: unknown, { id_unidad }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      await AppDataSource.getRepository(Unidad).delete({ id_unidad });
+      
+      const id = parseInt(id_unidad);
+      const repo = AppDataSource.getRepository(Unidad);
+      const item = await repo.findOne({ where: { id_unidad: id } });
+      if (!item) throw new NotFoundError('Unidad');
+
+      // 1. Verificar Usuarios
+      const usuariosCount = await AppDataSource.getRepository(Usuario).count({ where: { id_unidad: id } });
+      if (usuariosCount > 0) {
+        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${usuariosCount} usuario(s) asignado(s).`);
+      }
+
+      // 2. Verificar Ubicaciones
+      const ubicacionesCount = await AppDataSource.getRepository(Ubicacion).count({ where: { id_unidad: id } });
+      if (ubicacionesCount > 0) {
+        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${ubicacionesCount} ubicación(es) técnica(s) asociada(s).`);
+      }
+
+      // 3. Verificar Bienes
+      const bienesCount = await AppDataSource.getRepository(Bien).count({ where: { id_unidad: id } });
+      if (bienesCount > 0) {
+        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${bienesCount} activo(s) (bienes) vinculados.`);
+      }
+
+      await repo.remove(item);
       return true;
     },
   },

@@ -93,7 +93,11 @@ export const movimientosResolvers = {
     deleteMovimiento: async (_: unknown, { id_movimiento }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(MovimientoInventario).delete({ id_movimiento: parseInt(id_movimiento) });
+      const repo = AppDataSource.getRepository(MovimientoInventario);
+      const item = await repo.findOne({ where: { id_movimiento: parseInt(id_movimiento) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 

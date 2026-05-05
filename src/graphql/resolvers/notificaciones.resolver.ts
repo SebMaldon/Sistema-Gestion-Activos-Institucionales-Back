@@ -287,7 +287,7 @@ export const notificacionesResolvers = {
       const repo = AppDataSource.getRepository(NotificacionMensaje);
       const msg = await repo.findOne({ where: { id_notificacion } });
       if (!msg) throw new NotFoundError('Notificación');
-      await repo.delete({ id_notificacion });
+      await repo.remove(msg);
       return true;
     },
   },

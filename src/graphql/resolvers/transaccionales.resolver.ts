@@ -170,7 +170,11 @@ export const transaccionalesResolvers = {
     deleteGarantia: async (_: unknown, { id_garantia }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(Garantia).delete({ id_garantia: parseInt(id_garantia) });
+      const repo = AppDataSource.getRepository(Garantia);
+      const item = await repo.findOne({ where: { id_garantia: parseInt(id_garantia) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -195,7 +199,11 @@ export const transaccionalesResolvers = {
     deleteTipoIncidencia: async (_: unknown, { id_tipo_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(TipoIncidencia).delete({ id_tipo_incidencia: parseInt(id_tipo_incidencia) });
+      const repo = AppDataSource.getRepository(TipoIncidencia);
+      const item = await repo.findOne({ where: { id_tipo_incidencia: parseInt(id_tipo_incidencia) } });
+      if (item) {
+        await repo.remove(item);
+      }
       return true;
     },
 
@@ -337,9 +345,21 @@ export const transaccionalesResolvers = {
     deleteIncidencia: async (_: unknown, { id_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]); // Solo Maestro (id_rol = 1)
+      
+      const notaRepo = AppDataSource.getRepository(Nota);
+      const incidenciaRepo = AppDataSource.getRepository(Incidencia);
+
       // Borrar notas primero (la FK no tiene ON DELETE CASCADE)
-      await AppDataSource.getRepository(Nota).delete({ id_incidencia: parseInt(id_incidencia) });
-      await AppDataSource.getRepository(Incidencia).delete({ id_incidencia: parseInt(id_incidencia) });
+      const notas = await notaRepo.find({ where: { id_incidencia: parseInt(id_incidencia) } });
+      if (notas.length > 0) {
+        await notaRepo.remove(notas);
+      }
+
+      const incidencia = await incidenciaRepo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
+      if (incidencia) {
+        await incidenciaRepo.remove(incidencia);
+      }
+      
       return true;
     },
 
@@ -363,7 +383,11 @@ export const transaccionalesResolvers = {
     deleteNota: async (_: unknown, { id_nota }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN]);
-      await AppDataSource.getRepository(Nota).delete({ id_nota: parseInt(id_nota) });
+      const repo = AppDataSource.getRepository(Nota);
+      const nota = await repo.findOne({ where: { id_nota: parseInt(id_nota) } });
+      if (nota) {
+        await repo.remove(nota);
+      }
       return true;
     },
   },

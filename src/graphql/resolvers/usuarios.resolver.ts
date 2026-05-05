@@ -155,7 +155,7 @@ export const usuariosResolvers = {
       if (!usuario) throw new NotFoundError('Usuario');
       
       try {
-        await repo.delete({ id_usuario: parseInt(id_usuario) });
+        await repo.remove(usuario);
         return true;
       } catch (error: any) {
         // Código 547 en SQL Server corresponde a violación de llave foránea (FK constraint)
