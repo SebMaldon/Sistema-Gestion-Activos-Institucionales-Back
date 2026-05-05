@@ -170,7 +170,6 @@ CREATE TABLE Bienes (
     CONSTRAINT FK_Bienes_Modelos FOREIGN KEY (clave_modelo) REFERENCES Cat_Modelos(clave_modelo),
     CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario),
 	CONSTRAINT FK_Bienes_Ubicaciones FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion),
-	CONSTRAINT FK_Bienes_Inmueble FOREIGN KEY (clave_inmueble_ref) REFERENCES Cat_Inmuebles(clave_inmueble),
 );
 GO
 
