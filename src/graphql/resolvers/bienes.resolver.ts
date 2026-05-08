@@ -287,6 +287,9 @@ export const bienesResolvers = {
 
     garantias: (parent: Bien, _: unknown, context: GraphQLContext) =>
       context.loaders.garantiasByBienLoader.load(parent.id_bien),
+
+    notas: (parent: Bien, _: unknown, context: GraphQLContext) =>
+      context.loaders.notasByBienLoader.load(parent.id_bien),
   },
 
   EspecificacionTI: {

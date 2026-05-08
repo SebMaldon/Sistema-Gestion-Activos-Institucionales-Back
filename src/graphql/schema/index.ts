@@ -290,6 +290,7 @@ export const typeDefs = gql`
     usuarioResguardo: Usuario
     especificacionTI: EspecificacionTI
     garantias: [Garantia!]
+    notas: [Nota!]
   }
 
   type BienEdge {

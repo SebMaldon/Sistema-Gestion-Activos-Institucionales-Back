@@ -160,6 +160,22 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k) ?? []);
   });
 
+  // ── Notas agrupadas por id_bien — elimina N+1 en Bien.notas
+  const notasByBienLoader = new DataLoader<string, Nota[]>(async (keys) => {
+    const items = await AppDataSource.getRepository(Nota).find({
+      where: { id_bien: In(keys as string[]) },
+      order: { fecha_creacion: 'DESC' },
+    });
+    const map = new Map<string, Nota[]>();
+    items.forEach((n: Nota) => {
+      if (!n.id_bien) return;
+      const arr = map.get(n.id_bien) ?? [];
+      arr.push(n);
+      map.set(n.id_bien, arr);
+    });
+    return keys.map((k) => map.get(k) ?? []);
+  });
+
   return {
     marcaLoader,
     tipoDispositivoLoader,
@@ -175,6 +191,7 @@ export function createDataLoaders() {
     bienLoader,
     tipoIncidenciaLoader,
     notasByIncidenciaLoader,
+    notasByBienLoader,
   };
 }
 

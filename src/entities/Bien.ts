@@ -11,6 +11,7 @@ import { Unidad } from './Unidad';
 import { Ubicacion } from './Ubicacion';
 import { EspecificacionTI } from './EspecificacionTI';
 import { Garantia } from './Garantia';
+import { Nota } from './Nota';
 import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
 
@@ -101,6 +102,9 @@ export class Bien {
 
   @OneToMany(() => Garantia, (g) => g.bien)
   garantias?: Garantia[];
+
+  @OneToMany(() => Nota, (nota) => nota.bien)
+  notas?: Nota[];
 
   @OneToMany(() => Incidencia, (inc) => inc.bien)
   incidencias?: Incidencia[];
