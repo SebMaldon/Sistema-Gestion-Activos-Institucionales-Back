@@ -11,7 +11,7 @@ import { Unidad } from '../../entities/Unidad';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError, ConflictError, ForbiddenError } from '../../utils/errors';
+import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 import { Inmueble } from '../../entities/Inmueble';
 import { Usuario } from '../../entities/Usuario';
@@ -300,7 +300,19 @@ export const catalogosResolvers = {
     createMarca: async (_: unknown, { marca }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      return AppDataSource.getRepository(Marca).save({ marca });
+      if (!marca || !marca.trim()) throw new ValidationError('El nombre de la marca es obligatorio.');
+      const repo = AppDataSource.getRepository(Marca);
+      // Validar duplicado (case-insensitive)
+      const existente = await repo
+        .createQueryBuilder('m')
+        .where('LOWER(m.marca) = LOWER(:nombre)', { nombre: marca.trim() })
+        .getOne();
+      if (existente) {
+        throw new ConflictError(
+          `LA_MARCA_YA_EXISTE:${existente.clave_marca}:${existente.marca}`
+        );
+      }
+      return repo.save({ marca: marca.trim() });
     },
     updateMarca: async (_: unknown, { clave_marca, marca }: any, context: GraphQLContext) => {
       requireAuth(context);
@@ -356,7 +368,19 @@ export const catalogosResolvers = {
     createTipoDispositivo: async (_: unknown, { nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      return AppDataSource.getRepository(TipoDispositivo).save({ nombre_tipo });
+      if (!nombre_tipo || !nombre_tipo.trim()) throw new ValidationError('El nombre del tipo de dispositivo es obligatorio.');
+      const repo = AppDataSource.getRepository(TipoDispositivo);
+      // Validar duplicado (case-insensitive)
+      const existente = await repo
+        .createQueryBuilder('t')
+        .where('LOWER(t.nombre_tipo) = LOWER(:nombre)', { nombre: nombre_tipo.trim() })
+        .getOne();
+      if (existente) {
+        throw new ConflictError(
+          `EL_TIPO_YA_EXISTE:${existente.tipo_disp}:${existente.nombre_tipo}`
+        );
+      }
+      return repo.save({ nombre_tipo: nombre_tipo.trim() });
     },
     updateTipoDispositivo: async (_: unknown, { tipo_disp, nombre_tipo }: any, context: GraphQLContext) => {
       requireAuth(context);
@@ -382,10 +406,16 @@ export const catalogosResolvers = {
     createCatModelo: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      if (!args.clave_modelo || !String(args.clave_modelo).trim()) throw new ValidationError('La clave del modelo es obligatoria.');
       const repo = AppDataSource.getRepository(CatModelo);
-      const exists = await repo.findOne({ where: { clave_modelo: args.clave_modelo } });
-      if (exists) throw new ConflictError(`Modelo "${args.clave_modelo}" ya existe`);
-      return repo.save(repo.create(args));
+      const clave = String(args.clave_modelo).trim().toUpperCase();
+      const exists = await repo.findOne({ where: { clave_modelo: clave } });
+      if (exists) {
+        throw new ConflictError(
+          `EL_MODELO_YA_EXISTE:${exists.clave_modelo}:${exists.descrip_disp || ''}`
+        );
+      }
+      return repo.save(repo.create({ ...args, clave_modelo: clave }));
     },
     updateCatModelo: async (_: unknown, { clave_modelo, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);

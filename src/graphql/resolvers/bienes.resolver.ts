@@ -127,6 +127,23 @@ export const bienesResolvers = {
       }
 
       const repo = AppDataSource.getRepository(Bien);
+
+      // Validar unicidad de num_serie
+      if (args.num_serie && args.num_serie.trim() !== '') {
+        const dupSerie = await repo.findOne({ where: { num_serie: args.num_serie.trim() } });
+        if (dupSerie) {
+          throw new ValidationError(`El número de serie "${args.num_serie.trim()}" ya está registrado en otro bien.`);
+        }
+      }
+
+      // Validar unicidad de num_inv
+      if (args.num_inv && args.num_inv.trim() !== '') {
+        const dupInv = await repo.findOne({ where: { num_inv: args.num_inv.trim() } });
+        if (dupInv) {
+          throw new ValidationError(`El número de inventario "${args.num_inv.trim()}" ya está registrado en otro bien.`);
+        }
+      }
+
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
       // El trigger de BD se encargará de calcular clave_presupuestal
@@ -146,6 +163,23 @@ export const bienesResolvers = {
       const repo = AppDataSource.getRepository(Bien);
       const bien = await repo.findOne({ where: { id_bien } });
       if (!bien) throw new NotFoundError('Bien');
+
+      // Validar unicidad de num_serie (excluyendo el bien actual)
+      if (updates.num_serie && updates.num_serie.trim() !== '') {
+        const dupSerie = await repo.findOne({ where: { num_serie: updates.num_serie.trim() } });
+        if (dupSerie && dupSerie.id_bien !== id_bien) {
+          throw new ValidationError(`El número de serie "${updates.num_serie.trim()}" ya pertenece a otro bien.`);
+        }
+      }
+
+      // Validar unicidad de num_inv (excluyendo el bien actual)
+      if (updates.num_inv && updates.num_inv.trim() !== '') {
+        const dupInv = await repo.findOne({ where: { num_inv: updates.num_inv.trim() } });
+        if (dupInv && dupInv.id_bien !== id_bien) {
+          throw new ValidationError(`El número de inventario "${updates.num_inv.trim()}" ya pertenece a otro bien.`);
+        }
+      }
+
       // Forzar actualización de fecha_actualizacion en cada UPDATE
       updates.fecha_actualizacion = new Date();
       repo.merge(bien, updates);
