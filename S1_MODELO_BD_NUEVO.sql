@@ -12,13 +12,44 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
--- Cat�logo de Inmuebles
-CREATE TABLE Cat_Inmuebles (
-    clave_inmueble VARCHAR(50) PRIMARY KEY,
+-- Cat�logo de unidades
+CREATE TABLE Cat_Unidades (
+    clave_unidad VARCHAR(50) PRIMARY KEY,
     nombre_ubicacion VARCHAR(150) NOT NULL,
     direccion VARCHAR(MAX),
     jefatura_asignada VARCHAR(120)
 );
+GO
+--Tipo de unidades
+CREATE TABLE [dbo].[TipoUnidades](
+	[IDTipo] [int] IDENTITY(1,1) NOT NULL,
+	[Clasificación] [int] NULL,
+	[TipoUnidad] [varchar](50) NULL,
+ CONSTRAINT [PK_TipoUnidades] PRIMARY KEY CLUSTERED 
+(
+	[IDTipo] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+--Clasificación de unidades
+CREATE TABLE [dbo].[ClasificacionesUnidades](
+	[IDClas] [int] IDENTITY(1,1) NOT NULL,
+	[ClasificacionUnidades] [varchar](50) NULL,
+ CONSTRAINT [PK_ClasificacionesUnidades] PRIMARY KEY CLUSTERED 
+(
+	[IDClas] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
 GO
 
 -- Cat�logo de Marcas
@@ -75,6 +106,12 @@ CREATE TABLE Roles (
 );
 GO
 
+create table Rol_empleados (
+    id_rol_empleado int identity(1,1) primary key,
+    nombre_empleo varchar(100) not null
+);
+GO
+
 -- Categor�as de Activo
 CREATE TABLE Cat_CategoriasActivo (
     id_categoria INT IDENTITY(1,1) PRIMARY KEY,
@@ -92,20 +129,56 @@ CREATE TABLE Cat_UnidadesMedida (
 );
 GO
 
--- NUEVA TABLA: Unidades (Operativas / Red)
 CREATE TABLE [dbo].[unidades](
-    [id_unidad] [int] IDENTITY(1,1) PRIMARY KEY, -- Modificado para est�ndar de llaves for�neas
+	[clave] [varchar](50) NOT NULL,
+	[descripcion] [varchar](100) NULL,
+	[desc_corta] [varchar](15) NULL,
+	[encargado] [varchar](200) NULL,
+	[direccion] [varchar](200) NULL,
+	[calle] [varchar](70) NULL,
+	[numero] [varchar](5) NULL,
+	[colonia] [varchar](50) NULL,
+	[ciudad] [varchar](50) NULL,
+	[municipio] [varchar](50) NULL,
+	[cp] [varchar](50) NULL,
+	[ppal] [varchar](50) NULL,
+	[clave_zona] [varchar](5) NOT NULL,
+	[clave_A] [int] NULL,
+	[zonaReporte] [varchar](50) NULL,
+	[Nivel] [int] NULL,
+	[NOInmueble] [int] NULL,
+	[Regimen] [int] NULL,
+	[TipoUnidad] [int] NULL,
+ CONSTRAINT [PK_unidades] PRIMARY KEY CLUSTERED 
+(
+	[clave] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[unidades] ADD  CONSTRAINT [DF_inmu_clave_zona]  DEFAULT ((1)) FOR [clave_zona]
+GO
+ALTER TABLE [dbo].[unidades]  WITH CHECK ADD  CONSTRAINT [FK_unidades_TipoUnidades] FOREIGN KEY([TipoUnidad])
+REFERENCES [dbo].[TipoUnidades] ([IDTipo])
+GO
+ALTER TABLE [dbo].[unidades] CHECK CONSTRAINT [FK_unidades_TipoUnidades]
+GO
+ALTER TABLE [dbo].[TipoUnidades]  WITH CHECK ADD  CONSTRAINT [FK_TipoUnidades_ClasificacionesUnidades] FOREIGN KEY([Clasificación])
+REFERENCES [dbo].[ClasificacionesUnidades] ([IDClas])
+GO
+ALTER TABLE [dbo].[TipoUnidades] CHECK CONSTRAINT [FK_TipoUnidades_ClasificacionesUnidades]
+GO
+
+-- NUEVA TABLA: Segmentos (Operativas / Red)
+CREATE TABLE [dbo].[segmentos](
+    [id_segmento] [int] IDENTITY(1,1) PRIMARY KEY, -- Modificado para est�ndar de llaves for�neas
     [No_Ref] [varchar](50) NOT NULL,
     [Nombre] [varchar](200) NULL,
     [Ip] [varchar](15) NOT NULL,
-    [Encargado] [varchar](max) NULL,
-    [Telefono] [varchar](50) NULL,
-    [clave] [varchar](13) NULL,
-    [TipoUnidad] [int] NULL,
+    [clave] [varchar](50) NULL,
     [Bits] [int] NULL,
     [IPInit] [int] NULL,
     [Estatus] [int] NULL,
-    [Regimen] [int] NULL,
     [VLAN] [int] NULL,
     [Monitorear] [int] NULL,
     [Proveedor] [varchar](500) NULL,
@@ -114,9 +187,12 @@ CREATE TABLE [dbo].[unidades](
     [TipoEnlace] [int] NULL,
     [Diagrama_Red] [nvarchar](max) NULL,
     [Fecha_act_diag] [varbinary](50) NULL,
-    [fecha_diag] [varchar](50) NULL
+    [fecha_diag] [varchar](50) NULL,
+    constraint FK_CLAVE_SEGMENTOS_UNIDADES FOREIGN KEY (clave) REFERENCES unidades(clave)
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+
+
 
 -- ==========================================
 -- 2. ENTIDADES PRINCIPALES
@@ -130,10 +206,10 @@ CREATE TABLE Usuarios (
     correo_electronico VARCHAR(70),
     password_hash VARCHAR(255) NULL, -- MODIFICADO: Acepta NULL para el rol "Sin Acceso"
     id_rol INT NOT NULL DEFAULT 3,
-    id_unidad INT NULL,              -- NUEVO: Enlace a la tabla de unidades
+    id_unidad int NULL,              -- NUEVO: Enlace a la tabla de unidades
     estatus BIT DEFAULT 1,
     CONSTRAINT FK_Usuarios_Roles FOREIGN KEY (id_rol) REFERENCES Roles(id_rol),
-    CONSTRAINT FK_Usuarios_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
+    CONSTRAINT FK_Usuarios_Unidades FOREIGN KEY (id_unidad) REFERENCES segmentos(id_segmento)
 );
 GO
 -- ==========================================
@@ -141,9 +217,9 @@ GO
 -- ==========================================
 CREATE TABLE Ubicaciones (
     id_ubicacion INT IDENTITY(1,1) PRIMARY KEY,
-    id_unidad INT NOT NULL,
+    id_unidad varchar(50) NOT NULL,
     nombre_ubicacion VARCHAR(150) NOT NULL,
-    CONSTRAINT FK_Ubicaciones_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
+    CONSTRAINT FK_Ubicaciones_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(clave)
 );
 GO
 -- Bienes (Actualizada con enlaces a medida y unidades operativas)
@@ -151,14 +227,14 @@ CREATE TABLE Bienes (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     id_categoria INT NOT NULL,
     id_unidad_medida INT NOT NULL, -- FK a cat�logo de medidas
-    id_unidad INT NULL,            -- NUEVA FK: a la tabla de unidades operativas
+    id_segmento INT NULL,            -- NUEVA FK: a la tabla de segmentación de unidades operativas (red, operativas, etc)
 	id_ubicacion INT NULL,
     num_serie VARCHAR(50), 
     num_inv VARCHAR(50), 
     cantidad DECIMAL(10,2) DEFAULT 1, 
     estatus_operativo VARCHAR(50) DEFAULT 'ACTIVO',
     qr_hash VARCHAR(255) UNIQUE,
-    clave_inmueble_ref VARCHAR(50), -- FK para la tabla inmuebles
+    clave_unidad_ref VARCHAR(50), -- FK para la tabla unidades
     clave_presupuestal VARCHAR(150), -- Clave presupuestal autogenerada
     clave_modelo VARCHAR(30),
     id_usuario_resguardo INT,
@@ -166,7 +242,7 @@ CREATE TABLE Bienes (
     fecha_actualizacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     CONSTRAINT FK_Bienes_Categorias FOREIGN KEY (id_categoria) REFERENCES Cat_CategoriasActivo(id_categoria),
     CONSTRAINT FK_Bienes_UnidadMedida FOREIGN KEY (id_unidad_medida) REFERENCES Cat_UnidadesMedida(id_unidad_medida),
-    CONSTRAINT FK_Bienes_UnidadOperativa FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad),
+    CONSTRAINT FK_Bienes_SegmentoOperativo FOREIGN KEY (id_segmento) REFERENCES segmentos(id_segmento),
     CONSTRAINT FK_Bienes_Modelos FOREIGN KEY (clave_modelo) REFERENCES Cat_Modelos(clave_modelo),
     CONSTRAINT FK_Bienes_Usuarios FOREIGN KEY (id_usuario_resguardo) REFERENCES Usuarios(id_usuario),
 	CONSTRAINT FK_Bienes_Ubicaciones FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion),
@@ -180,24 +256,26 @@ GO
 CREATE TABLE Proveedores (
     id_proveedor INT IDENTITY(1,1) PRIMARY KEY,
     nombre_proveedor VARCHAR(150) NOT NULL,
-	informacion_contacto VARCHAR(MAX)
 );
 GO
 
 -- Especificaciones TI
 CREATE TABLE Especificaciones_TI (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY,
-    nom_pc VARCHAR(64),
+    cuenta_windows VARCHAR(64),
     cpu_info VARCHAR(100),
     ram_gb INT,
     almacenamiento_gb INT,
     mac_address VARCHAR(50),
     dir_ip VARCHAR(15),
     dir_mac VARCHAR(17),
+    correo VARCHAR(100),
+    last_scan DATETIME,
     puerto_red VARCHAR(15),
     switch_red VARCHAR(50),
     modelo_so VARCHAR(50),
-	id_monitor UNIQUEIDENTIFIER,
+	id_monitor VARCHAR(50),
+    tipo_user VARCHAR(50),
     CONSTRAINT FK_Especificaciones_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
 );
 GO
@@ -229,7 +307,6 @@ CREATE TABLE Incidencias (
     id_incidencia INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
     id_usuario_genera_reporte INT NOT NULL, -- Es el admministrador o usuario que crea la incidencia, se mantiene para trazabilidad
-    id_usuario_resuelve INT NULL, -- Es el técnico o responsable que finalmente resuelve la incidencia, puede ser NULL si aún no se ha resuelto
     id_tipo_incidencia INT NOT NULL, -- FK a la tabla de tipos de incidencias
     descripcion_falla NVARCHAR(MAX) NOT NULL,
     fecha_reporte DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
@@ -238,12 +315,11 @@ CREATE TABLE Incidencias (
     fecha_resolucion DATETIME NULL,
 	alias VARCHAR(MAX),
 	requerimiento VARCHAR(MAX),
-    id_unidad INT,
+    id_unidad varchar(50),
     CONSTRAINT FK_Incidencias_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien),
     CONSTRAINT FK_Incidencias_UsuGeneraReporte FOREIGN KEY (id_usuario_genera_reporte) REFERENCES Usuarios(id_usuario),
-    CONSTRAINT FK_Incidencias_UsuResuelve FOREIGN KEY (id_usuario_resuelve) REFERENCES Usuarios(id_usuario),
     CONSTRAINT FK_Incidencias_TipoIncidencia FOREIGN KEY (id_tipo_incidencia) REFERENCES Tipo_Incidencias(id_tipo_incidencia),
-	CONSTRAINT FK_Incidencias_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(id_unidad)
+	CONSTRAINT FK_Incidencias_Unidades FOREIGN KEY (id_unidad) REFERENCES unidades(clave)
 );
 GO
 
@@ -283,92 +359,51 @@ CREATE TABLE Notas (
 );
 GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[ClasificacionesUnidades](
-	[IDClas] [int] IDENTITY(1,1) NOT NULL,
-	[ClasificacionUnidades] [varchar](50) NULL,
- CONSTRAINT [PK_ClasificacionesUnidades] PRIMARY KEY CLUSTERED 
-(
-	[IDClas] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-) ON [PRIMARY]
-GO
 
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE [dbo].[TipoUnidades](
-	[IDTipo] [int] IDENTITY(1,1) NOT NULL,
-	[Clasificación] [int] NULL,
-	[TipoUnidad] [varchar](50) NULL,
- CONSTRAINT [PK_TipoUnidades] PRIMARY KEY CLUSTERED 
-(
-	[IDTipo] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-) ON [PRIMARY]
-GO
 
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE TABLE [dbo].[inmuebles](
-	[clave] [varchar](50) NOT NULL,
-	[descripcion] [varchar](100) NULL,
-	[desc_corta] [varchar](15) NULL,
-	[encargado] [varchar](200) NULL,
-	[direccion] [varchar](200) NULL,
-	[calle] [varchar](70) NULL,
-	[numero] [varchar](5) NULL,
-	[colonia] [varchar](50) NULL,
-	[ciudad] [varchar](50) NULL,
-	[municipio] [varchar](50) NULL,
-	[cp] [varchar](50) NULL,
-	[ppal] [varchar](50) NULL,
-	[clave_zona] [varchar](5) NOT NULL,
-	[clave_A] [int] NULL,
-	[Telefono] [varchar](18) NULL,
-	[zonaReporte] [varchar](50) NULL,
-	[Nivel] [int] NULL,
-	[NOInmueble] [int] NULL,
-	[Regimen] [int] NULL,
-	[TipoUnidad] [int] NULL,
- CONSTRAINT [PK_inmuebles] PRIMARY KEY CLUSTERED 
-(
-	[clave] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
-) ON [PRIMARY]
-GO
 
-ALTER TABLE [dbo].[inmuebles] ADD  CONSTRAINT [DF_inmuebles_clave_zona]  DEFAULT ((1)) FOR [clave_zona]
-GO
-ALTER TABLE [dbo].[inmuebles]  WITH CHECK ADD  CONSTRAINT [FK_inmuebles_TipoUnidades] FOREIGN KEY([TipoUnidad])
-REFERENCES [dbo].[TipoUnidades] ([IDTipo])
-GO
-ALTER TABLE [dbo].[inmuebles] CHECK CONSTRAINT [FK_inmuebles_TipoUnidades]
-GO
-ALTER TABLE [dbo].[unidades]  WITH CHECK ADD  CONSTRAINT [FK_unidades_TipoUnidades] FOREIGN KEY([TipoUnidad])
-REFERENCES [dbo].[TipoUnidades] ([IDTipo])
-GO
-ALTER TABLE [dbo].[TipoUnidades]  WITH CHECK ADD  CONSTRAINT [FK_TipoUnidades_ClasificacionesUnidades] FOREIGN KEY([Clasificación])
-REFERENCES [dbo].[ClasificacionesUnidades] ([IDClas])
-GO
-ALTER TABLE [dbo].[TipoUnidades] CHECK CONSTRAINT [FK_TipoUnidades_ClasificacionesUnidades]
-GO
+
+
+
+
+
+CREATE TABLE [dbo].[Contactos] (
+    [id_contacto] [int] IDENTITY(1,1) PRIMARY KEY,
+    [id_unidad] [varchar](50) NULL,
+    [id_proveedor] [int] NULL,
+    [id_segmento] [int] NULL,
+    [contacto] [varchar](100) NOT NULL,
+    [tipo_contacto] [varchar](100) NULL, -- Ej: 'Principal', 'Móvil'
+    
+    -- Foreign Keys
+    CONSTRAINT [FK_Contactos_Unidades] FOREIGN KEY ([id_unidad]) 
+        REFERENCES [dbo].[unidades]([clave]),
+    CONSTRAINT [FK_Contactos_Proveedores] FOREIGN KEY ([id_proveedor]) 
+        REFERENCES [dbo].[Proveedores]([id_proveedor]),
+    CONSTRAINT [FK_Contactos_Segmentos] FOREIGN KEY ([id_segmento]) 
+        REFERENCES [dbo].[segmentos]([id_segmento]),
+    
+    -- CHECK Corregido (sin CAST innecesario)
+    CONSTRAINT [CHK_Contactos_Exclusividad] CHECK (
+        (id_unidad IS NOT NULL AND id_proveedor IS NULL AND id_segmento IS NULL) OR
+        (id_unidad IS NULL AND id_proveedor IS NOT NULL AND id_segmento IS NULL) OR
+        (id_unidad IS NULL AND id_proveedor IS NULL AND id_segmento IS NOT NULL)
+    )
+);
 
 -- ==========================================
 -- NUEVOS AJUSTES (FORANEA Y TRIGGER PARA BIENES)
 -- ==========================================
 
--- Agregar la foranea hacia la tabla inmuebles (creada posteriormente)
-ALTER TABLE [dbo].[Bienes]  WITH CHECK ADD CONSTRAINT [FK_Bienes_InmueblesRef] FOREIGN KEY([clave_inmueble_ref])
-REFERENCES [dbo].[inmuebles] ([clave]);
+-- Agregar la foranea hacia la tabla unidades (creada posteriormente)
+ALTER TABLE [dbo].[Bienes]  WITH CHECK ADD CONSTRAINT [FK_Bienes_UnidadesRef] FOREIGN KEY([clave_unidad_ref])
+REFERENCES [dbo].[unidades] ([clave]);
 GO
-ALTER TABLE [dbo].[Bienes] CHECK CONSTRAINT [FK_Bienes_InmueblesRef];
+ALTER TABLE [dbo].[Bienes] CHECK CONSTRAINT [FK_Bienes_UnidadesRef];
 GO
 
 -- Trigger para generar clave presupuestal en Bienes automaticamente
@@ -385,7 +420,7 @@ BEGIN
     BEGIN
         UPDATE B
         SET
-            B.clave_presupuestal = ISNULL(U.clave, '') + ISNULL(I.clave, ''),
+            B.clave_presupuestal = ISNULL(S.clave, '') + ISNULL(U.clave, ''),
             -- Actualizar la fecha de modificacion solo en UPDATEs
             -- (en INSERT ya se establece via DEFAULT GETDATE())
             B.fecha_actualizacion = CASE
@@ -395,8 +430,8 @@ BEGIN
             END
         FROM Bienes B
         INNER JOIN inserted ins ON B.id_bien = ins.id_bien
-        LEFT JOIN unidades U ON B.id_unidad = U.id_unidad
-        LEFT JOIN inmuebles I ON B.clave_inmueble_ref = I.clave;
+        LEFT JOIN segmentos S ON B.id_segmento = S.id_segmento
+        LEFT JOIN unidades U ON B.clave_unidad_ref = U.clave;
     END
 END;
 GO
@@ -416,7 +451,6 @@ CREATE TABLE Bitacora (
     CONSTRAINT FK_Bitacora_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
 );
 GO
-
 -- ==========================================
 -- 1. TABLA PRINCIPAL: El contenido de la notificación
 -- ==========================================
@@ -424,32 +458,57 @@ CREATE TABLE Notificaciones_Mensajes (
     id_notificacion INT IDENTITY(1,1) PRIMARY KEY,
     titulo VARCHAR(100) NOT NULL,
     mensaje NVARCHAR(MAX) NOT NULL,
-    -- Define a quién va dirigida: 'GLOBAL', 'ROL', 'UNIDAD', 'PERSONAL'
+    -- 'GLOBAL', 'ROL', 'UNIDAD', 'PERSONAL'
     tipo_audiencia VARCHAR(20) NOT NULL, 
-    -- Guarda el ID correspondiente al tipo_audiencia. 
-    -- Si es GLOBAL, puede ser NULL. Si es ROL, guarda el id_rol, etc.
+    -- ID del Rol, ID de la Unidad o ID del Usuario según el tipo
     id_audiencia INT NULL, 
-    fecha_creacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
+    fecha_creacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME)
 );
 GO
 
 -- ==========================================
--- 2. TABLA PIVOTE: Control de lectura por usuario
+-- 2. TABLA PIVOTE: Solo para interacciones reales
 -- ==========================================
 CREATE TABLE Notificaciones_Lecturas (
     id_notificacion INT NOT NULL,
     id_usuario INT NOT NULL,
-    leida BIT DEFAULT 0,                     -- 1 = Ya la vio
-    fecha_lectura DATETIME NULL,             -- Cuándo la vio
-    oculta BIT DEFAULT 0,                    -- 1 = El usuario le dio "Eliminar/X" en su bandeja
+    leida BIT DEFAULT 0,
+    fecha_lectura DATETIME NULL,
+    oculta BIT DEFAULT 0, -- Para que el usuario la "borre" de su vista
     
-    -- Llave primaria compuesta para evitar duplicados por usuario
     CONSTRAINT PK_Notificaciones_Lecturas PRIMARY KEY (id_notificacion, id_usuario),
-    
     CONSTRAINT FK_NotLecturas_Mensaje FOREIGN KEY (id_notificacion) 
         REFERENCES Notificaciones_Mensajes(id_notificacion) ON DELETE CASCADE,
-        
     CONSTRAINT FK_NotLecturas_Usuario FOREIGN KEY (id_usuario) 
         REFERENCES Usuarios(id_usuario)
+);
+GO
+
+CREATE TABLE Unidad_A_Cargo (
+    id_unidad_cargo varchar(50) not null,
+    id_rol_empleado int not null,
+    id_usuario int not null
+    constraint FK_UnidadCargo_RolEmpleado FOREIGN KEY (id_rol_empleado) REFERENCES Rol_empleados(id_rol_empleado),
+    constraint FK_UnidadCargo_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
+    constraint PK_UnidadCargo PRIMARY KEY (id_usuario, id_rol_empleado, id_unidad_cargo),
+    constraint FK_UnidadCargo_Unidades FOREIGN KEY (id_unidad_cargo) REFERENCES unidades(clave)
+);
+-- 1. Agregamos el tipo 'MULTIPLE' a la lógica
+-- Notificaciones_Mensajes se queda igual, pero ahora id_audiencia puede ser NULL 
+-- si el tipo_audiencia es 'MULTIPLE'.
+
+-- 2. NUEVA TABLA: Destinatarios Específicos
+-- Solo se llena si tipo_audiencia = 'MULTIPLE' o 'UNIDAD_MULTIPLE'
+CREATE TABLE Notificaciones_Destinatarios (
+    id_notificacion INT NOT NULL,
+    id_usuario INT NULL,       -- Para usuarios específicos
+    id_unidad varchar(50) NULL,        -- Para cuando quieras enviar a 2 o 3 unidades específicas
+    
+    CONSTRAINT FK_Destinatarios_Mensaje FOREIGN KEY (id_notificacion) 
+        REFERENCES Notificaciones_Mensajes(id_notificacion) ON DELETE CASCADE,
+    CONSTRAINT FK_Destinatarios_Usuario FOREIGN KEY (id_usuario) 
+        REFERENCES Usuarios(id_usuario),
+    CONSTRAINT FK_Destinatarios_Unidad FOREIGN KEY (id_unidad) 
+        REFERENCES unidades(clave)
 );
 GO
