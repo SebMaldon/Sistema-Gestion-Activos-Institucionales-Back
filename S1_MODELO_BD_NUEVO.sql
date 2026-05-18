@@ -282,7 +282,102 @@ GO
 
 
 -- ==========================================
--- 3. ENTIDADES TRANSACCIONALES
+-- SISTEMA DE ATRIBUTOS TÉCNICOS FLEXIBLES
+-- ==========================================
+-- Permite definir atributos técnicos genéricos (RAM, CPU, pantalla, batería, etc.)
+-- y asignarlos a cualquier bien, independientemente del tipo de dispositivo.
+-- Se mantiene Especificaciones_TI para PCs (escáner automático de red).
+
+-- Catálogo de atributos técnicos disponibles
+CREATE TABLE Cat_Atributos_Tecnicos (
+    id_atributo     INT IDENTITY(1,1) PRIMARY KEY,
+    nombre_atributo VARCHAR(100) NOT NULL,       -- Ej: 'RAM', 'CPU', 'Tamaño de Pantalla'
+    -- Tipo de dato del valor: TEXT | NUMERO | BOOLEANO | FECHA
+    tipo_valor      VARCHAR(20)  NOT NULL DEFAULT 'TEXT'
+                    CONSTRAINT CHK_Atributo_TipoValor
+                    CHECK (tipo_valor IN ('TEXT', 'NUMERO', 'BOOLEANO', 'FECHA')),
+    unidad_medida   VARCHAR(30)  NULL,            -- Ej: 'GB', 'MHz', 'pulgadas', 'mAh'
+    descripcion     VARCHAR(255) NULL,            -- Descripción de ayuda para el usuario
+    activo          BIT          NOT NULL DEFAULT 1
+);
+GO
+
+-- Sugerencia de atributos por tipo de dispositivo
+-- (no obligatorio — solo guía al usuario al registrar un bien)
+CREATE TABLE Atributos_Por_TipoDispositivo (
+    tipo_disp   INT NOT NULL,
+    id_atributo INT NOT NULL,
+    es_requerido BIT NOT NULL DEFAULT 0,         -- 1 = el sistema lo exigirá al guardar
+    CONSTRAINT PK_AtributosTipoDisp PRIMARY KEY (tipo_disp, id_atributo),
+    CONSTRAINT FK_AtribTipoDisp_TipoDisp FOREIGN KEY (tipo_disp)
+        REFERENCES dbo.tipo_dispositivos (tipo_disp),
+    CONSTRAINT FK_AtribTipoDisp_Atributo FOREIGN KEY (id_atributo)
+        REFERENCES Cat_Atributos_Tecnicos (id_atributo)
+);
+GO
+
+-- Valores de atributos técnicos por bien
+-- Un bien puede tener N atributos; cada fila es un par (bien, atributo, valor)
+CREATE TABLE Bien_Atributos (
+    id_bien_atributo INT           IDENTITY(1,1) PRIMARY KEY,
+    id_bien          UNIQUEIDENTIFIER NOT NULL,
+    id_atributo      INT           NOT NULL,
+    -- El valor siempre se guarda como texto; la app lo interpreta según tipo_valor
+    valor            NVARCHAR(500) NOT NULL,
+    CONSTRAINT UQ_BienAtributo UNIQUE (id_bien, id_atributo),    -- 1 valor por atributo/bien
+    CONSTRAINT FK_BienAtrib_Bien FOREIGN KEY (id_bien)
+        REFERENCES Bienes (id_bien) ON DELETE CASCADE,
+    CONSTRAINT FK_BienAtrib_Atributo FOREIGN KEY (id_atributo)
+        REFERENCES Cat_Atributos_Tecnicos (id_atributo)
+);
+GO
+
+-- ==========================================
+-- DATOS SEMILLA: Atributos técnicos comunes
+-- ==========================================
+INSERT INTO Cat_Atributos_Tecnicos (nombre_atributo, tipo_valor, unidad_medida, descripcion) VALUES
+-- Hardware general
+('RAM',                 'NUMERO', 'GB',      'Memoria RAM instalada'),
+('Almacenamiento',      'NUMERO', 'GB',      'Capacidad de almacenamiento interno'),
+('CPU',                 'TEXT',   NULL,      'Procesador (modelo y velocidad)'),
+('Número de núcleos',   'NUMERO', 'núcleos', 'Cantidad de núcleos del procesador'),
+('Frecuencia CPU',      'NUMERO', 'GHz',     'Velocidad del procesador'),
+-- Pantalla / Monitor
+('Tamaño de pantalla',  'NUMERO', 'pulgadas','Diagonal de la pantalla'),
+('Resolución',          'TEXT',   NULL,      'Resolución de pantalla (ej: 1920x1080)'),
+('Tipo de panel',       'TEXT',   NULL,      'Ej: IPS, TN, OLED'),
+-- Red
+('Dirección IP',        'TEXT',   NULL,      'IP estática o última IP asignada'),
+('Dirección MAC',       'TEXT',   NULL,      'Dirección MAC de la interfaz principal'),
+('Puerto de red',       'TEXT',   NULL,      'Puerto físico del switch'),
+('Switch',              'TEXT',   NULL,      'Nombre o IP del switch al que se conecta'),
+-- Móviles / Tablets
+('Batería',             'NUMERO', 'mAh',     'Capacidad de la batería'),
+('Sistema Operativo',   'TEXT',   NULL,      'SO y versión (ej: Android 14, iOS 17)'),
+('IMEI',                'TEXT',   NULL,      'IMEI del equipo móvil'),
+('Número de SIM',       'NUMERO', NULL,      'Cantidad de SIMs soportadas'),
+-- Impresoras / Periféricos
+('Tecnología impresión','TEXT',   NULL,      'Ej: Láser, Inyección de tinta, Térmica'),
+('Velocidad impresión', 'NUMERO', 'ppm',     'Páginas por minuto'),
+('Conectividad',        'TEXT',   NULL,      'Ej: USB, WiFi, Ethernet, Bluetooth'),
+-- Servidores
+('Cantidad de RAM DIMM','NUMERO', NULL,      'Número de módulos RAM instalados'),
+('Fuente de poder',     'NUMERO', 'W',       'Vatios de la fuente de alimentación'),
+('Tipo RAID',           'TEXT',   NULL,      'Configuración RAID del almacenamiento'),
+-- Cuenta / Software
+('Cuenta de usuario',   'TEXT',   NULL,      'Usuario del sistema operativo o dominio'),
+('Licencia OS',         'TEXT',   NULL,      'Clave o número de licencia del SO'),
+-- Otros
+('Voltaje',             'NUMERO', 'V',       'Voltaje de operación'),
+('Peso',                'NUMERO', 'kg',      'Peso del equipo');
+GO
+
+-- Sugerencias de atributos por tipo de dispositivo (tipo_disp según catálogo existente)
+-- NOTA: Ajustar los IDs de tipo_disp según los datos reales del catálogo
+-- Ejemplo orientativo (se puede poblar después con los IDs correctos):
+-- INSERT INTO Atributos_Por_TipoDispositivo (tipo_disp, id_atributo, es_requerido) VALUES ...
+
+
 -- ==========================================
 
 CREATE TABLE Garantias (

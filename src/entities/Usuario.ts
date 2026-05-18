@@ -4,7 +4,7 @@ import {
 } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { Rol } from './Rol';
-import { Unidad } from './Unidad';
+import { Segmento } from './Segmento';
 import { Bien } from './Bien';
 import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
@@ -32,6 +32,7 @@ export class Usuario {
   @Column({ name: 'id_rol', type: 'int', default: 3 })
   id_rol!: number;
 
+  // FK al segmento de red (tabla: segmentos) — mantiene nombre id_unidad en la DB
   @Column({ name: 'id_unidad', type: 'int', nullable: true })
   id_unidad?: number;
 
@@ -44,13 +45,13 @@ export class Usuario {
   @JoinColumn({ name: 'id_rol' })
   rol?: Rol;
 
-  @ManyToOne(() => Unidad, (u) => u.usuarios, { nullable: true })
+  // Segmento de red al que pertenece el usuario
+  @ManyToOne(() => Segmento, (s) => s.usuarios, { nullable: true })
   @JoinColumn({ name: 'id_unidad' })
-  unidad?: Unidad;
+  segmento?: Segmento;
 
   @OneToMany(() => Bien, (bien) => bien.usuarioResguardo)
   bienesResguardados?: Bien[];
-
 
   @OneToMany(() => MovimientoInventario, (mov) => mov.usuarioAutoriza)
   movimientosAutorizados?: MovimientoInventario[];

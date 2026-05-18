@@ -9,13 +9,13 @@ import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
-import { Unidad } from '../../entities/Unidad';
+import { Segmento } from '../../entities/Segmento';
 
 export interface BienesFilter {
   estatus_operativo?: string;
-  clave_inmueble_ref?: string;
+  clave_unidad_ref?: string;
   id_categoria?: number;
-  id_unidad?: number;
+  id_segmento?: number;
   id_ubicacion?: number;
   id_unidad_medida?: number;
   id_usuario_resguardo?: number;
@@ -34,9 +34,9 @@ export const bienesResolvers = {
       const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
 
       if (filter?.estatus_operativo) qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
-      if (filter?.clave_inmueble_ref) qb.andWhere('b.clave_inmueble_ref = :ci', { ci: filter.clave_inmueble_ref });
+      if (filter?.clave_unidad_ref) qb.andWhere('b.clave_unidad_ref = :cu', { cu: filter.clave_unidad_ref });
       if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
-      if (filter?.id_unidad) qb.andWhere('b.id_unidad = :iu', { iu: filter.id_unidad });
+      if (filter?.id_segmento) qb.andWhere('b.id_segmento = :is', { is: filter.id_segmento });
       if (filter?.id_ubicacion) qb.andWhere('b.id_ubicacion = :iub', { iub: filter.id_ubicacion });
       if (filter?.id_unidad_medida) qb.andWhere('b.id_unidad_medida = :ium', { ium: filter.id_unidad_medida });
       if (filter?.id_usuario_resguardo) qb.andWhere('b.id_usuario_resguardo = :ur', { ur: filter.id_usuario_resguardo });
@@ -104,7 +104,6 @@ export const bienesResolvers = {
       return AppDataSource.getRepository(Bien)
         .createQueryBuilder('b')
         .leftJoinAndSelect('b.especificacionTI', 'e')
-        // TRY_CONVERT evita el error de conversión cuando el término no es un UUID válido
         .where('(TRY_CONVERT(uniqueidentifier, :termino) IS NOT NULL AND b.id_bien = TRY_CONVERT(uniqueidentifier, :termino))', { termino })
         .orWhere('b.qr_hash = :termino', { termino })
         .orWhere('b.num_serie = :termino', { termino })
@@ -117,7 +116,6 @@ export const bienesResolvers = {
   Mutation: {
     createBien: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      // Roles 1 (Admin) y 2 (Maestro) pueden crear bienes
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       if (!args.id_categoria) throw new ValidationError('Debe seleccionar la categoría del bien.');
@@ -128,7 +126,6 @@ export const bienesResolvers = {
 
       const repo = AppDataSource.getRepository(Bien);
 
-      // Validar unicidad de num_serie
       if (args.num_serie && args.num_serie.trim() !== '') {
         const dupSerie = await repo.findOne({ where: { num_serie: args.num_serie.trim() } });
         if (dupSerie) {
@@ -136,7 +133,6 @@ export const bienesResolvers = {
         }
       }
 
-      // Validar unicidad de num_inv
       if (args.num_inv && args.num_inv.trim() !== '') {
         const dupInv = await repo.findOne({ where: { num_inv: args.num_inv.trim() } });
         if (dupInv) {
@@ -146,14 +142,12 @@ export const bienesResolvers = {
 
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
-      // El trigger de BD se encargará de calcular clave_presupuestal
       const bien = repo.create({ ...args, id_bien, qr_hash });
       return repo.save(bien);
     },
 
     updateBien: async (_: unknown, { id_bien, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      // Roles 1 (Admin) y 2 (Maestro) pueden editar bienes
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       if (updates.estatus_operativo !== undefined && updates.estatus_operativo.trim() === '') {
@@ -164,7 +158,6 @@ export const bienesResolvers = {
       const bien = await repo.findOne({ where: { id_bien } });
       if (!bien) throw new NotFoundError('Bien');
 
-      // Validar unicidad de num_serie (excluyendo el bien actual)
       if (updates.num_serie && updates.num_serie.trim() !== '') {
         const dupSerie = await repo.findOne({ where: { num_serie: updates.num_serie.trim() } });
         if (dupSerie && dupSerie.id_bien !== id_bien) {
@@ -172,7 +165,6 @@ export const bienesResolvers = {
         }
       }
 
-      // Validar unicidad de num_inv (excluyendo el bien actual)
       if (updates.num_inv && updates.num_inv.trim() !== '') {
         const dupInv = await repo.findOne({ where: { num_inv: updates.num_inv.trim() } });
         if (dupInv && dupInv.id_bien !== id_bien) {
@@ -180,7 +172,6 @@ export const bienesResolvers = {
         }
       }
 
-      // Forzar actualización de fecha_actualizacion en cada UPDATE
       updates.fecha_actualizacion = new Date();
       repo.merge(bien, updates);
       return repo.save(bien);
@@ -188,10 +179,8 @@ export const bienesResolvers = {
 
     deleteBien: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
       requireAuth(context);
-      // Solo el rol Maestro (2) puede eliminar bienes
       requireRole(context, [ROLES.MAESTRO]);
 
-      // Verificar que no tenga incidencias asociadas
       const incidenciasCount = await AppDataSource.getRepository(Incidencia).count({ where: { id_bien } });
       if (incidenciasCount > 0) {
         throw new ForbiddenError(
@@ -199,7 +188,6 @@ export const bienesResolvers = {
         );
       }
 
-      // Verificar que no tenga movimientos asociados
       const movimientosCount = await AppDataSource.getRepository(MovimientoInventario).count({ where: { id_bien } });
       if (movimientosCount > 0) {
         throw new ForbiddenError(
@@ -207,19 +195,14 @@ export const bienesResolvers = {
         );
       }
 
-      // Sin dependencias: eliminar notas primero y luego el bien
       const notaRepo = AppDataSource.getRepository(Nota);
       const bienRepo = AppDataSource.getRepository(Bien);
 
       const notas = await notaRepo.find({ where: { id_bien } });
-      if (notas.length > 0) {
-        await notaRepo.remove(notas);
-      }
+      if (notas.length > 0) await notaRepo.remove(notas);
 
       const bien = await bienRepo.findOne({ where: { id_bien } });
-      if (bien) {
-        await bienRepo.remove(bien);
-      }
+      if (bien) await bienRepo.remove(bien);
       return true;
     },
 
@@ -233,43 +216,37 @@ export const bienesResolvers = {
 
       if (specs.id_monitor && specs.id_monitor.trim() !== '') {
         const bienRepo = AppDataSource.getRepository(Bien);
-        
-        // 1. Validar que el bien principal sea PC (tipo de dispositivo 4)
+
         const bienPrincipal = await bienRepo.createQueryBuilder('b')
           .leftJoinAndSelect('b.modelo', 'm')
           .where('b.id_bien = :id', { id: id_bien })
           .getOne();
 
-        if (!bienPrincipal) {
-          throw new ValidationError('El bien principal no existe.');
-        }
+        if (!bienPrincipal) throw new ValidationError('El bien principal no existe.');
 
         if (bienPrincipal.modelo?.tipo_disp !== 4) {
           throw new ValidationError('Solo los bienes de tipo PC (tipo de dispositivo 4) pueden tener un monitor ligado.');
         }
 
-        // 2. Buscar si existe el monitor
         const monitorExistente = await bienRepo.findOne({ where: { id_bien: specs.id_monitor } });
 
         if (monitorExistente) {
-          // Si existe, actualizar sus datos con los del bien principal
-          monitorExistente.id_unidad = bienPrincipal.id_unidad;
+          monitorExistente.id_segmento = bienPrincipal.id_segmento;
           monitorExistente.id_ubicacion = bienPrincipal.id_ubicacion;
-          monitorExistente.clave_inmueble_ref = bienPrincipal.clave_inmueble_ref;
+          monitorExistente.clave_unidad_ref = bienPrincipal.clave_unidad_ref;
           monitorExistente.id_usuario_resguardo = bienPrincipal.id_usuario_resguardo;
           monitorExistente.fecha_actualizacion = new Date();
           await bienRepo.save(monitorExistente);
         } else {
-          // Si no existe, crearlo con datos por defecto
           const nuevoMonitor = bienRepo.create({
             id_bien: specs.id_monitor,
-            id_categoria: 1, // Equipo de Cómputo
-            id_unidad_medida: 1, // Pieza
-            id_unidad: bienPrincipal.id_unidad,
+            id_categoria: 1,
+            id_unidad_medida: 1,
+            id_segmento: bienPrincipal.id_segmento,
             id_ubicacion: bienPrincipal.id_ubicacion,
             cantidad: 1,
             estatus_operativo: 'ACTIVO',
-            clave_inmueble_ref: bienPrincipal.clave_inmueble_ref,
+            clave_unidad_ref: bienPrincipal.clave_unidad_ref,
             clave_modelo: '_Mon_Sin_Modelo_',
             id_usuario_resguardo: bienPrincipal.id_usuario_resguardo,
             qr_hash: Buffer.from(`IMSS-${specs.id_monitor}`).toString('base64'),
@@ -289,7 +266,7 @@ export const bienesResolvers = {
     },
   },
 
-  // ── Field resolvers usando DataLoaders ──────────────────
+  // ── Field resolvers usando DataLoaders
   Bien: {
     categoria: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.id_categoria ? context.loaders.categoriaLoader.load(parent.id_categoria) : null,
@@ -297,8 +274,9 @@ export const bienesResolvers = {
     unidadMedida: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.id_unidad_medida ? context.loaders.unidadMedidaLoader.load(parent.id_unidad_medida) : null,
 
-    unidad: (parent: Bien, _: unknown, context: GraphQLContext) =>
-      parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
+    // Segmento de red (tabla: segmentos)
+    segmento: (parent: Bien, _: unknown, context: GraphQLContext) =>
+      parent.id_segmento ? context.loaders.segmentoLoader.load(parent.id_segmento) : null,
 
     ubicacion: async (parent: Bien) =>
       parent.id_ubicacion
@@ -307,8 +285,9 @@ export const bienesResolvers = {
         })
         : null,
 
-    inmueble: (parent: Bien, _: unknown, context: GraphQLContext) =>
-      parent.clave_inmueble_ref ? context.loaders.catInmuebleLoader.load(parent.clave_inmueble_ref) : null,
+    // Unidad física (tabla: unidades — antes inmuebles)
+    unidad: (parent: Bien, _: unknown, context: GraphQLContext) =>
+      parent.clave_unidad_ref ? context.loaders.inmuebleLoader.load(parent.clave_unidad_ref) : null,
 
     modelo: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.clave_modelo ? context.loaders.catModeloLoader.load(parent.clave_modelo) : null,

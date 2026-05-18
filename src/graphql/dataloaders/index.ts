@@ -5,12 +5,12 @@ import { Marca } from '../../entities/Marca';
 import { TipoDispositivo } from '../../entities/TipoDispositivo';
 import { CatModelo } from '../../entities/CatModelo';
 import { Usuario } from '../../entities/Usuario';
-import { CatInmueble } from '../../entities/CatInmueble';
+import { Inmueble } from '../../entities/Inmueble';
+import { Segmento } from '../../entities/Segmento';
 import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { Garantia } from '../../entities/Garantia';
 import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
-import { Unidad } from '../../entities/Unidad';
 import { Rol } from '../../entities/Rol';
 import { Bien } from '../../entities/Bien';
 import { TipoIncidencia } from '../../entities/TipoIncidencia';
@@ -57,12 +57,23 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
-  // ── Cat_Inmuebles (clave_inmueble: string)
-  const catInmuebleLoader = new DataLoader<string, CatInmueble | undefined>(async (keys) => {
-    const items = await AppDataSource.getRepository(CatInmueble).find({
-      where: { clave_inmueble: In(keys as string[]) },
+  // ── Inmuebles por clave varchar(50) — tabla: unidades (antes "inmuebles")
+  // Usado por: Bien.unidad, Incidencia.unidad, Ubicacion.unidad
+  const inmuebleLoader = new DataLoader<string, Inmueble | undefined>(async (keys) => {
+    const items = await AppDataSource.getRepository(Inmueble).find({
+      where: { clave: In(keys as string[]) },
     });
-    const map = toMap<string, CatInmueble>(items, (i) => i.clave_inmueble);
+    const map = toMap<string, Inmueble>(items, (i) => i.clave);
+    return keys.map((k) => map.get(k));
+  });
+
+  // ── Segmentos (id_segmento: int) — tabla: segmentos (antes "unidades" de red)
+  // Usado por: Bien.segmento, Usuario.segmento
+  const segmentoLoader = new DataLoader<number, Segmento | undefined>(async (keys) => {
+    const items = await AppDataSource.getRepository(Segmento).find({
+      where: { id_segmento: In(keys as number[]) },
+    });
+    const map = toMap<number, Segmento>(items, (s) => s.id_segmento);
     return keys.map((k) => map.get(k));
   });
 
@@ -98,21 +109,12 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
-  // ── Cat_UnidadesMedida (id_unidad_medida: int) — PK correcta en la DB
+  // ── Cat_UnidadesMedida (id_unidad_medida: int)
   const unidadMedidaLoader = new DataLoader<number, CatUnidadMedida | undefined>(async (keys) => {
     const items = await AppDataSource.getRepository(CatUnidadMedida).find({
       where: { id_unidad_medida: In(keys as number[]) },
     });
     const map = toMap<number, CatUnidadMedida>(items, (u) => u.id_unidad_medida);
-    return keys.map((k) => map.get(k));
-  });
-
-  // ── Unidades operativas (id_unidad: int)
-  const unidadLoader = new DataLoader<number, Unidad | undefined>(async (keys) => {
-    const items = await AppDataSource.getRepository(Unidad).find({
-      where: { id_unidad: In(keys as number[]) },
-    });
-    const map = toMap<number, Unidad>(items, (u) => u.id_unidad);
     return keys.map((k) => map.get(k));
   });
 
@@ -125,7 +127,7 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
-  // ── Bienes por id_bien (string) — elimina N+1 en Incidencia.bien
+  // ── Bienes por id_bien (string UUID)
   const bienLoader = new DataLoader<string, Bien | undefined>(async (keys) => {
     const items = await AppDataSource.getRepository(Bien).find({
       where: { id_bien: In(keys as string[]) },
@@ -134,7 +136,7 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
-  // ── TiposIncidencia por id (int) — elimina N+1 en Incidencia.tipoIncidencia
+  // ── TiposIncidencia (id_tipo_incidencia: int)
   const tipoIncidenciaLoader = new DataLoader<number, TipoIncidencia | undefined>(async (keys) => {
     const items = await AppDataSource.getRepository(TipoIncidencia).find({
       where: { id_tipo_incidencia: In(keys as number[]) },
@@ -143,7 +145,7 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
-  // ── Notas agrupadas por id_incidencia — elimina N+1 en Incidencia.notas
+  // ── Notas agrupadas por id_incidencia
   const notasByIncidenciaLoader = new DataLoader<number, Nota[]>(async (keys) => {
     const items = await AppDataSource.getRepository(Nota).find({
       where: { id_incidencia: In(keys as number[]) },
@@ -151,7 +153,6 @@ export function createDataLoaders() {
     });
     const map = new Map<number, Nota[]>();
     items.forEach((n: Nota) => {
-      // id_incidencia es opcional (una nota puede pertenecer a un bien en vez de a una incidencia)
       if (n.id_incidencia == null) return;
       const arr = map.get(n.id_incidencia) ?? [];
       arr.push(n);
@@ -160,7 +161,7 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k) ?? []);
   });
 
-  // ── Notas agrupadas por id_bien — elimina N+1 en Bien.notas
+  // ── Notas agrupadas por id_bien
   const notasByBienLoader = new DataLoader<string, Nota[]>(async (keys) => {
     const items = await AppDataSource.getRepository(Nota).find({
       where: { id_bien: In(keys as string[]) },
@@ -181,12 +182,12 @@ export function createDataLoaders() {
     tipoDispositivoLoader,
     catModeloLoader,
     usuarioLoader,
-    catInmuebleLoader,
+    inmuebleLoader,      // Antes: catInmuebleLoader (clave_unidad_ref → unidades.clave)
+    segmentoLoader,      // Antes: unidadLoader (id_segmento → segmentos.id_segmento)
     especificacionTILoader,
     garantiasByBienLoader,
     categoriaLoader,
     unidadMedidaLoader,
-    unidadLoader,
     rolLoader,
     bienLoader,
     tipoIncidenciaLoader,

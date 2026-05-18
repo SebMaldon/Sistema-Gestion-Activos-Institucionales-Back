@@ -1,6 +1,8 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
+import { Bien } from './Bien';
 
-@Entity('inmuebles')
+// Tabla: unidades (antes llamada "inmuebles" — datos físicos de la unidad: clave, dirección, etc.)
+@Entity('unidades')
 export class Inmueble {
   @PrimaryColumn({ type: 'varchar', length: 50 })
   clave!: string;
@@ -44,9 +46,6 @@ export class Inmueble {
   @Column({ name: 'clave_A', type: 'int', nullable: true })
   clave_a?: number;
 
-  @Column({ name: 'Telefono', type: 'varchar', length: 18, nullable: true })
-  telefono?: string;
-
   @Column({ name: 'zonaReporte', type: 'varchar', length: 50, nullable: true })
   zona_reporte?: string;
 
@@ -61,4 +60,7 @@ export class Inmueble {
 
   @Column({ name: 'TipoUnidad', type: 'int', nullable: true })
   tipo_unidad?: number;
+
+  @OneToMany(() => Bien, (bien) => bien.unidad)
+  bienes?: Bien[];
 }

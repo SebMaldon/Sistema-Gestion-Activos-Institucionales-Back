@@ -4,6 +4,36 @@ export const typeDefs = gql`
   scalar DateTime
   scalar Date
 
+  # ─── ATRIBUTOS TÉCNICOS ─────────────────────────────────
+  # Catálogo maestro de atributos (RAM, CPU, Pantalla, IMEI, etc.)
+  type CatAtributoTecnico {
+    id_atributo: ID!
+    nombre_atributo: String!
+    tipo_valor: String!          # TEXT | NUMERO | BOOLEANO | FECHA
+    unidad_medida: String
+    descripcion: String
+    activo: Boolean!
+    tiposDispositivo: [AtributoTipoDispositivo!]
+  }
+
+  # Relación sugerida: atributo ↔ tipo de dispositivo
+  type AtributoTipoDispositivo {
+    tipo_disp: Int!
+    id_atributo: Int!
+    es_requerido: Boolean!
+    atributo: CatAtributoTecnico
+    tipoDispositivo: TipoDispositivo
+  }
+
+  # Valor de un atributo para un bien específico
+  type BienAtributo {
+    id_bien_atributo: ID!
+    id_bien: ID!
+    id_atributo: Int!
+    valor: String!
+    atributo: CatAtributoTecnico
+  }
+
   # ─── PAGINACIÓN ─────────────────────────────────────────
   type PageInfo {
     hasNextPage: Boolean!
@@ -21,15 +51,6 @@ export const typeDefs = gql`
   }
 
   # ─── CATÁLOGOS ──────────────────────────────────────────
-
-  # Tabla: Cat_Inmuebles (catálogo propio del sistema)
-  type CatInmueble {
-    clave_inmueble: ID!
-    nombre_ubicacion: String!
-    direccion: String
-    jefatura_asignada: String
-    totalBienes: Int
-  }
 
   # Tabla: marcas
   type Marca {
@@ -63,7 +84,6 @@ export const typeDefs = gql`
   type Proveedor {
     id_proveedor: ID!
     nombre_proveedor: String!
-    informacion_contacto: String
   }
 
   # Tabla: Cat_CategoriasActivo
@@ -95,19 +115,21 @@ export const typeDefs = gql`
     clasificacionUnidad: ClasificacionUnidad
   }
 
-  # Tabla: unidades (unidades operativas / red)
-  type Unidad {
-    id_unidad: ID!
+  type TipoUnidadCatalog {
+    id_tipo: Int!
+    tipo_unidad: String!
+    clasificacion: Int
+  }
+
+  # Tabla: segmentos (antes llamada "unidades" — datos de red/IP)
+  type Segmento {
+    id_segmento: ID!
     no_ref: String!
     nombre: String
     ip: String!
-    encargado: String
-    telefono: String
     clave: String
-    tipo_unidad: Int
     bits: Int
     estatus: Int
-    regimen: Int
     vlan: Int
     monitorear: Int
     proveedor: String
@@ -115,26 +137,19 @@ export const typeDefs = gql`
     tipo_enlace: Int
     ip_init: Int
     fecha_migracion: DateTime
-    tipoUnidadInfo: TipoUnidad
   }
 
-  type TipoUnidadCatalog {
-    id_tipo: Int!
-    tipo_unidad: String!
-    clasificacion: Int
-  }
-
-  type UnidadEdge {
-    node: Unidad!
+  type SegmentoEdge {
+    node: Segmento!
     cursor: String!
   }
 
-  type UnidadesConnection {
-    edges: [UnidadEdge!]!
+  type SegmentosConnection {
+    edges: [SegmentoEdge!]!
     pageInfo: PageInfo!
   }
 
-  # Tabla: inmuebles (tabla legacy con datos completos)
+  # Tabla: unidades (antes llamada "inmuebles" — datos físicos de la unidad)
   type Inmueble {
     clave: ID!
     descripcion: String
@@ -150,7 +165,6 @@ export const typeDefs = gql`
     ppal: String
     clave_zona: String
     clave_a: Int
-    telefono: String
     zona_reporte: String
     nivel: Int
     no_inmueble: Int
@@ -171,17 +185,17 @@ export const typeDefs = gql`
 
   # ─── UBICACIONES ────────────────────────────────────────
 
-  # Tabla: Ubicaciones (departamentos/áreas por unidad operativa)
+  # Tabla: Ubicaciones — departamentos/áreas
+  # id_unidad es String (varchar FK a unidades.clave)
   type Ubicacion {
     id_ubicacion: ID!
-    id_unidad: Int!
+    id_unidad: String!
     nombre_ubicacion: String!
-    unidad: Unidad
+    unidad: Inmueble
   }
 
   # ─── BITÁCORA ───────────────────────────────────────────
 
-  # Tabla: Bitacora (log de acciones del sistema)
   type Bitacora {
     id_bitacora: ID!
     id_usuario: Int!
@@ -205,18 +219,15 @@ export const typeDefs = gql`
 
   # ─── NOTIFICACIONES ─────────────────────────────────────
 
-  # Tabla: Notificaciones_Mensajes
   type NotificacionMensaje {
     id_notificacion: ID!
     titulo: String!
     mensaje: String!
-    # 'GLOBAL' | 'ROL' | 'UNIDAD' | 'PERSONAL'
     tipo_audiencia: String!
     id_audiencia: Int
     fecha_creacion: DateTime!
   }
 
-  # Tabla: Notificaciones_Lecturas
   type NotificacionLectura {
     id_notificacion: Int!
     id_usuario: Int!
@@ -225,7 +236,6 @@ export const typeDefs = gql`
     oculta: Boolean!
   }
 
-  # Tipo fusionado para el frontend: mensaje + estado de lectura del usuario
   type MiNotificacion {
     id_notificacion: ID!
     titulo: String!
@@ -240,7 +250,6 @@ export const typeDefs = gql`
 
   # ─── USUARIOS ───────────────────────────────────────────
 
-  # Tabla: Usuarios
   type Usuario {
     id_usuario: ID!
     matricula: String!
@@ -251,7 +260,8 @@ export const typeDefs = gql`
     id_unidad: Int
     estatus: Boolean!
     rol: Rol
-    unidad: Unidad
+    # segmento de red al que pertenece el usuario (id_unidad es FK a segmentos.id_segmento)
+    segmento: Segmento
   }
 
   type AuthPayload {
@@ -262,19 +272,18 @@ export const typeDefs = gql`
 
   # ─── BIENES ─────────────────────────────────────────────
 
-  # Tabla: Bienes
   type Bien {
     id_bien: ID!
     id_categoria: Int!
     id_unidad_medida: Int!
-    id_unidad: Int
+    id_segmento: Int
     id_ubicacion: Int
     num_serie: String
     num_inv: String
     cantidad: Float!
     estatus_operativo: String!
     qr_hash: String
-    clave_inmueble_ref: String
+    clave_unidad_ref: String
     clave_presupuestal: String
     clave_modelo: String
     id_usuario_resguardo: Int
@@ -283,9 +292,9 @@ export const typeDefs = gql`
     # Relaciones resueltas
     categoria: CatCategoriaActivo
     unidadMedida: CatUnidadMedida
-    unidad: Unidad
+    segmento: Segmento
     ubicacion: Ubicacion
-    inmueble: CatInmueble
+    unidad: Inmueble
     modelo: CatModelo
     usuarioResguardo: Usuario
     especificacionTI: EspecificacionTI
@@ -305,9 +314,9 @@ export const typeDefs = gql`
 
   input BienesFilterInput {
     estatus_operativo: String
-    clave_inmueble_ref: String
+    clave_unidad_ref: String
     id_categoria: Int
-    id_unidad: Int
+    id_segmento: Int
     id_ubicacion: Int
     id_unidad_medida: Int
     id_usuario_resguardo: Int
@@ -317,10 +326,8 @@ export const typeDefs = gql`
 
   # ─── ESPECIFICACIONES TI ────────────────────────────────
 
-  # Tabla: Especificaciones_TI
   type EspecificacionTI {
     id_bien: ID!
-    nom_pc: String
     cpu_info: String
     ram_gb: Int
     almacenamiento_gb: Int
@@ -336,7 +343,6 @@ export const typeDefs = gql`
 
   # ─── GARANTÍAS ──────────────────────────────────────────
 
-  # Tabla: Garantias
   type Garantia {
     id_garantia: ID!
     id_bien: ID!
@@ -350,8 +356,7 @@ export const typeDefs = gql`
 
   # ─── INCIDENCIAS ────────────────────────────────────────
 
-  # Tabla: Incidencias
-  # estatus_reparacion valores: 'Pendiente' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Sin resolver'
+  # estatus_reparacion: 'Pendiente' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Sin resolver'
   type Incidencia {
     id_incidencia: ID!
     id_bien: ID!
@@ -365,12 +370,13 @@ export const typeDefs = gql`
     fecha_resolucion: DateTime
     alias: String
     requerimiento: String
-    id_unidad: Int
+    # id_unidad es varchar(50) FK a unidades(clave)
+    id_unidad: String
     bien: Bien
     usuarioGeneraReporte: Usuario
     usuarioResuelve: Usuario
     tipoIncidencia: TipoIncidencia
-    unidad: Unidad
+    unidad: Inmueble
     notas: [Nota!]
   }
 
@@ -386,7 +392,6 @@ export const typeDefs = gql`
 
   # ─── NOTAS ──────────────────────────────────────────────
 
-  # Tabla: Notas — puede asociarse a un Bien O a una Incidencia (mutuamente excluyente)
   type Nota {
     id_nota: ID!
     id_bien: ID
@@ -399,7 +404,6 @@ export const typeDefs = gql`
 
   # ─── MOVIMIENTOS ────────────────────────────────────────
 
-  # Tabla: Movimientos_Inventario
   type MovimientoInventario {
     id_movimiento: ID!
     id_bien: ID!
@@ -425,15 +429,14 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
-  # ─── TIPOS DE INCIDENCIA ──────────────────────────────────
+  # ─── TIPOS DE INCIDENCIA ────────────────────────────────
 
-  # Tabla: Tipo_Incidencias
   type TipoIncidencia {
     id_tipo_incidencia: ID!
     nombre_tipo: String!
   }
 
-  # ─── USUARIOS (Paginación) ─────────────────────────────
+  # ─── PAGINACIÓN USUARIOS ────────────────────────────────
 
   type UsuarioEdge {
     node: Usuario!
@@ -466,10 +469,6 @@ export const typeDefs = gql`
     # ── Auth
     me: Usuario
 
-    # ── Catálogos — Cat_Inmuebles
-    catInmuebles: [CatInmueble!]!
-    catInmueble(clave_inmueble: ID!): CatInmueble
-
     # ── Catálogos — Marcas
     marcas: [Marca!]!
     marca(clave_marca: ID!): Marca
@@ -497,25 +496,25 @@ export const typeDefs = gql`
     catUnidadesMedida: [CatUnidadMedida!]!
     catUnidadMedida(id_unidad_medida: ID!): CatUnidadMedida
 
-    # ── Unidades Operativas
-    unidades(estatus: Int, search: String, pagination: PaginationInput): UnidadesConnection!
-    catUnidades: [Unidad!]!
+    # ── Segmentos (antes "Unidades" — tabla de red/IP)
+    segmentos(estatus: Int, search: String, pagination: PaginationInput): SegmentosConnection!
+    catSegmentos: [Segmento!]!
     catTipoUnidades: [TipoUnidadCatalog!]!
-    unidad(id_unidad: ID!): Unidad
+    segmento(id_segmento: ID!): Segmento
 
-    # ── Inmuebles (tabla legacy)
+    # ── Inmuebles (tabla: unidades — datos físicos de la unidad)
     inmuebles(search: String, pagination: PaginationInput): InmueblesConnection!
-    catLegacyInmuebles: [Inmueble!]!
+    catInmuebles: [Inmueble!]!
     inmueble(clave: ID!): Inmueble
 
     # ── Clasificaciones de Unidades
     clasificacionesUnidades: [ClasificacionUnidad!]!
     tiposUnidad(id_clas: Int): [TipoUnidad!]!
 
-    # ── Ubicaciones (departamentos por unidad)
-    ubicaciones(id_unidad: Int): [Ubicacion!]!
+    # ── Ubicaciones (departamentos por unidad física)
+    ubicaciones(id_unidad: String): [Ubicacion!]!
     ubicacion(id_ubicacion: ID!): Ubicacion
-    ubicacionesPorUnidad(id_unidad: Int!): [Ubicacion!]!
+    ubicacionesPorUnidad(id_unidad: String!): [Ubicacion!]!
 
     # ── Usuarios
     usuarios(
@@ -552,7 +551,7 @@ export const typeDefs = gql`
       id_bien: ID
       id_usuario_genera_reporte: Int
       id_tipo_incidencia: Int
-      id_unidad: Int
+      id_unidad: String
       search: String
       pagination: PaginationInput
     ): IncidenciasConnection!
@@ -572,7 +571,6 @@ export const typeDefs = gql`
     ): MovimientosConnection!
     movimiento(id_movimiento: ID!): MovimientoInventario
 
-
     # ── Bitácora
     bitacora(
       accion: String
@@ -591,6 +589,20 @@ export const typeDefs = gql`
 
     # ── Dashboard
     dashboardStats: DashboardStats!
+
+    # ── Atributos Técnicos
+    catAtributos(soloActivos: Boolean): [CatAtributoTecnico!]!
+    catAtributo(id_atributo: ID!): CatAtributoTecnico
+    atributosPorTipoDispositivo(tipo_disp: Int!): [AtributoTipoDispositivo!]!
+    bienAtributos(id_bien: ID!): [BienAtributo!]!
+  }
+
+  # ─────────────────────────────────────────────────────────
+  # INPUT TYPES
+  # ─────────────────────────────────────────────────────────
+  input AtributoInput {
+    id_atributo: Int!
+    valor: String!
   }
 
   # ─────────────────────────────────────────────────────────
@@ -600,70 +612,6 @@ export const typeDefs = gql`
     # ── Auth
     login(matricula: String!, password: String!): AuthPayload!
     changePassword(id_usuario: ID!, currentPassword: String!, newPassword: String!): Boolean!
-
-    # ── Catálogos — Cat_Inmuebles
-    createCatInmueble(
-      clave_inmueble: ID!
-      nombre_ubicacion: String!
-      direccion: String
-      jefatura_asignada: String
-    ): CatInmueble!
-    updateCatInmueble(
-      clave_inmueble: ID!
-      nombre_ubicacion: String
-      direccion: String
-      jefatura_asignada: String
-    ): CatInmueble!
-    deleteCatInmueble(clave_inmueble: ID!): Boolean!
-
-    # ── Inmuebles (legacy)
-    createInmueble(
-      clave: ID!
-      descripcion: String
-      desc_corta: String
-      encargado: String
-      direccion: String
-      calle: String
-      numero: String
-      colonia: String
-      ciudad: String
-      municipio: String
-      cp: String
-      ppal: String
-      clave_zona: String!
-      clave_a: Int
-      telefono: String
-      zona_reporte: String
-      nivel: Int
-      no_inmueble: Int
-      regimen: Int
-      tipo_unidad: Int
-    ): Inmueble!
-
-    updateInmueble(
-      clave: ID!
-      descripcion: String
-      desc_corta: String
-      encargado: String
-      direccion: String
-      calle: String
-      numero: String
-      colonia: String
-      ciudad: String
-      municipio: String
-      cp: String
-      ppal: String
-      clave_zona: String
-      clave_a: Int
-      telefono: String
-      zona_reporte: String
-      nivel: Int
-      no_inmueble: Int
-      regimen: Int
-      tipo_unidad: Int
-    ): Inmueble!
-
-    deleteInmueble(clave: ID!): Boolean!
 
     # ── Catálogos — Marcas
     createMarca(marca: String!): Marca!
@@ -733,23 +681,22 @@ export const typeDefs = gql`
       estatus: Boolean
     ): Usuario!
     deleteUsuario(id_usuario: ID!): Boolean!
-    # Reseteo de contraseña por admin: el admin valida su password y fija una contraseña temporal al usuario
     resetPasswordAdmin(
       id_usuario_target: ID!
       adminPassword: String!
-    ): String!  # Devuelve la contraseña temporal para que el admin la comunique al usuario
+    ): String!
 
     # ── Bienes
     createBien(
       id_categoria: Int!
       id_unidad_medida: Int!
-      id_unidad: Int
+      id_segmento: Int
       id_ubicacion: Int
       num_serie: String
       num_inv: String
       cantidad: Float
       estatus_operativo: String
-      clave_inmueble_ref: String
+      clave_unidad_ref: String
       clave_modelo: String
       id_usuario_resguardo: Int
       fecha_adquisicion: Date
@@ -758,13 +705,13 @@ export const typeDefs = gql`
       id_bien: ID!
       id_categoria: Int
       id_unidad_medida: Int
-      id_unidad: Int
+      id_segmento: Int
       id_ubicacion: Int
       num_serie: String
       num_inv: String
       cantidad: Float
       estatus_operativo: String
-      clave_inmueble_ref: String
+      clave_unidad_ref: String
       clave_modelo: String
       id_usuario_resguardo: Int
       fecha_adquisicion: Date
@@ -774,7 +721,6 @@ export const typeDefs = gql`
     # ── Especificaciones TI (upsert: crea o actualiza)
     upsertEspecificacionTI(
       id_bien: ID!
-      nom_pc: String
       cpu_info: String
       ram_gb: Int
       almacenamiento_gb: Int
@@ -788,8 +734,8 @@ export const typeDefs = gql`
     ): EspecificacionTI!
 
     # ── Proveedores
-    createProveedor(nombre_proveedor: String!, informacion_contacto: String): Proveedor!
-    updateProveedor(id_proveedor: ID!, nombre_proveedor: String, informacion_contacto: String): Proveedor!
+    createProveedor(nombre_proveedor: String!): Proveedor!
+    updateProveedor(id_proveedor: ID!, nombre_proveedor: String): Proveedor!
     deleteProveedor(id_proveedor: ID!): Boolean!
 
     # ── Garantías
@@ -815,54 +761,40 @@ export const typeDefs = gql`
     deleteTipoIncidencia(id_tipo_incidencia: ID!): Boolean!
 
     # ── Incidencias
-    # Crear incidencia
-    # id_usuario_genera_reporte se toma del context.user (usuario autenticado)
     createIncidencia(
       id_bien: ID!
       id_tipo_incidencia: Int!
       descripcion_falla: String!
-      id_unidad: Int
+      id_unidad: String
       alias: String
       requerimiento: String
     ): Incidencia!
-
-    # Editar campos de una incidencia existente (Maestro y Admin)
     updateIncidencia(
       id_incidencia: ID!
       id_tipo_incidencia: Int
       descripcion_falla: String
-      id_unidad: Int
+      id_unidad: String
       alias: String
       requerimiento: String
     ): Incidencia!
-
-    # Pasar a 'En proceso' — opcionalmente agrega nota de inicio
     pasarAEnProceso(
       id_incidencia: ID!
       contenido_nota: String
     ): Incidencia!
-
-    # Agregar nota de seguimiento a una incidencia
     agregarNotaSeguimiento(
       id_incidencia: ID!
       contenido_nota: String!
     ): Nota!
-
-    # Resolver incidencia (estatus_cierre: 'Resuelto' | 'Cerrado' | 'Sin resolver')
-    # id_usuario_resuelve: quién físicamente resolvió el problema
     resolverIncidencia(
       id_incidencia: ID!
       estatus_cierre: String!
       resolucion_textual: String!
       id_usuario_resuelve: Int
     ): Incidencia!
-
-    # Cambio de estatus libre (para casos especiales / admin)
     updateIncidenciaEstatus(
       id_incidencia: ID!
       estatus_reparacion: String!
     ): Incidencia!
-
     deleteIncidencia(id_incidencia: ID!): Boolean!
 
     # ── Notas
@@ -890,7 +822,7 @@ export const typeDefs = gql`
     deleteMovimiento(id_movimiento: ID!): Boolean!
 
     # ── Ubicaciones
-    createUbicacion(id_unidad: Int!, nombre_ubicacion: String!): Ubicacion!
+    createUbicacion(id_unidad: String!, nombre_ubicacion: String!): Ubicacion!
     updateUbicacion(id_ubicacion: ID!, nombre_ubicacion: String): Ubicacion!
     deleteUbicacion(id_ubicacion: ID!): Boolean!
 
@@ -906,46 +838,115 @@ export const typeDefs = gql`
     ocultarNotificacion(id_notificacion: Int!): Boolean!
     deleteNotificacion(id_notificacion: Int!): Boolean!
 
-    # ── Unidades
-    createUnidad(
+    # ── Segmentos (antes "Unidades")
+    createSegmento(
       no_ref: String!
       nombre: String
       ip: String!
-      encargado: String
-      telefono: String
       clave: String
-      tipo_unidad: Int
       bits: Int
       ip_init: Int
       estatus: Int
-      regimen: Int
       vlan: Int
       monitorear: Int
       proveedor: String
       fecha_migracion: DateTime
       velocidad: String
       tipo_enlace: Int
-    ): Unidad!
-    updateUnidad(
-      id_unidad: Int!
+    ): Segmento!
+    updateSegmento(
+      id_segmento: Int!
       no_ref: String
       nombre: String
       ip: String
-      encargado: String
-      telefono: String
       clave: String
-      tipo_unidad: Int
       bits: Int
       ip_init: Int
       estatus: Int
-      regimen: Int
       vlan: Int
       monitorear: Int
       proveedor: String
       fecha_migracion: DateTime
       velocidad: String
       tipo_enlace: Int
-    ): Unidad!
-    deleteUnidad(id_unidad: Int!): Boolean!
+    ): Segmento!
+    deleteSegmento(id_segmento: Int!): Boolean!
+
+    # ── Inmuebles (tabla: unidades — datos físicos)
+    createInmueble(
+      clave: ID!
+      descripcion: String
+      desc_corta: String
+      encargado: String
+      direccion: String
+      calle: String
+      numero: String
+      colonia: String
+      ciudad: String
+      municipio: String
+      cp: String
+      ppal: String
+      clave_zona: String!
+      clave_a: Int
+      zona_reporte: String
+      nivel: Int
+      no_inmueble: Int
+      regimen: Int
+      tipo_unidad: Int
+    ): Inmueble!
+    updateInmueble(
+      clave: ID!
+      descripcion: String
+      desc_corta: String
+      encargado: String
+      direccion: String
+      calle: String
+      numero: String
+      colonia: String
+      ciudad: String
+      municipio: String
+      cp: String
+      ppal: String
+      clave_zona: String
+      clave_a: Int
+      telefono: String
+      zona_reporte: String
+      nivel: Int
+      no_inmueble: Int
+      regimen: Int
+      tipo_unidad: Int
+    ): Inmueble!
+    deleteInmueble(clave: ID!): Boolean!
+
+    # ── Catálogo de Atributos Técnicos ──────────────────────
+    createAtributo(
+      nombre_atributo: String!
+      tipo_valor: String
+      unidad_medida: String
+      descripcion: String
+    ): CatAtributoTecnico!
+    updateAtributo(
+      id_atributo: ID!
+      nombre_atributo: String
+      tipo_valor: String
+      unidad_medida: String
+      descripcion: String
+      activo: Boolean
+    ): CatAtributoTecnico!
+    deleteAtributo(id_atributo: ID!): Boolean!
+
+    # ── Atributos por Tipo de Dispositivo ────────────────────
+    setAtributoTipoDispositivo(
+      tipo_disp: Int!
+      id_atributo: Int!
+      es_requerido: Boolean
+    ): AtributoTipoDispositivo!
+    removeAtributoTipoDispositivo(tipo_disp: Int!, id_atributo: Int!): Boolean!
+
+    # ── Atributos por Bien ────────────────────────────────────
+    setBienAtributo(id_bien: ID!, id_atributo: Int!, valor: String!): BienAtributo!
+    deleteBienAtributo(id_bien_atributo: ID!): Boolean!
+    # Establece todos los atributos de un bien en una sola operación (upsert masivo)
+    upsertBienAtributos(id_bien: ID!, atributos: [AtributoInput!]!): [BienAtributo!]!
   }
 `;

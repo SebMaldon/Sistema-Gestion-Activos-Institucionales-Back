@@ -8,6 +8,7 @@ import { movimientosResolvers, dashboardResolvers } from './movimientos.resolver
 import { ubicacionesResolvers } from './ubicaciones.resolver';
 import { bitacoraResolvers } from './bitacora.resolver';
 import { notificacionesResolvers } from './notificaciones.resolver';
+import { atributosResolvers } from './atributos.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -62,6 +63,7 @@ export const resolvers = {
     ...ubicacionesResolvers.Query,
     ...bitacoraResolvers.Query,
     ...notificacionesResolvers.Query,
+    ...atributosResolvers.Query,
   },
 
   Mutation: {
@@ -73,10 +75,11 @@ export const resolvers = {
     ...movimientosResolvers.Mutation,
     ...ubicacionesResolvers.Mutation,
     ...notificacionesResolvers.Mutation,
+    ...atributosResolvers.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────
-  CatInmueble: catalogosResolvers.CatInmueble,
+  Inmueble: catalogosResolvers.Inmueble,
   CatModelo: catalogosResolvers.CatModelo,
   Bien: bienesResolvers.Bien,
   EspecificacionTI: bienesResolvers.EspecificacionTI,
@@ -87,4 +90,8 @@ export const resolvers = {
   Usuario: usuariosResolvers.Usuario,
   Ubicacion: ubicacionesResolvers.Ubicacion,
   Bitacora: bitacoraResolvers.Bitacora,
+  // Atributos Técnicos
+  BienAtributo: atributosResolvers.BienAtributo,
+  AtributoTipoDispositivo: atributosResolvers.AtributoTipoDispositivo,
+  CatAtributoTecnico: atributosResolvers.CatAtributoTecnico,
 };

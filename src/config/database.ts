@@ -24,8 +24,11 @@ import { Bitacora } from '../entities/Bitacora';
 import { NotificacionMensaje } from '../entities/NotificacionMensaje';
 import { NotificacionLectura } from '../entities/NotificacionLectura';
 import { Inmueble } from '../entities/Inmueble';
+import { BienAtributo } from '../entities/BienAtributo';
+import { CatAtributoTecnico } from '../entities/CatAtributoTecnico';
+import { AtributoPorTipoDispositivo } from '../entities/AtributoPorTipoDispositivo';
+import { Segmento } from '../entities/Segmento';
 import { logger } from '../utils/logger';
-
 import { BitacoraSubscriber } from '../subscribers/BitacoraSubscriber';
 
 export const AppDataSource = new DataSource({
@@ -56,6 +59,7 @@ export const AppDataSource = new DataSource({
     Proveedor,
     Ubicacion, Bitacora, NotificacionMensaje, NotificacionLectura,
     Inmueble,
+    BienAtributo, CatAtributoTecnico, AtributoPorTipoDispositivo, Segmento
   ],
   subscribers: [
     BitacoraSubscriber,

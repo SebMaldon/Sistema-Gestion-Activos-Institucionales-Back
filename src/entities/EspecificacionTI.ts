@@ -6,9 +6,6 @@ export class EspecificacionTI {
   @PrimaryColumn({ name: 'id_bien', type: 'uniqueidentifier' })
   id_bien!: string;
 
-  @Column({ name: 'nom_pc', type: 'varchar', length: 64, nullable: true })
-  nom_pc?: string;
-
   @Column({ name: 'cpu_info', type: 'varchar', length: 100, nullable: true })
   cpu_info?: string;
 

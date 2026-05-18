@@ -215,8 +215,9 @@ export const usuariosResolvers = {
       if (parent.rol) return parent.rol;
       return context.loaders.rolLoader.load(parent.id_rol);
     },
-    unidad: (parent: Usuario, _: unknown, context: GraphQLContext) =>
-      parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
+    // id_unidad (int) FK a segmentos.id_segmento
+    segmento: (parent: Usuario, _: unknown, context: GraphQLContext) =>
+      parent.id_unidad ? context.loaders.segmentoLoader.load(parent.id_unidad) : null,
     // Normalizar BIT de SQL Server
     estatus: (parent: Usuario) => Boolean(parent.estatus),
   },

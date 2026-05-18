@@ -1,9 +1,14 @@
-import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
-import { Bien } from './Bien';
+// NOTA: La tabla Cat_Inmuebles ya no existe en el nuevo modelo de BD.
+// Cat_Unidades tampoco se usa activamente.
+// Este archivo se mantiene como stub vacío para no romper importaciones durante la migración.
+// Se puede eliminar cuando todas las referencias hayan sido limpiadas.
 
-@Entity('Cat_Inmuebles')
+import { Entity, PrimaryColumn, Column } from 'typeorm';
+
+/** @deprecated - Cat_Inmuebles fue eliminada del nuevo modelo de BD */
+@Entity('Cat_Unidades')
 export class CatInmueble {
-  @PrimaryColumn({ name: 'clave_inmueble', type: 'varchar', length: 50 })
+  @PrimaryColumn({ name: 'clave_unidad', type: 'varchar', length: 50 })
   clave_inmueble!: string;
 
   @Column({ name: 'nombre_ubicacion', type: 'varchar', length: 150 })
@@ -14,7 +19,4 @@ export class CatInmueble {
 
   @Column({ name: 'jefatura_asignada', type: 'varchar', length: 120, nullable: true })
   jefatura_asignada?: string;
-
-  @OneToMany(() => Bien, (bien) => bien.inmueble)
-  bienes?: Bien[];
 }

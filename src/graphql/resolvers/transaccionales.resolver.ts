@@ -5,6 +5,7 @@ import { Proveedor } from '../../entities/Proveedor';
 import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
 import { Bien } from '../../entities/Bien';
+import { Inmueble } from '../../entities/Inmueble';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ValidationError } from '../../utils/errors';
@@ -411,8 +412,9 @@ export const transaccionalesResolvers = {
     usuarioResuelve: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       parent.id_usuario_resuelve ? context.loaders.usuarioLoader.load(parent.id_usuario_resuelve) : null,
 
+    // unidad ahora es Inmueble (tabla: unidades) — id_unidad es varchar
     unidad: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
-      parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
+      parent.id_unidad ? context.loaders.inmuebleLoader.load(parent.id_unidad) : null,
 
     // Antes: findOne por cada fila → N+1. Ahora: 1 query para todos.
     tipoIncidencia: (parent: Incidencia, _: unknown, context: GraphQLContext) =>

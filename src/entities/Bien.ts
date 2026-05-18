@@ -4,16 +4,17 @@ import {
 } from 'typeorm';
 import { CatCategoriaActivo } from './CatCategoriaActivo';
 import { CatUnidadMedida } from './CatUnidadMedida';
-import { CatInmueble } from './CatInmueble';
+import { Inmueble } from './Inmueble';
 import { CatModelo } from './CatModelo';
 import { Usuario } from './Usuario';
-import { Unidad } from './Unidad';
+import { Segmento } from './Segmento';
 import { Ubicacion } from './Ubicacion';
 import { EspecificacionTI } from './EspecificacionTI';
 import { Garantia } from './Garantia';
 import { Nota } from './Nota';
 import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
+import { BienAtributo } from './BienAtributo';
 
 @Entity('Bienes')
 export class Bien {
@@ -26,8 +27,9 @@ export class Bien {
   @Column({ name: 'id_unidad_medida', type: 'int' })
   id_unidad_medida!: number;
 
-  @Column({ name: 'id_unidad', type: 'int', nullable: true })
-  id_unidad?: number;
+  // FK al segmento de red (tabla: segmentos, antes "unidades")
+  @Column({ name: 'id_segmento', type: 'int', nullable: true })
+  id_segmento?: number;
 
   @Column({ name: 'id_ubicacion', type: 'int', nullable: true })
   id_ubicacion?: number;
@@ -47,11 +49,11 @@ export class Bien {
   @Column({ name: 'qr_hash', type: 'varchar', length: 255, nullable: true, unique: true })
   qr_hash?: string;
 
-  // FK a la tabla inmuebles (tabla legacy con más detalle)
-  @Column({ name: 'clave_inmueble_ref', type: 'varchar', length: 50, nullable: true })
-  clave_inmueble_ref?: string;
+  // FK a la tabla unidades (datos físicos, antes llamada "inmuebles")
+  @Column({ name: 'clave_unidad_ref', type: 'varchar', length: 50, nullable: true })
+  clave_unidad_ref?: string;
 
-  // Autogenerado por trigger (unidades.clave + inmuebles.clave)
+  // Autogenerado por trigger (segmentos.clave + unidades.clave)
   @Column({ name: 'clave_presupuestal', type: 'varchar', length: 150, nullable: true })
   clave_presupuestal?: string;
 
@@ -77,17 +79,19 @@ export class Bien {
   @JoinColumn({ name: 'id_unidad_medida' })
   unidadMedida?: CatUnidadMedida;
 
-  @ManyToOne(() => Unidad, (u) => u.bienes, { nullable: true })
-  @JoinColumn({ name: 'id_unidad' })
-  unidad?: Unidad;
+  // Segmento de red al que pertenece el bien
+  @ManyToOne(() => Segmento, (s) => s.bienes, { nullable: true })
+  @JoinColumn({ name: 'id_segmento' })
+  segmento?: Segmento;
 
   @ManyToOne(() => Ubicacion, (ub) => ub.bienes, { nullable: true })
   @JoinColumn({ name: 'id_ubicacion' })
   ubicacion?: Ubicacion;
 
-  @ManyToOne(() => CatInmueble, (i) => i.bienes, { nullable: true })
-  @JoinColumn({ name: 'clave_inmueble_ref' })
-  inmueble?: CatInmueble;
+  // Unidad física (datos del inmueble) a la que pertenece el bien
+  @ManyToOne(() => Inmueble, (i) => i.bienes, { nullable: true })
+  @JoinColumn({ name: 'clave_unidad_ref', referencedColumnName: 'clave' })
+  unidad?: Inmueble;
 
   @ManyToOne(() => CatModelo, (m) => m.bienes, { nullable: true })
   @JoinColumn({ name: 'clave_modelo' })
@@ -111,4 +115,7 @@ export class Bien {
 
   @OneToMany(() => MovimientoInventario, (mov) => mov.bien)
   movimientos?: MovimientoInventario[];
+
+  @OneToMany(() => BienAtributo, (ba) => ba.bien)
+  atributos?: BienAtributo[];
 }
