@@ -18,9 +18,6 @@ export class Incidencia {
   @Column({ name: 'id_usuario_genera_reporte', type: 'int' })
   id_usuario_genera_reporte!: number;
 
-  @Column({ name: 'id_usuario_resuelve', type: 'int', nullable: true })
-  id_usuario_resuelve?: number;
-
   @Column({ name: 'id_tipo_incidencia', type: 'int' })
   id_tipo_incidencia!: number;
 
@@ -58,10 +55,6 @@ export class Incidencia {
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'id_usuario_genera_reporte' })
   usuarioGeneraReporte?: Usuario;
-
-  @ManyToOne(() => Usuario)
-  @JoinColumn({ name: 'id_usuario_resuelve' })
-  usuarioResuelve?: Usuario;
 
   @ManyToOne(() => TipoIncidencia)
   @JoinColumn({ name: 'id_tipo_incidencia' })

@@ -287,7 +287,7 @@ export const bienesResolvers = {
 
     // Unidad física (tabla: unidades — antes inmuebles)
     unidad: (parent: Bien, _: unknown, context: GraphQLContext) =>
-      parent.clave_unidad_ref ? context.loaders.inmuebleLoader.load(parent.clave_unidad_ref) : null,
+      parent.clave_unidad_ref ? context.loaders.unidadLoader.load(parent.clave_unidad_ref) : null,
 
     modelo: (parent: Bien, _: unknown, context: GraphQLContext) =>
       parent.clave_modelo ? context.loaders.catModeloLoader.load(parent.clave_modelo) : null,

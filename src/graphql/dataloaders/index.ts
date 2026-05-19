@@ -57,9 +57,9 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
-  // ── Inmuebles por clave varchar(50) — tabla: unidades (antes "inmuebles")
+  // ── Unidades por clave varchar(50) — tabla: unidades (entidad TypeORM: Inmueble)
   // Usado por: Bien.unidad, Incidencia.unidad, Ubicacion.unidad
-  const inmuebleLoader = new DataLoader<string, Inmueble | undefined>(async (keys) => {
+  const unidadLoader = new DataLoader<string, Inmueble | undefined>(async (keys) => {
     const items = await AppDataSource.getRepository(Inmueble).find({
       where: { clave: In(keys as string[]) },
     });
@@ -182,7 +182,7 @@ export function createDataLoaders() {
     tipoDispositivoLoader,
     catModeloLoader,
     usuarioLoader,
-    inmuebleLoader,      // Antes: catInmuebleLoader (clave_unidad_ref → unidades.clave)
+    unidadLoader,      // clave_unidad_ref → unidades.clave (físico)
     segmentoLoader,      // Antes: unidadLoader (id_segmento → segmentos.id_segmento)
     especificacionTILoader,
     garantiasByBienLoader,

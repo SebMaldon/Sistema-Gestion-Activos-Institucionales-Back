@@ -137,6 +137,7 @@ export const typeDefs = gql`
     tipo_enlace: Int
     ip_init: Int
     fecha_migracion: DateTime
+    unidad: Unidad
   }
 
   type SegmentoEdge {
@@ -149,8 +150,8 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
-  # Tabla: unidades (antes llamada "inmuebles" — datos físicos de la unidad)
-  type Inmueble {
+  # Tabla: unidades — datos físicos de la unidad (clínica, hospital, etc.)
+  type Unidad {
     clave: ID!
     descripcion: String
     desc_corta: String
@@ -171,15 +172,32 @@ export const typeDefs = gql`
     regimen: Int
     tipo_unidad: Int
     tipoUnidadInfo: TipoUnidadCatalog
+    unidadesACargo: [UnidadACargo!]
+    contactos: [Contacto!]
+    segmentos: [Segmento!]
   }
 
-  type InmuebleEdge {
-    node: Inmueble!
+  type UnidadACargo {
+    id_unidad_cargo: String!
+    id_rol_empleado: Int!
+    id_usuario: Int!
+    usuario: Usuario
+  }
+
+  type Contacto {
+    id_contacto: Int!
+    id_unidad: String
+    contacto: String!
+    tipo_contacto: String!
+  }
+
+  type UnidadEdge {
+    node: Unidad!
     cursor: String!
   }
 
-  type InmueblesConnection {
-    edges: [InmuebleEdge!]!
+  type UnidadesConnection {
+    edges: [UnidadEdge!]!
     pageInfo: PageInfo!
   }
 
@@ -191,7 +209,7 @@ export const typeDefs = gql`
     id_ubicacion: ID!
     id_unidad: String!
     nombre_ubicacion: String!
-    unidad: Inmueble
+    unidad: Unidad
   }
 
   # ─── BITÁCORA ───────────────────────────────────────────
@@ -294,7 +312,7 @@ export const typeDefs = gql`
     unidadMedida: CatUnidadMedida
     segmento: Segmento
     ubicacion: Ubicacion
-    unidad: Inmueble
+    unidad: Unidad
     modelo: CatModelo
     usuarioResguardo: Usuario
     especificacionTI: EspecificacionTI
@@ -361,7 +379,6 @@ export const typeDefs = gql`
     id_incidencia: ID!
     id_bien: ID!
     id_usuario_genera_reporte: Int!
-    id_usuario_resuelve: Int
     id_tipo_incidencia: Int!
     descripcion_falla: String!
     fecha_reporte: DateTime!
@@ -374,9 +391,8 @@ export const typeDefs = gql`
     id_unidad: String
     bien: Bien
     usuarioGeneraReporte: Usuario
-    usuarioResuelve: Usuario
     tipoIncidencia: TipoIncidencia
-    unidad: Inmueble
+    unidad: Unidad
     notas: [Nota!]
   }
 
@@ -502,10 +518,10 @@ export const typeDefs = gql`
     catTipoUnidades: [TipoUnidadCatalog!]!
     segmento(id_segmento: ID!): Segmento
 
-    # ── Inmuebles (tabla: unidades — datos físicos de la unidad)
-    inmuebles(search: String, pagination: PaginationInput): InmueblesConnection!
-    catInmuebles: [Inmueble!]!
-    inmueble(clave: ID!): Inmueble
+    # ── Unidades (tabla: unidades — datos físicos de la unidad: clínica, hospital, etc.)
+    unidades(search: String, pagination: PaginationInput): UnidadesConnection!
+    catUnidades: [Unidad!]!
+    unidad(clave: ID!): Unidad
 
     # ── Clasificaciones de Unidades
     clasificacionesUnidades: [ClasificacionUnidad!]!
@@ -603,6 +619,32 @@ export const typeDefs = gql`
   input AtributoInput {
     id_atributo: Int!
     valor: String!
+  }
+
+  input UnidadACargoInput {
+    id_rol_empleado: Int!
+    id_usuario: Int!
+  }
+
+  input ContactoInput {
+    contacto: String!
+    tipo_contacto: String!
+  }
+
+  input SegmentoInput {
+    id_segmento: Int
+    no_ref: String!
+    nombre: String
+    ip: String!
+    bits: Int
+    ip_init: Int
+    estatus: Int
+    vlan: Int
+    monitorear: Int
+    proveedor: String
+    fecha_migracion: DateTime
+    velocidad: String
+    tipo_enlace: Int
   }
 
   # ─────────────────────────────────────────────────────────
@@ -733,6 +775,57 @@ export const typeDefs = gql`
       id_monitor: ID
     ): EspecificacionTI!
 
+    # ── Unidades (tabla: unidades — datos físicos de la unidad: clínica, hospital, etc.)
+    createUnidad(
+      clave: ID!
+      descripcion: String
+      desc_corta: String
+      direccion: String
+      calle: String
+      numero: String
+      colonia: String
+      ciudad: String
+      municipio: String
+      cp: String
+      ppal: String
+      clave_zona: String
+      clave_a: Int
+      zona_reporte: String
+      nivel: Int
+      no_inmueble: Int
+      regimen: Int
+      tipo_unidad: Int
+      unidadesACargo: [UnidadACargoInput!]
+      contactos: [ContactoInput!]
+      segmentos: [SegmentoInput!]
+    ): Unidad!
+
+    updateUnidad(
+      clave: ID!
+      descripcion: String
+      desc_corta: String
+      direccion: String
+      calle: String
+      numero: String
+      colonia: String
+      ciudad: String
+      municipio: String
+      cp: String
+      ppal: String
+      clave_zona: String
+      clave_a: Int
+      zona_reporte: String
+      nivel: Int
+      no_inmueble: Int
+      regimen: Int
+      tipo_unidad: Int
+      unidadesACargo: [UnidadACargoInput!]
+      contactos: [ContactoInput!]
+      segmentos: [SegmentoInput!]
+    ): Unidad!
+    
+    deleteUnidad(clave: ID!): Boolean!
+
     # ── Proveedores
     createProveedor(nombre_proveedor: String!): Proveedor!
     updateProveedor(id_proveedor: ID!, nombre_proveedor: String): Proveedor!
@@ -789,7 +882,6 @@ export const typeDefs = gql`
       id_incidencia: ID!
       estatus_cierre: String!
       resolucion_textual: String!
-      id_usuario_resuelve: Int
     ): Incidencia!
     updateIncidenciaEstatus(
       id_incidencia: ID!
@@ -871,52 +963,6 @@ export const typeDefs = gql`
       tipo_enlace: Int
     ): Segmento!
     deleteSegmento(id_segmento: Int!): Boolean!
-
-    # ── Inmuebles (tabla: unidades — datos físicos)
-    createInmueble(
-      clave: ID!
-      descripcion: String
-      desc_corta: String
-      encargado: String
-      direccion: String
-      calle: String
-      numero: String
-      colonia: String
-      ciudad: String
-      municipio: String
-      cp: String
-      ppal: String
-      clave_zona: String!
-      clave_a: Int
-      zona_reporte: String
-      nivel: Int
-      no_inmueble: Int
-      regimen: Int
-      tipo_unidad: Int
-    ): Inmueble!
-    updateInmueble(
-      clave: ID!
-      descripcion: String
-      desc_corta: String
-      encargado: String
-      direccion: String
-      calle: String
-      numero: String
-      colonia: String
-      ciudad: String
-      municipio: String
-      cp: String
-      ppal: String
-      clave_zona: String
-      clave_a: Int
-      telefono: String
-      zona_reporte: String
-      nivel: Int
-      no_inmueble: Int
-      regimen: Int
-      tipo_unidad: Int
-    ): Inmueble!
-    deleteInmueble(clave: ID!): Boolean!
 
     # ── Catálogo de Atributos Técnicos ──────────────────────
     createAtributo(

@@ -8,6 +8,8 @@ import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
 import { Segmento } from '../../entities/Segmento';
 import { Inmueble } from '../../entities/Inmueble';
+import { UnidadACargo } from '../../entities/UnidadACargo';
+import { Contacto } from '../../entities/Contacto';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
@@ -136,8 +138,8 @@ export const catalogosResolvers = {
       return AppDataSource.getRepository(Segmento).findOne({ where: { id_segmento: parseInt(id_segmento) } });
     },
 
-    // ── Inmuebles (tabla: unidades — datos físicos de la unidad)
-    inmuebles: async (
+    // ── Unidades (tabla: unidades — datos físicos de la unidad)
+    unidades: async (
       _: unknown,
       {
         search,
@@ -152,7 +154,10 @@ export const catalogosResolvers = {
       const qb = AppDataSource.getRepository(Inmueble).createQueryBuilder('i');
 
       if (search) {
-        qb.andWhere('(i.descripcion LIKE :search OR i.clave LIKE :search OR i.ciudad LIKE :search)', { search: `%${search}%` });
+        qb.andWhere(
+          '(i.descripcion LIKE :search OR i.clave LIKE :search OR i.ciudad LIKE :search OR EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Ip LIKE :search))',
+          { search: `%${search}%` }
+        );
       }
 
       const totalCount = await qb.getCount();
@@ -182,11 +187,11 @@ export const catalogosResolvers = {
         },
       };
     },
-    catInmuebles: async (_: unknown, __: unknown, context: GraphQLContext) => {
+    catUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
       return AppDataSource.getRepository(Inmueble).find({ order: { descripcion: 'ASC' } });
     },
-    inmueble: async (_: unknown, { clave }: { clave: string }, context: GraphQLContext) => {
+    unidad: async (_: unknown, { clave }: { clave: string }, context: GraphQLContext) => {
       requireAuth(context);
       return AppDataSource.getRepository(Inmueble).findOne({ where: { clave } });
     },
@@ -424,39 +429,123 @@ export const catalogosResolvers = {
       return true;
     },
 
-    // ── Inmuebles (tabla: unidades — datos físicos)
-    createInmueble: async (_: unknown, args: any, context: GraphQLContext) => {
+    // ── Unidades (tabla: unidades — datos físicos)
+    createUnidad: async (_: unknown, { unidadesACargo, contactos, segmentos, ...args }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      const repo = AppDataSource.getRepository(Inmueble);
-      const exists = await repo.findOne({ where: { clave: args.clave } });
-      if (exists) throw new ConflictError(`Inmueble con clave "${args.clave}" ya existe`);
-      return repo.save(repo.create(args));
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(Inmueble);
+        const exists = await repo.findOne({ where: { clave: args.clave } });
+        if (exists) throw new ConflictError(`Unidad con clave "${args.clave}" ya existe`);
+        
+        const nuevaUnidad = await repo.save(repo.create(args));
+
+        if (unidadesACargo && unidadesACargo.length > 0) {
+          const uacRepo = manager.getRepository(UnidadACargo);
+          await Promise.all(unidadesACargo.map((uac: any) => 
+            uacRepo.save(uacRepo.create({ ...uac, id_unidad_cargo: args.clave }))
+          ));
+        }
+
+        if (contactos && contactos.length > 0) {
+          const contactoRepo = manager.getRepository(Contacto);
+          await Promise.all(contactos.map((c: any) => 
+            contactoRepo.save(contactoRepo.create({ ...c, id_unidad: args.clave }))
+          ));
+        }
+
+        if (segmentos && segmentos.length > 0) {
+          const segmentoRepo = manager.getRepository(Segmento);
+          await Promise.all(segmentos.map((s: any) =>
+            segmentoRepo.save(segmentoRepo.create({ ...s, clave: args.clave }))
+          ));
+        }
+
+        return nuevaUnidad;
+      });
     },
-    updateInmueble: async (_: unknown, { clave, ...updates }: any, context: GraphQLContext) => {
+    updateUnidad: async (_: unknown, { clave, unidadesACargo, contactos, segmentos, ...updates }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(Inmueble);
+        const item = await repo.findOne({ where: { clave } });
+        if (!item) throw new NotFoundError('Unidad');
+        
+        repo.merge(item, updates);
+        const unidadActualizada = await repo.save(item);
+
+        if (unidadesACargo !== undefined) {
+          const uacRepo = manager.getRepository(UnidadACargo);
+          await uacRepo.delete({ id_unidad_cargo: clave });
+          if (unidadesACargo.length > 0) {
+            await Promise.all(unidadesACargo.map((uac: any) => 
+              uacRepo.save(uacRepo.create({ ...uac, id_unidad_cargo: clave }))
+            ));
+          }
+        }
+
+        if (contactos !== undefined) {
+          const contactoRepo = manager.getRepository(Contacto);
+          await contactoRepo.delete({ id_unidad: clave });
+          if (contactos.length > 0) {
+            await Promise.all(contactos.map((c: any) => 
+              contactoRepo.save(contactoRepo.create({ ...c, id_unidad: clave }))
+            ));
+          }
+        }
+
+        if (segmentos !== undefined) {
+          const segmentoRepo = manager.getRepository(Segmento);
+          const existingSegments = await segmentoRepo.find({ where: { clave } });
+          const inputSegmentIds = segmentos.map((s: any) => s.id_segmento).filter(Boolean);
+
+          // Segments to delete
+          const toDelete = existingSegments.filter(s => !inputSegmentIds.includes(s.id_segmento));
+          for (const s of toDelete) {
+            const usuariosCount = await manager.getRepository(Usuario).count({ where: { id_unidad: s.id_segmento } });
+            if (usuariosCount > 0) {
+              throw new ForbiddenError(`No se puede eliminar el segmento "${s.nombre || s.ip}" porque tiene ${usuariosCount} usuario(s) asignado(s).`);
+            }
+            const bienesCount = await manager.getRepository(Bien).count({ where: { id_segmento: s.id_segmento } });
+            if (bienesCount > 0) {
+              throw new ForbiddenError(`No se puede eliminar el segmento "${s.nombre || s.ip}" porque tiene ${bienesCount} activo(s) vinculados.`);
+            }
+            await segmentoRepo.remove(s);
+          }
+
+          // Segments to save (create or update)
+          for (const s of segmentos) {
+            if (s.id_segmento) {
+              const existing = existingSegments.find(x => x.id_segmento === s.id_segmento);
+              if (existing) {
+                segmentoRepo.merge(existing, s);
+                await segmentoRepo.save(existing);
+              }
+            } else {
+              await segmentoRepo.save(segmentoRepo.create({ ...s, clave }));
+            }
+          }
+        }
+
+        return unidadActualizada;
+      });
+    },
+    deleteUnidad: async (_: unknown, { clave }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Inmueble);
       const item = await repo.findOne({ where: { clave } });
-      if (!item) throw new NotFoundError('Inmueble');
-      repo.merge(item, updates);
-      return repo.save(item);
-    },
-    deleteInmueble: async (_: unknown, { clave }: any, context: GraphQLContext) => {
-      requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      const repo = AppDataSource.getRepository(Inmueble);
-      const item = await repo.findOne({ where: { clave } });
-      if (!item) throw new NotFoundError('Inmueble');
+      if (!item) throw new NotFoundError('Unidad');
 
       const bienesCount = await AppDataSource.getRepository(Bien).count({ where: { clave_unidad_ref: clave } });
       if (bienesCount > 0) {
-        throw new ForbiddenError(`No se puede eliminar el inmueble porque tiene ${bienesCount} activo(s) vinculados.`);
+        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${bienesCount} activo(s) vinculados.`);
       }
 
       const ubicacionesCount = await AppDataSource.getRepository(Ubicacion).count({ where: { id_unidad: clave } });
       if (ubicacionesCount > 0) {
-        throw new ForbiddenError(`No se puede eliminar el inmueble porque tiene ${ubicacionesCount} ubicación(es) asociada(s).`);
+        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${ubicacionesCount} ubicación(es) asociada(s).`);
       }
 
       await repo.remove(item);
@@ -464,8 +553,8 @@ export const catalogosResolvers = {
     },
   },
 
-  // ── Field resolvers
-  Inmueble: {
+  // ── Field resolvers para tipo Unidad (entidad Inmueble)
+  Unidad: {
     tipoUnidadInfo: async (parent: Inmueble) => {
       if (!parent.tipo_unidad) return null;
       const rows = await AppDataSource.query(
@@ -473,6 +562,18 @@ export const catalogosResolvers = {
         [parent.tipo_unidad]
       );
       return rows[0] || null;
+    },
+    unidadesACargo: async (parent: Inmueble) => {
+      const uacRepo = AppDataSource.getRepository(UnidadACargo);
+      return uacRepo.find({ where: { id_unidad_cargo: parent.clave }, relations: ['usuario'] });
+    },
+    contactos: async (parent: Inmueble) => {
+      const contactosRepo = AppDataSource.getRepository(Contacto);
+      return contactosRepo.find({ where: { id_unidad: parent.clave } });
+    },
+    segmentos: async (parent: Inmueble) => {
+      const segmentoRepo = AppDataSource.getRepository(Segmento);
+      return segmentoRepo.find({ where: { clave: parent.clave } });
     }
   },
 
@@ -480,6 +581,6 @@ export const catalogosResolvers = {
     marca: (parent: CatModelo, _: unknown, context: GraphQLContext) =>
       parent.clave_marca ? context.loaders.marcaLoader.load(parent.clave_marca) : null,
     tipoDispositivo: (parent: CatModelo, _: unknown, context: GraphQLContext) =>
-      parent.tipo_disp ? context.loaders.tipoDispositivoLoader.load(parent.tipo_disp) : null,
+      parent.tipo_disp ? context.loaders.tipoDispositivoLoader.load(parent.tipo_disp) : null, // reload comment
   },
 };

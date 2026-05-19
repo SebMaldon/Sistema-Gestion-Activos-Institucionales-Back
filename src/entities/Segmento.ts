@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColum
 import { Bien } from './Bien';
 import { Usuario } from './Usuario';
 import { Ubicacion } from './Ubicacion';
+import { Inmueble } from './Inmueble';
 
 // Tabla: segmentos (antes llamada "unidades" — datos de red/IP por unidad operativa)
 @Entity('segmentos')
@@ -54,4 +55,8 @@ export class Segmento {
 
   @OneToMany(() => Usuario, (usuario) => usuario.segmento)
   usuarios?: Usuario[];
+
+  @ManyToOne(() => Inmueble, (inmueble) => inmueble.segmentos)
+  @JoinColumn({ name: 'clave', referencedColumnName: 'clave' })
+  inmueble?: Inmueble;
 }

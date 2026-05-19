@@ -1,5 +1,8 @@
 import { Entity, PrimaryColumn, Column, OneToMany } from 'typeorm';
 import { Bien } from './Bien';
+import { UnidadACargo } from './UnidadACargo';
+import { Contacto } from './Contacto';
+import { Segmento } from './Segmento';
 
 // Tabla: unidades (antes llamada "inmuebles" — datos físicos de la unidad: clave, dirección, etc.)
 @Entity('unidades')
@@ -63,4 +66,13 @@ export class Inmueble {
 
   @OneToMany(() => Bien, (bien) => bien.unidad)
   bienes?: Bien[];
+
+  @OneToMany(() => UnidadACargo, uac => uac.inmueble)
+  unidadesACargo?: UnidadACargo[];
+
+  @OneToMany(() => Contacto, c => c.inmueble)
+  contactos?: Contacto[];
+
+  @OneToMany(() => Segmento, s => s.inmueble)
+  segmentos?: Segmento[];
 }

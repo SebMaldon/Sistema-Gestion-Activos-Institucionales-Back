@@ -28,6 +28,8 @@ import { BienAtributo } from '../entities/BienAtributo';
 import { CatAtributoTecnico } from '../entities/CatAtributoTecnico';
 import { AtributoPorTipoDispositivo } from '../entities/AtributoPorTipoDispositivo';
 import { Segmento } from '../entities/Segmento';
+import { UnidadACargo } from '../entities/UnidadACargo';
+import { Contacto } from '../entities/Contacto';
 import { logger } from '../utils/logger';
 import { BitacoraSubscriber } from '../subscribers/BitacoraSubscriber';
 
@@ -59,7 +61,8 @@ export const AppDataSource = new DataSource({
     Proveedor,
     Ubicacion, Bitacora, NotificacionMensaje, NotificacionLectura,
     Inmueble,
-    BienAtributo, CatAtributoTecnico, AtributoPorTipoDispositivo, Segmento
+    BienAtributo, CatAtributoTecnico, AtributoPorTipoDispositivo, Segmento,
+    UnidadACargo, Contacto
   ],
   subscribers: [
     BitacoraSubscriber,

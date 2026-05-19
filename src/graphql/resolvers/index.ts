@@ -79,7 +79,7 @@ export const resolvers = {
   },
 
   // ── Type-level field resolvers ───────────────────────────
-  Inmueble: catalogosResolvers.Inmueble,
+  Unidad: catalogosResolvers.Unidad,
   CatModelo: catalogosResolvers.CatModelo,
   Bien: bienesResolvers.Bien,
   EspecificacionTI: bienesResolvers.EspecificacionTI,

@@ -312,7 +312,7 @@ export const transaccionalesResolvers = {
 
     resolverIncidencia: async (
       _: unknown,
-      { id_incidencia, estatus_cierre, resolucion_textual, id_usuario_resuelve }: any,
+      { id_incidencia, estatus_cierre, resolucion_textual }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -325,11 +325,9 @@ export const transaccionalesResolvers = {
       const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
       if (!item) throw new NotFoundError('Incidencia');
 
-      item.estatus_reparacion = estatus_cierre; // 'Resuelto' | 'Cerrado' | 'Sin resolver'
+      item.estatus_reparacion = estatus_cierre;
       item.resolucion_textual = resolucion_textual;
       item.fecha_resolucion = new Date();
-      // Si se provee un id_usuario_resuelve específico, usarlo; si no caer en el usuario logueado
-      item.id_usuario_resuelve = id_usuario_resuelve ?? context.user!.id_usuario;
 
       return repo.save(item);
     },
@@ -409,12 +407,9 @@ export const transaccionalesResolvers = {
     usuarioGeneraReporte: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario_genera_reporte),
 
-    usuarioResuelve: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
-      parent.id_usuario_resuelve ? context.loaders.usuarioLoader.load(parent.id_usuario_resuelve) : null,
-
     // unidad ahora es Inmueble (tabla: unidades) — id_unidad es varchar
     unidad: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
-      parent.id_unidad ? context.loaders.inmuebleLoader.load(parent.id_unidad) : null,
+      parent.id_unidad ? context.loaders.unidadLoader.load(parent.id_unidad) : null,
 
     // Antes: findOne por cada fila → N+1. Ahora: 1 query para todos.
     tipoIncidencia: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
