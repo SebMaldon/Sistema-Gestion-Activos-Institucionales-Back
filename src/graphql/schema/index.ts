@@ -241,6 +241,7 @@ export const typeDefs = gql`
     registro_afectado: String
     detalles_movimiento: String
     fecha_movimiento: DateTime!
+    origen: String
     usuario: Usuario
   }
 

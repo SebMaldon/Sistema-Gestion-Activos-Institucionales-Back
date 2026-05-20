@@ -31,6 +31,10 @@ export class Bitacora {
   @Column({ name: 'fecha_movimiento', type: 'datetime', default: () => 'GETDATE()' })
   fecha_movimiento!: Date;
 
+  /** Origen de la petición: ej. 'web' o 'win' */
+  @Column({ name: 'origen', type: 'varchar', length: 50, nullable: true })
+  origen?: string;
+
   // ── Relations ──────────────────────────────────────────────
 
   @ManyToOne(() => Usuario, { nullable: false })

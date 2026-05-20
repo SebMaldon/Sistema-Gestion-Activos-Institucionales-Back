@@ -18,14 +18,16 @@ export interface JwtPayload {
 export interface GraphQLContext extends BaseContext {
   user?: JwtPayload;
   loaders: DataLoaders;
+  origen?: string;
 }
 
 export async function buildContext({ req }: { req: Request }): Promise<GraphQLContext> {
   const loaders = createDataLoaders();
   const authHeader = req.headers.authorization;
+  const origen = req.headers['x-origen'] as string | undefined;
 
   if (!authHeader?.startsWith('Bearer ')) {
-    return { loaders };
+    return { loaders, origen };
   }
 
   const token = authHeader.substring(7);
@@ -34,9 +36,9 @@ export async function buildContext({ req }: { req: Request }): Promise<GraphQLCo
     const payload = jwt.verify(token, env.jwt.secret) as JwtPayload;
     
     // Almacenar el ID del usuario en el contexto asíncrono global
-    return { user: payload, loaders };
+    return { user: payload, loaders, origen };
   } catch (error) {
     console.error('[Context] Error verifying token:', error);
-    return { loaders };
+    return { loaders, origen };
   }
 }

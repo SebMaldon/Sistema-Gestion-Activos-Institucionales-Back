@@ -3,6 +3,7 @@ import { Bitacora } from '../../entities/Bitacora';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { decodeCursor } from '../../utils/pagination';
+import { sessionContext } from '../../utils/asyncLocalStorage';
 
 // ── Helper exportable para registrar entradas de bitácora desde cualquier resolver
 export async function registrarBitacora(
@@ -14,12 +15,16 @@ export async function registrarBitacora(
 ): Promise<void> {
   try {
     const repo = AppDataSource.getRepository(Bitacora);
+    const session = sessionContext.getStore();
+    const origen = session?.origen;
+
     await repo.save(
       repo.create({
         id_usuario,
         accion,
         tabla_afectada,
         registro_afectado,
+        origen,
         detalles_movimiento:
           detalles_movimiento && typeof detalles_movimiento === 'object'
             ? JSON.stringify(detalles_movimiento)
