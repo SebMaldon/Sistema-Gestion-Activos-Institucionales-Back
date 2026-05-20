@@ -33,8 +33,6 @@ export class EspecificacionTI {
   @Column({ name: 'modelo_so', type: 'varchar', length: 50, nullable: true })
   modelo_so?: string;
 
-  @Column({ name: 'id_monitor', type: 'uniqueidentifier', nullable: true })
-  id_monitor?: string;
 
   @OneToOne(() => Bien, (bien) => bien.especificacionTI, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_bien' })

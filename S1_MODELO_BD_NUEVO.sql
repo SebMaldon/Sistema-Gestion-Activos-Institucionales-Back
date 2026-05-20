@@ -259,7 +259,8 @@ CREATE TABLE Proveedores (
 );
 GO
 
--- Especificaciones TI
+-- Especificaciones TI (CPU, RAM, red, etc. para equipos de cómputo)
+-- Nota: La relación de monitores se gestiona en la tabla Bien_Monitores (many-to-many)
 CREATE TABLE Especificaciones_TI (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY,
     cuenta_windows VARCHAR(64),
@@ -274,9 +275,26 @@ CREATE TABLE Especificaciones_TI (
     puerto_red VARCHAR(15),
     switch_red VARCHAR(50),
     modelo_so VARCHAR(50),
-	id_monitor VARCHAR(50),
     tipo_user VARCHAR(50),
     CONSTRAINT FK_Especificaciones_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
+);
+GO
+
+-- ==========================================
+-- Relación equipo ↔ monitores (Many-to-Many)
+-- Un equipo (PC o Laptop) puede tener 0..N monitores asignados.
+-- Un monitor puede estar asignado a 1 equipo (unicidad por monitor).
+-- Se identifica que un bien es "monitor" por el nombre_tipo de su modelo.
+-- ==========================================
+CREATE TABLE Bien_Monitores (
+    id_bien_monitor  INT              IDENTITY(1,1) PRIMARY KEY,
+    id_bien          UNIQUEIDENTIFIER NOT NULL,  -- El equipo (PC o Laptop)
+    id_monitor       UNIQUEIDENTIFIER NOT NULL,  -- El bien que actúa como monitor
+    CONSTRAINT UQ_BienMonitor  UNIQUE (id_bien, id_monitor),
+    CONSTRAINT FK_BienMon_Bien    FOREIGN KEY (id_bien)
+        REFERENCES Bienes(id_bien) ON DELETE CASCADE,
+    CONSTRAINT FK_BienMon_Monitor FOREIGN KEY (id_monitor)
+        REFERENCES Bienes(id_bien)
 );
 GO
 

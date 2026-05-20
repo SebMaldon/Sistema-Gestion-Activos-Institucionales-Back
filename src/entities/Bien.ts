@@ -15,6 +15,7 @@ import { Nota } from './Nota';
 import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
 import { BienAtributo } from './BienAtributo';
+import { BienMonitor } from './BienMonitor';
 
 @Entity('Bienes')
 export class Bien {
@@ -118,4 +119,8 @@ export class Bien {
 
   @OneToMany(() => BienAtributo, (ba) => ba.bien)
   atributos?: BienAtributo[];
+
+  // Monitores asignados a este equipo (solo aplica a PCs y Laptops)
+  @OneToMany(() => BienMonitor, (bm) => bm.equipo)
+  monitores?: BienMonitor[];
 }

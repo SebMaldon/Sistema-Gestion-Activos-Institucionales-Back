@@ -34,6 +34,16 @@ export const typeDefs = gql`
     atributo: CatAtributoTecnico
   }
 
+  # Relación equipo ↔ monitor (many-to-many)
+  # Un equipo (PC/Laptop) puede tener 0..N monitores asignados
+  type BienMonitor {
+    id_bien_monitor: ID!
+    id_bien: ID!
+    id_monitor: ID!
+    monitor: Bien       # el bien que actúa como monitor
+    equipo: Bien        # el equipo al que está asignado
+  }
+
   # ─── PAGINACIÓN ─────────────────────────────────────────
   type PageInfo {
     hasNextPage: Boolean!
@@ -318,6 +328,7 @@ export const typeDefs = gql`
     especificacionTI: EspecificacionTI
     garantias: [Garantia!]
     notas: [Nota!]
+    monitores: [BienMonitor!]
   }
 
   type BienEdge {
@@ -355,7 +366,6 @@ export const typeDefs = gql`
     puerto_red: String
     switch_red: String
     modelo_so: String
-    id_monitor: ID
     bien: Bien
   }
 
@@ -611,6 +621,12 @@ export const typeDefs = gql`
     catAtributo(id_atributo: ID!): CatAtributoTecnico
     atributosPorTipoDispositivo(tipo_disp: Int!): [AtributoTipoDispositivo!]!
     bienAtributos(id_bien: ID!): [BienAtributo!]!
+
+    # ── Monitores
+    # Lista todos los bienes cuyo modelo es de tipo 'Monitor'
+    bienesMonitor: [Bien!]!
+    # Lista los monitores asignados a un equipo específico
+    monitoresDeEquipo(id_bien: ID!): [BienMonitor!]!
   }
 
   # ─────────────────────────────────────────────────────────
@@ -772,8 +788,14 @@ export const typeDefs = gql`
       puerto_red: String
       switch_red: String
       modelo_so: String
-      id_monitor: ID
     ): EspecificacionTI!
+
+    # ── Monitores asignados a equipos
+    # Asigna un monitor (bien) a un equipo (PC/Laptop)
+    # Sincroniza automáticamente la ubicación del monitor con el equipo
+    asignarMonitor(id_bien: ID!, id_monitor: ID!): BienMonitor!
+    # Elimina la asignación (no borra el bien monitor del inventario)
+    desasignarMonitor(id_bien_monitor: ID!): Boolean!
 
     # ── Unidades (tabla: unidades — datos físicos de la unidad: clínica, hospital, etc.)
     createUnidad(

@@ -15,6 +15,7 @@ import { Rol } from '../../entities/Rol';
 import { Bien } from '../../entities/Bien';
 import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
+import { BienMonitor } from '../../entities/BienMonitor';
 
 function toMap<K, V>(items: V[], keyFn: (item: V) => K): Map<K, V> {
   return new Map<K, V>(items.map((item) => [keyFn(item), item] as [K, V]));
@@ -177,6 +178,20 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k) ?? []);
   });
 
+  // ── Monitores agrupados por id_bien (el equipo)
+  const monitoresByBienLoader = new DataLoader<string, BienMonitor[]>(async (keys) => {
+    const items = await AppDataSource.getRepository(BienMonitor).find({
+      where: { id_bien: In(keys as string[]) },
+    });
+    const map = new Map<string, BienMonitor[]>();
+    items.forEach((m: BienMonitor) => {
+      const arr = map.get(m.id_bien) ?? [];
+      arr.push(m);
+      map.set(m.id_bien, arr);
+    });
+    return keys.map((k) => map.get(k) ?? []);
+  });
+
   return {
     marcaLoader,
     tipoDispositivoLoader,
@@ -193,6 +208,7 @@ export function createDataLoaders() {
     tipoIncidenciaLoader,
     notasByIncidenciaLoader,
     notasByBienLoader,
+    monitoresByBienLoader,
   };
 }
 

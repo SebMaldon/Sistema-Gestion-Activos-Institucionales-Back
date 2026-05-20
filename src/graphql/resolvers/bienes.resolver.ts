@@ -5,6 +5,7 @@ import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { Nota } from '../../entities/Nota';
 import { Incidencia } from '../../entities/Incidencia';
 import { MovimientoInventario } from '../../entities/MovimientoInventario';
+import { BienMonitor } from '../../entities/BienMonitor';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
@@ -111,6 +112,28 @@ export const bienesResolvers = {
         .orWhere('e.dir_ip = :termino', { termino })
         .getOne();
     },
+
+    // Lista todos los bienes cuyo modelo tiene nombre_tipo LIKE '%Monitor%'
+    bienesMonitor: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Bien)
+        .createQueryBuilder('b')
+        .innerJoin('b.modelo', 'm')
+        .innerJoin('m.tipoDispositivo', 't')
+        .where("LOWER(t.nombre_tipo) LIKE '%monitor%'")
+        .orderBy('b.fecha_actualizacion', 'DESC')
+        .getMany();
+    },
+
+    // Monitores asignados a un equipo específico
+    monitoresDeEquipo: async (
+      _: unknown,
+      { id_bien }: { id_bien: string },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(BienMonitor).find({ where: { id_bien } });
+    },
   },
 
   Mutation: {
@@ -214,48 +237,6 @@ export const bienesResolvers = {
         throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
       }
 
-      if (specs.id_monitor && specs.id_monitor.trim() !== '') {
-        const bienRepo = AppDataSource.getRepository(Bien);
-
-        const bienPrincipal = await bienRepo.createQueryBuilder('b')
-          .leftJoinAndSelect('b.modelo', 'm')
-          .where('b.id_bien = :id', { id: id_bien })
-          .getOne();
-
-        if (!bienPrincipal) throw new ValidationError('El bien principal no existe.');
-
-        if (bienPrincipal.modelo?.tipo_disp !== 4) {
-          throw new ValidationError('Solo los bienes de tipo PC (tipo de dispositivo 4) pueden tener un monitor ligado.');
-        }
-
-        const monitorExistente = await bienRepo.findOne({ where: { id_bien: specs.id_monitor } });
-
-        if (monitorExistente) {
-          monitorExistente.id_segmento = bienPrincipal.id_segmento;
-          monitorExistente.id_ubicacion = bienPrincipal.id_ubicacion;
-          monitorExistente.clave_unidad_ref = bienPrincipal.clave_unidad_ref;
-          monitorExistente.id_usuario_resguardo = bienPrincipal.id_usuario_resguardo;
-          monitorExistente.fecha_actualizacion = new Date();
-          await bienRepo.save(monitorExistente);
-        } else {
-          const nuevoMonitor = bienRepo.create({
-            id_bien: specs.id_monitor,
-            id_categoria: 1,
-            id_unidad_medida: 1,
-            id_segmento: bienPrincipal.id_segmento,
-            id_ubicacion: bienPrincipal.id_ubicacion,
-            cantidad: 1,
-            estatus_operativo: 'ACTIVO',
-            clave_unidad_ref: bienPrincipal.clave_unidad_ref,
-            clave_modelo: '_Mon_Sin_Modelo_',
-            id_usuario_resguardo: bienPrincipal.id_usuario_resguardo,
-            qr_hash: Buffer.from(`IMSS-${specs.id_monitor}`).toString('base64'),
-            fecha_actualizacion: new Date()
-          });
-          await bienRepo.save(nuevoMonitor);
-        }
-      }
-
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {
@@ -263,6 +244,57 @@ export const bienesResolvers = {
         return repo.save(existing);
       }
       return repo.save(repo.create({ id_bien, ...specs }));
+    },
+
+    // ── Asignar monitor a un equipo (PC o Laptop) ──────────────────────────
+    asignarMonitor: async (
+      _: unknown,
+      { id_bien, id_monitor }: { id_bien: string; id_monitor: string },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      const bienRepo    = AppDataSource.getRepository(Bien);
+      const monitorRepo = AppDataSource.getRepository(BienMonitor);
+
+      const equipo  = await bienRepo.findOne({ where: { id_bien } });
+      if (!equipo) throw new NotFoundError('Equipo');
+
+      const monitorBien = await bienRepo.findOne({ where: { id_bien: id_monitor } });
+      if (!monitorBien) throw new NotFoundError('Monitor (bien)');
+
+      // Verificar que no esté ya asignado
+      const dup = await monitorRepo.findOne({ where: { id_bien, id_monitor } });
+      if (dup) throw new ValidationError('Este monitor ya está asignado a ese equipo.');
+
+      // Sincronizar ubicación del monitor con el equipo
+      monitorBien.id_segmento       = equipo.id_segmento;
+      monitorBien.id_ubicacion      = equipo.id_ubicacion;
+      monitorBien.clave_unidad_ref  = equipo.clave_unidad_ref;
+      monitorBien.id_usuario_resguardo = equipo.id_usuario_resguardo;
+      monitorBien.fecha_actualizacion  = new Date();
+      await bienRepo.save(monitorBien);
+
+      // Crear la relación
+      const rel = monitorRepo.create({ id_bien, id_monitor });
+      return monitorRepo.save(rel);
+    },
+
+    // ── Desasignar monitor (no borra el bien del inventario) ───────────────
+    desasignarMonitor: async (
+      _: unknown,
+      { id_bien_monitor }: { id_bien_monitor: string },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      const repo = AppDataSource.getRepository(BienMonitor);
+      const rel  = await repo.findOne({ where: { id_bien_monitor: parseInt(id_bien_monitor) } });
+      if (!rel) throw new NotFoundError('Asignación de monitor');
+      await repo.remove(rel);
+      return true;
     },
   },
 
@@ -303,6 +335,18 @@ export const bienesResolvers = {
 
     notas: (parent: Bien, _: unknown, context: GraphQLContext) =>
       context.loaders.notasByBienLoader.load(parent.id_bien),
+
+    // Monitores asignados al equipo
+    monitores: (parent: Bien, _: unknown, context: GraphQLContext) =>
+      context.loaders.monitoresByBienLoader.load(parent.id_bien),
+  },
+
+  // ── Field resolvers de BienMonitor ──────────────────────────────────────
+  BienMonitor: {
+    monitor: async (parent: BienMonitor) =>
+      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_monitor } }),
+    equipo: async (parent: BienMonitor) =>
+      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
   },
 
   EspecificacionTI: {
