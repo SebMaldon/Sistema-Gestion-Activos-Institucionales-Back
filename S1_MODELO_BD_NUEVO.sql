@@ -560,6 +560,7 @@ CREATE TABLE Bitacora (
     tabla_afectada VARCHAR(100) NOT NULL,    -- Ej: 'Bienes', 'Usuarios', 'Ubicaciones'
     registro_afectado VARCHAR(100) NULL,     -- ID del registro que fue modificado/creado
     detalles_movimiento NVARCHAR(MAX) NULL,  -- Descripción textual o un JSON con los valores viejos/nuevos
+    origen varchar(15),                     -- Ej: 'WEB', 'API', 'ADMIN'
     fecha_movimiento DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
     CONSTRAINT FK_Bitacora_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
 );
