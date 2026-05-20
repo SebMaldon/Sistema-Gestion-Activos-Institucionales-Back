@@ -622,9 +622,10 @@ export const typeDefs = gql`
 
     # ── Bitácora
     bitacora(
-      accion: String
-      tabla_afectada: String
-      id_usuario: Int
+      accion: [String]
+      tabla_afectada: [String]
+      id_usuario: [Int]
+      origen: String
       fechaDesde: DateTime
       fechaHasta: DateTime
       pagination: PaginationInput

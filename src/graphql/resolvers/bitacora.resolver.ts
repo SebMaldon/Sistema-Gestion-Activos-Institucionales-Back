@@ -49,13 +49,15 @@ export const bitacoraResolvers = {
         accion,
         tabla_afectada,
         id_usuario,
+        origen,
         fechaDesde,
         fechaHasta,
         pagination,
       }: {
-        accion?: string;
-        tabla_afectada?: string;
-        id_usuario?: number;
+        accion?: string[];
+        tabla_afectada?: string[];
+        id_usuario?: number[];
+        origen?: string;
         fechaDesde?: Date;
         fechaHasta?: Date;
         pagination?: { first?: number; after?: string };
@@ -67,9 +69,10 @@ export const bitacoraResolvers = {
 
       const qb = AppDataSource.getRepository(Bitacora).createQueryBuilder('b');
 
-      if (accion)          qb.andWhere('b.accion = :a',            { a: accion });
-      if (tabla_afectada)  qb.andWhere('b.tabla_afectada = :t',    { t: tabla_afectada });
-      if (id_usuario)      qb.andWhere('b.id_usuario = :u',        { u: id_usuario });
+      if (accion && accion.length > 0)              qb.andWhere('b.accion IN (:...a)',            { a: accion });
+      if (tabla_afectada && tabla_afectada.length > 0) qb.andWhere('b.tabla_afectada IN (:...t)',    { t: tabla_afectada });
+      if (id_usuario && id_usuario.length > 0) qb.andWhere('b.id_usuario IN (:...u)', { u: id_usuario });
+      if (origen)          qb.andWhere('b.origen = :o',            { o: origen });
       if (fechaDesde)      qb.andWhere('b.fecha_movimiento >= :fd', { fd: fechaDesde });
       if (fechaHasta)      qb.andWhere('b.fecha_movimiento <= :fh', { fh: fechaHasta });
 
