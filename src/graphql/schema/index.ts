@@ -131,6 +131,15 @@ export const typeDefs = gql`
     clasificacion: Int
   }
 
+  type DistinctFiltrosCatalog {
+    ciudades: [String!]!
+    municipios: [String!]!
+    regimenes: [Int!]!
+    niveles: [Int!]!
+    velocidades: [String!]!
+    proveedores: [String!]!
+  }
+
   # Tabla: segmentos (antes llamada "unidades" — datos de red/IP)
   type Segmento {
     id_segmento: ID!
@@ -529,9 +538,22 @@ export const typeDefs = gql`
     segmento(id_segmento: ID!): Segmento
 
     # ── Unidades (tabla: unidades — datos físicos de la unidad: clínica, hospital, etc.)
-    unidades(search: String, pagination: PaginationInput): UnidadesConnection!
+    unidades(
+      search: String
+      clave_zona: [String!]
+      tipo_unidad: [Int!]
+      regimen: [Int!]
+      nivel: [Int!]
+      ciudad: [String!]
+      municipio: [String!]
+      segmento_velocidad: [String!]
+      segmento_proveedor: [String!]
+      segmento_monitorear: Int
+      pagination: PaginationInput
+    ): UnidadesConnection!
     catUnidades: [Unidad!]!
     unidad(clave: ID!): Unidad
+    catDistinctFiltros: DistinctFiltrosCatalog!
 
     # ── Clasificaciones de Unidades
     clasificacionesUnidades: [ClasificacionUnidad!]!
@@ -802,6 +824,7 @@ export const typeDefs = gql`
       clave: ID!
       descripcion: String
       desc_corta: String
+      encargado: String
       direccion: String
       calle: String
       numero: String
@@ -826,6 +849,7 @@ export const typeDefs = gql`
       clave: ID!
       descripcion: String
       desc_corta: String
+      encargado: String
       direccion: String
       calle: String
       numero: String

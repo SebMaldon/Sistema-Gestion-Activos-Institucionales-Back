@@ -143,9 +143,27 @@ export const catalogosResolvers = {
       _: unknown,
       {
         search,
+        clave_zona,
+        tipo_unidad,
+        regimen,
+        nivel,
+        ciudad,
+        municipio,
+        segmento_velocidad,
+        segmento_proveedor,
+        segmento_monitorear,
         pagination,
       }: {
         search?: string;
+        clave_zona?: string[];
+        tipo_unidad?: number[];
+        regimen?: number[];
+        nivel?: number[];
+        ciudad?: string[];
+        municipio?: string[];
+        segmento_velocidad?: string[];
+        segmento_proveedor?: string[];
+        segmento_monitorear?: number;
         pagination?: { first?: number; after?: string };
       },
       context: GraphQLContext
@@ -155,8 +173,55 @@ export const catalogosResolvers = {
 
       if (search) {
         qb.andWhere(
-          '(i.descripcion LIKE :search OR i.clave LIKE :search OR i.ciudad LIKE :search OR EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Ip LIKE :search))',
+          '(i.descripcion LIKE :search OR i.clave LIKE :search OR i.ciudad LIKE :search ' +
+          'OR EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Ip LIKE :search) ' +
+          'OR EXISTS (SELECT 1 FROM Unidad_A_Cargo uac INNER JOIN Usuarios u ON u.id_usuario = uac.id_usuario WHERE uac.id_unidad_cargo = i.clave AND u.nombre_completo LIKE :search))',
           { search: `%${search}%` }
+        );
+      }
+
+      if (clave_zona && clave_zona.length > 0) {
+        qb.andWhere('i.clave_zona IN (:...clave_zona)', { clave_zona });
+      }
+
+      if (tipo_unidad && tipo_unidad.length > 0) {
+        qb.andWhere('i.tipo_unidad IN (:...tipo_unidad)', { tipo_unidad });
+      }
+
+      if (regimen && regimen.length > 0) {
+        qb.andWhere('i.regimen IN (:...regimen)', { regimen });
+      }
+
+      if (nivel && nivel.length > 0) {
+        qb.andWhere('i.nivel IN (:...nivel)', { nivel });
+      }
+
+      if (ciudad && ciudad.length > 0) {
+        qb.andWhere('i.ciudad IN (:...ciudad)', { ciudad });
+      }
+
+      if (municipio && municipio.length > 0) {
+        qb.andWhere('i.municipio IN (:...municipio)', { municipio });
+      }
+
+      if (segmento_velocidad && segmento_velocidad.length > 0) {
+        qb.andWhere(
+          'EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Velocidad IN (:...segmento_velocidad))',
+          { segmento_velocidad }
+        );
+      }
+
+      if (segmento_proveedor && segmento_proveedor.length > 0) {
+        qb.andWhere(
+          'EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Proveedor IN (:...segmento_proveedor))',
+          { segmento_proveedor }
+        );
+      }
+
+      if (segmento_monitorear !== undefined && segmento_monitorear !== null) {
+        qb.andWhere(
+          'EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Monitorear = :segmento_monitorear)',
+          { segmento_monitorear }
         );
       }
 
@@ -194,6 +259,29 @@ export const catalogosResolvers = {
     unidad: async (_: unknown, { clave }: { clave: string }, context: GraphQLContext) => {
       requireAuth(context);
       return AppDataSource.getRepository(Inmueble).findOne({ where: { clave } });
+    },
+    catDistinctFiltros: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      const inmuebleRepo = AppDataSource.getRepository(Inmueble);
+      const segmentoRepo = AppDataSource.getRepository(Segmento);
+
+      const [ciudadesRaw, municipiosRaw, nivelesRaw, regimenesRaw, velocidadesRaw, proveedoresRaw] = await Promise.all([
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.ciudad)', 'val').where('i.ciudad IS NOT NULL AND i.ciudad <> \'\'').orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.municipio)', 'val').where('i.municipio IS NOT NULL AND i.municipio <> \'\'').orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.nivel)', 'val').where('i.nivel IS NOT NULL').orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.regimen)', 'val').where('i.regimen IS NOT NULL').orderBy('val', 'ASC').getRawMany(),
+        segmentoRepo.createQueryBuilder('s').select('DISTINCT(s.velocidad)', 'val').where('s.velocidad IS NOT NULL AND s.velocidad <> \'\'').orderBy('val', 'ASC').getRawMany(),
+        segmentoRepo.createQueryBuilder('s').select('DISTINCT(s.proveedor)', 'val').where('s.proveedor IS NOT NULL AND s.proveedor <> \'\'').orderBy('val', 'ASC').getRawMany(),
+      ]);
+
+      return {
+        ciudades: ciudadesRaw.map(r => r.val),
+        municipios: municipiosRaw.map(r => r.val),
+        niveles: nivelesRaw.map(r => r.val),
+        regimenes: regimenesRaw.map(r => r.val),
+        velocidades: velocidadesRaw.map(r => r.val),
+        proveedores: proveedoresRaw.map(r => r.val),
+      };
     },
 
     // ── ClasificacionesUnidades
