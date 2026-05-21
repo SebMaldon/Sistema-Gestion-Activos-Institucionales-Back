@@ -353,14 +353,34 @@ export const typeDefs = gql`
 
   input BienesFilterInput {
     estatus_operativo: String
-    clave_unidad_ref: String
-    id_categoria: Int
-    id_segmento: Int
-    id_ubicacion: Int
-    id_unidad_medida: Int
-    id_usuario_resguardo: Int
-    clave_modelo: String
     search: String
+    # Multi-select arrays
+    id_categoria: [Int!]
+    id_segmento: [Int!]
+    id_ubicacion: [Int!]
+    id_unidad_medida: [Int!]
+    id_usuario_resguardo: [Int!]
+    clave_unidad_ref: [String!]
+    clave_modelo: [String!]
+    # Device type and brand (via Cat_Modelos join)
+    tipo_disp: [Int!]
+    clave_marca: [Int!]
+    # IT Specs (via Especificaciones_TI join)
+    ram_min: Int
+    ram_max: Int
+    almacenamiento_min: Int
+    almacenamiento_max: Int
+    modelo_so: String
+    cpu_info: String
+    dir_ip: String
+    # Warranty filters (via Garantias join)
+    tiene_garantia: Boolean
+    garantia_vigente: Boolean
+    garantia_fin_desde: Date
+    garantia_fin_hasta: Date
+    # EAV attribute filter
+    atributo_id: Int
+    atributo_valor: String
   }
 
   # ─── ESPECIFICACIONES TI ────────────────────────────────

@@ -14,14 +14,34 @@ import { Segmento } from '../../entities/Segmento';
 
 export interface BienesFilter {
   estatus_operativo?: string;
-  clave_unidad_ref?: string;
-  id_categoria?: number;
-  id_segmento?: number;
-  id_ubicacion?: number;
-  id_unidad_medida?: number;
-  id_usuario_resguardo?: number;
-  clave_modelo?: string;
   search?: string;
+  // Multi-select arrays
+  id_categoria?: number[];
+  id_segmento?: number[];
+  id_ubicacion?: number[];
+  id_unidad_medida?: number[];
+  id_usuario_resguardo?: number[];
+  clave_unidad_ref?: string[];
+  clave_modelo?: string[];
+  // Device type / brand (via Cat_Modelos)
+  tipo_disp?: number[];
+  clave_marca?: number[];
+  // IT Specs (via Especificaciones_TI)
+  ram_min?: number;
+  ram_max?: number;
+  almacenamiento_min?: number;
+  almacenamiento_max?: number;
+  modelo_so?: string;
+  cpu_info?: string;
+  dir_ip?: string;
+  // Warranty
+  tiene_garantia?: boolean;
+  garantia_vigente?: boolean;
+  garantia_fin_desde?: string;
+  garantia_fin_hasta?: string;
+  // EAV
+  atributo_id?: number;
+  atributo_valor?: string;
 }
 
 export const bienesResolvers = {
@@ -34,14 +54,10 @@ export const bienesResolvers = {
       requireAuth(context);
       const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
 
-      if (filter?.estatus_operativo) qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
-      if (filter?.clave_unidad_ref) qb.andWhere('b.clave_unidad_ref = :cu', { cu: filter.clave_unidad_ref });
-      if (filter?.id_categoria) qb.andWhere('b.id_categoria = :ic', { ic: filter.id_categoria });
-      if (filter?.id_segmento) qb.andWhere('b.id_segmento = :is', { is: filter.id_segmento });
-      if (filter?.id_ubicacion) qb.andWhere('b.id_ubicacion = :iub', { iub: filter.id_ubicacion });
-      if (filter?.id_unidad_medida) qb.andWhere('b.id_unidad_medida = :ium', { ium: filter.id_unidad_medida });
-      if (filter?.id_usuario_resguardo) qb.andWhere('b.id_usuario_resguardo = :ur', { ur: filter.id_usuario_resguardo });
-      if (filter?.clave_modelo) qb.andWhere('b.clave_modelo = :cm', { cm: filter.clave_modelo });
+      // ── Basic filters ────────────────────────────────────────
+      if (filter?.estatus_operativo) {
+        qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
+      }
       if (filter?.search) {
         qb.andWhere(
           '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s)',
@@ -49,9 +65,65 @@ export const bienesResolvers = {
         );
       }
 
+      // ── Multi-select IN filters ──────────────────────────────
+      if (filter?.id_categoria?.length) qb.andWhere('b.id_categoria IN (:...ic)', { ic: filter.id_categoria });
+      if (filter?.id_segmento?.length) qb.andWhere('b.id_segmento IN (:...iseg)', { iseg: filter.id_segmento });
+      if (filter?.id_ubicacion?.length) qb.andWhere('b.id_ubicacion IN (:...iub)', { iub: filter.id_ubicacion });
+      if (filter?.id_unidad_medida?.length) qb.andWhere('b.id_unidad_medida IN (:...ium)', { ium: filter.id_unidad_medida });
+      if (filter?.id_usuario_resguardo?.length) qb.andWhere('b.id_usuario_resguardo IN (:...ur)', { ur: filter.id_usuario_resguardo });
+      if (filter?.clave_unidad_ref?.length) qb.andWhere('b.clave_unidad_ref IN (:...cur)', { cur: filter.clave_unidad_ref });
+      if (filter?.clave_modelo?.length) qb.andWhere('b.clave_modelo IN (:...cm)', { cm: filter.clave_modelo });
+
+      // ── Device type / Brand (via Cat_Modelos) ────────────────
+      if (filter?.tipo_disp?.length || filter?.clave_marca?.length) {
+        qb.innerJoin('Cat_Modelos', 'mod', 'mod.clave_modelo = b.clave_modelo');
+        if (filter.tipo_disp?.length) qb.andWhere('mod.tipo_disp IN (:...td)', { td: filter.tipo_disp });
+        if (filter.clave_marca?.length) qb.andWhere('mod.clave_marca IN (:...mk)', { mk: filter.clave_marca });
+      }
+
+      // ── IT Specs (via Especificaciones_TI) ───────────────────
+      const needsTI = (
+        filter?.ram_min != null || filter?.ram_max != null ||
+        filter?.almacenamiento_min != null || filter?.almacenamiento_max != null ||
+        filter?.modelo_so || filter?.cpu_info || filter?.dir_ip
+      );
+      if (needsTI) {
+        qb.innerJoin('Especificaciones_TI', 'ti', 'ti.id_bien = b.id_bien');
+        if (filter!.ram_min != null) qb.andWhere('ti.ram_gb >= :rmin', { rmin: filter!.ram_min });
+        if (filter!.ram_max != null) qb.andWhere('ti.ram_gb <= :rmax', { rmax: filter!.ram_max });
+        if (filter!.almacenamiento_min != null) qb.andWhere('ti.almacenamiento_gb >= :amin', { amin: filter!.almacenamiento_min });
+        if (filter!.almacenamiento_max != null) qb.andWhere('ti.almacenamiento_gb <= :amax', { amax: filter!.almacenamiento_max });
+        if (filter!.modelo_so) qb.andWhere('ti.modelo_so LIKE :so', { so: `%${filter!.modelo_so}%` });
+        if (filter!.cpu_info) qb.andWhere('ti.cpu_info LIKE :cpu', { cpu: `%${filter!.cpu_info}%` });
+        if (filter!.dir_ip) qb.andWhere('ti.dir_ip LIKE :ip', { ip: `%${filter!.dir_ip}%` });
+      }
+
+      // ── Warranty filters (via Garantias) ─────────────────────
+      if (filter?.tiene_garantia === false) {
+        qb.leftJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
+        qb.andWhere('gf.id_garantia IS NULL');
+      } else if (
+        filter?.tiene_garantia === true ||
+        filter?.garantia_vigente != null ||
+        filter?.garantia_fin_desde || filter?.garantia_fin_hasta
+      ) {
+        qb.innerJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
+        if (filter.garantia_vigente === true) qb.andWhere("gf.estado_garantia = 'VIGENTE'");
+        if (filter.garantia_fin_desde) qb.andWhere('gf.fecha_fin >= :gfd', { gfd: filter.garantia_fin_desde });
+        if (filter.garantia_fin_hasta) qb.andWhere('gf.fecha_fin <= :gfh', { gfh: filter.garantia_fin_hasta });
+      }
+
+      // ── EAV Attribute filter ─────────────────────────────────
+      if (filter?.atributo_id != null && filter?.atributo_valor) {
+        qb.innerJoin('Bien_Atributos', 'ba', 'ba.id_bien = b.id_bien');
+        qb.andWhere('ba.id_atributo = :aid', { aid: filter.atributo_id });
+        qb.andWhere('ba.valor LIKE :aval', { aval: `%${filter.atributo_valor}%` });
+      }
+
+      // ── Count + Pagination ───────────────────────────────────
       const totalCount = await qb.getCount();
       const first = pagination?.first ?? 20;
-      qb.take(Math.min(first, 100));
+      qb.take(Math.min(first, 200));
 
       if (pagination?.after) {
         const cursor = decodeCursor(pagination.after);
