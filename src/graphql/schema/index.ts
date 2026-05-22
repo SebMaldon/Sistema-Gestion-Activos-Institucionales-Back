@@ -397,6 +397,10 @@ export const typeDefs = gql`
     puerto_red: String
     switch_red: String
     modelo_so: String
+    cuenta_windows: String
+    correo: String
+    last_scan: DateTime
+    tipo_user: String
     bien: Bien
   }
 

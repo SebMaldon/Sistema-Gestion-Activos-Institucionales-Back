@@ -36,6 +36,18 @@ export class EspecificacionTI {
   @Column({ name: 'modelo_so', type: 'varchar', length: 50, nullable: true })
   modelo_so?: string;
 
+  @Column({ name: 'cuenta_windows', type: 'varchar', length: 100, nullable: true })
+  cuenta_windows?: string;
+
+  @Column({ name: 'correo', type: 'varchar', length: 100, nullable: true })
+  correo?: string;
+
+  @Column({ name: 'last_scan', type: 'datetime', nullable: true })
+  last_scan?: Date;
+
+  @Column({ name: 'tipo_user', type: 'varchar', length: 50, nullable: true })
+  tipo_user?: string;
+
 
   @OneToOne(() => Bien, (bien) => bien.especificacionTI, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_bien' })
