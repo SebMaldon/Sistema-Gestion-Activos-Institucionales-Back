@@ -130,6 +130,11 @@ export class BitacoraSubscriber implements EntitySubscriberInterface {
     bitacora.registro_afectado = registroAfectado || 'N/A';
     bitacora.detalles_movimiento = detalles;
 
+    // Obtener el origen desde el async context
+    const store = sessionContext.getStore();
+    const origen = store?.origen || event.queryRunner?.data?.origen || 'WEB';
+    bitacora.origen = origen.toUpperCase();
+
     // CRUCIAL: Usamos event.manager para asegurar que la inserción de la bitácora 
     // ocurra dentro de la misma transacción de la consulta original.
     await event.manager.save(Bitacora, bitacora);

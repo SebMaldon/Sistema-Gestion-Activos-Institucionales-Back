@@ -28,7 +28,7 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      // Cualquier usuario autenticado puede buscar/listar usuarios (necesario para asignar resguardo)
 
       const qb = AppDataSource.getRepository(Usuario)
         .createQueryBuilder('u')

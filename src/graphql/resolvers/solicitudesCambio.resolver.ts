@@ -5,7 +5,7 @@ import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { Usuario } from '../../entities/Usuario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
-import { NotFoundError, ValidationError } from '../../utils/errors';
+import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 
 // Campos que pertenecen a la tabla Bienes
 const BIEN_FIELDS = [
@@ -16,7 +16,7 @@ const BIEN_FIELDS = [
 
 // Campos que pertenecen a Especificaciones_TI
 const SPEC_FIELDS = [
-  'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
+  'nom_pc', 'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
   'dir_ip', 'dir_mac', 'puerto_red', 'switch_red', 'modelo_so',
 ];
 
@@ -54,6 +54,34 @@ export const solicitudesCambioResolvers = {
       }
 
       const repo = AppDataSource.getRepository(SolicitudCambio);
+
+      // Si es una creación, validar que no existan duplicados de num_serie o num_inv en Bienes ni en otras solicitudes pendientes
+      if (parsed._esCreacion) {
+        const { num_serie, num_inv } = parsed;
+        
+        // 1. Validar en tabla Bienes
+        const bienRepo = AppDataSource.getRepository(Bien);
+        const queryBien = bienRepo.createQueryBuilder('b');
+        if (num_serie) queryBien.orWhere('b.num_serie = :num_serie', { num_serie });
+        if (num_inv) queryBien.orWhere('b.num_inv = :num_inv', { num_inv });
+        const existeBien = await queryBien.getOne();
+        if (existeBien) {
+          throw new ConflictError('Ya existe un activo registrado con este número de serie o inventario.');
+        }
+
+        // 2. Validar en solicitudes pendientes (JSON)
+        const querySolicitud = repo.createQueryBuilder('s')
+          .where("s.estado = 'PENDIENTE'")
+          .andWhere(
+            "(JSON_VALUE(s.datos_nuevos, '$.num_serie') = :num_serie OR JSON_VALUE(s.datos_nuevos, '$.num_inv') = :num_inv)",
+            { num_serie: num_serie || '', num_inv: num_inv || '' }
+          );
+        const existeSolicitud = await querySolicitud.getOne();
+        if (existeSolicitud) {
+          throw new ConflictError('Ya existe una solicitud pendiente de creación para este número de serie o inventario.');
+        }
+      }
+
       const solicitud = repo.create({
         bien_id: idBien,
         usuario_solicitante_id: context.user!.id_usuario,
@@ -101,7 +129,10 @@ export const solicitudesCambioResolvers = {
         if (!bien) {
           // Es una creación: el bien no existe aún
           // Para creaciones, datos debe incluir los campos obligatorios
+          const qr_hash = Buffer.from(`IMSS-${solicitud.bien_id}`).toString('base64');
           const newBien = manager.create(Bien, {
+            id_bien: solicitud.bien_id,
+            qr_hash,
             id_categoria: datos.id_categoria ?? 1,
             id_unidad_medida: datos.id_unidad_medida ?? 1,
             ...bienUpdates,
@@ -162,11 +193,7 @@ export const solicitudesCambioResolvers = {
       });
       if (!solicitud) throw new NotFoundError('Solicitud pendiente');
 
-      solicitud.estado = 'RECHAZADO';
-      solicitud.usuario_aprobador_id = context.user!.id_usuario;
-      solicitud.fecha_resolucion = new Date();
-      solicitud.comentarios = motivo || undefined;
-      await repo.save(solicitud);
+      await repo.remove(solicitud);
 
       return true;
     },
