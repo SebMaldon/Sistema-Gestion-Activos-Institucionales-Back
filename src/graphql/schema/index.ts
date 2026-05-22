@@ -399,8 +399,10 @@ export const typeDefs = gql`
     modelo_so: String
     cuenta_windows: String
     correo: String
-    last_scan: DateTime
+    last_scan: String
     tipo_user: String
+    nombre_host: String
+    windows_serial: String
     bien: Bien
   }
 
@@ -840,6 +842,12 @@ export const typeDefs = gql`
       puerto_red: String
       switch_red: String
       modelo_so: String
+      cuenta_windows: String
+      correo: String
+      last_scan: String
+      tipo_user: String
+      nombre_host: String
+      windows_serial: String
     ): EspecificacionTI!
 
     # ── Monitores asignados a equipos
