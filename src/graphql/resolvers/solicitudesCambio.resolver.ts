@@ -21,6 +21,13 @@ const SPEC_FIELDS = [
   'cuenta_windows', 'correo', 'last_scan', 'tipo_user', 'windows_serial',
 ];
 
+const WMI_TO_DB_MAP: Record<string, string> = {
+  'usuario_pc': 'cuenta_windows',
+  'fecha_act_antivirus': 'last_scan',
+  'correo_usuario': 'correo',
+  'tipo_usuario_pc': 'tipo_user'
+};
+
 export const solicitudesCambioResolvers = {
   Query: {
     obtenerSolicitudesPendientes: async (_: unknown, __: unknown, context: GraphQLContext) => {
@@ -116,10 +123,18 @@ export const solicitudesCambioResolvers = {
         const specUpdates: Record<string, any> = {};
 
         for (const [key, value] of Object.entries(datos)) {
-          if (BIEN_FIELDS.includes(key)) {
-            bienUpdates[key] = value;
-          } else if (SPEC_FIELDS.includes(key)) {
-            specUpdates[key] = value;
+          if (key === '_esCreacion') continue;
+          
+          const dbKey = WMI_TO_DB_MAP[key] || key;
+
+          if (SPEC_FIELDS.includes(dbKey)) {
+            if (dbKey === 'last_scan' && value) {
+              specUpdates[dbKey] = new Date(value as string);
+            } else {
+              specUpdates[dbKey] = value;
+            }
+          } else if (BIEN_FIELDS.includes(dbKey)) {
+            bienUpdates[dbKey] = value;
           }
           // Campos desconocidos se ignoran silenciosamente
         }
