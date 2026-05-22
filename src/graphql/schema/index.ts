@@ -387,7 +387,6 @@ export const typeDefs = gql`
 
   type EspecificacionTI {
     id_bien: ID!
-    nom_pc: String
     cpu_info: String
     ram_gb: Int
     almacenamiento_gb: Int
