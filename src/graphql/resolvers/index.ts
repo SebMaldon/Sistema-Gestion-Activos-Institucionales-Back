@@ -9,6 +9,7 @@ import { ubicacionesResolvers } from './ubicaciones.resolver';
 import { bitacoraResolvers } from './bitacora.resolver';
 import { notificacionesResolvers } from './notificaciones.resolver';
 import { atributosResolvers } from './atributos.resolver';
+import { solicitudesCambioResolvers } from './solicitudesCambio.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -64,6 +65,7 @@ export const resolvers = {
     ...bitacoraResolvers.Query,
     ...notificacionesResolvers.Query,
     ...atributosResolvers.Query,
+    ...solicitudesCambioResolvers.Query,
   },
 
   Mutation: {
@@ -76,6 +78,7 @@ export const resolvers = {
     ...ubicacionesResolvers.Mutation,
     ...notificacionesResolvers.Mutation,
     ...atributosResolvers.Mutation,
+    ...solicitudesCambioResolvers.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────
@@ -94,4 +97,5 @@ export const resolvers = {
   BienAtributo: atributosResolvers.BienAtributo,
   AtributoTipoDispositivo: atributosResolvers.AtributoTipoDispositivo,
   CatAtributoTecnico: atributosResolvers.CatAtributoTecnico,
+  SolicitudCambio: solicitudesCambioResolvers.SolicitudCambio,
 };

@@ -671,6 +671,9 @@ export const typeDefs = gql`
     bienesMonitor: [Bien!]!
     # Lista los monitores asignados a un equipo específico
     monitoresDeEquipo(id_bien: ID!): [BienMonitor!]!
+
+    # ── Solicitudes de Cambio (Maker-Checker)
+    obtenerSolicitudesPendientes: [SolicitudCambio!]!
   }
 
   # ─────────────────────────────────────────────────────────
@@ -1062,5 +1065,26 @@ export const typeDefs = gql`
     deleteBienAtributo(id_bien_atributo: ID!): Boolean!
     # Establece todos los atributos de un bien en una sola operación (upsert masivo)
     upsertBienAtributos(id_bien: ID!, atributos: [AtributoInput!]!): [BienAtributo!]!
+
+    # ── Solicitudes de Cambio (Maker-Checker) ────────────────
+    solicitarActualizacionBien(idBien: ID!, datosNuevos: String!): SolicitudCambio!
+    aprobarCambio(solicitudId: Int!): Boolean!
+    rechazarCambio(solicitudId: Int!, motivo: String): Boolean!
+  }
+
+  # ─── SOLICITUDES DE CAMBIO (Maker-Checker) ─────────────────
+  type SolicitudCambio {
+    id: ID!
+    bien_id: ID!
+    usuario_solicitante_id: Int!
+    datos_nuevos: String!
+    estado: String!
+    fecha_solicitud: DateTime!
+    usuario_aprobador_id: Int
+    fecha_resolucion: DateTime
+    comentarios: String
+    bien: Bien
+    solicitante: Usuario
+    aprobador: Usuario
   }
 `;
