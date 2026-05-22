@@ -16,8 +16,9 @@ const BIEN_FIELDS = [
 
 // Campos que pertenecen a Especificaciones_TI
 const SPEC_FIELDS = [
-  'nom_pc', 'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
+  'nombre_host', 'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
   'dir_ip', 'dir_mac', 'puerto_red', 'switch_red', 'modelo_so',
+  'cuenta_windows', 'correo', 'last_scan', 'tipo_user', 'windows_serial',
 ];
 
 export const solicitudesCambioResolvers = {
