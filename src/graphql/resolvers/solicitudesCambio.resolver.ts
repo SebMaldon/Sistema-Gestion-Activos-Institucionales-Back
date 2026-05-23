@@ -17,7 +17,7 @@ const BIEN_FIELDS = [
 const SPEC_FIELDS = [
   'nombre_host', 'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
   'dir_ip', 'dir_mac', 'puerto_red', 'switch_red', 'modelo_so',
-  'cuenta_windows', 'correo', 'last_scan', 'tipo_user', 'windows_serial'
+  'cuenta_windows', 'correo', 'last_scan', 'tipo_user', 'windows_serial',
 ];
 
 const WMI_TO_DB_MAP: Record<string, string> = {
@@ -66,7 +66,7 @@ export const solicitudesCambioResolvers = {
       // Si es una creación, validar que no existan duplicados de num_serie o num_inv en Bienes ni en otras solicitudes pendientes
       if (parsed._esCreacion) {
         const { num_serie, num_inv } = parsed;
-        
+
         // 1. Validar en tabla Bienes
         const bienRepo = AppDataSource.getRepository(Bien);
         const queryBien = bienRepo.createQueryBuilder('b');
@@ -124,7 +124,7 @@ export const solicitudesCambioResolvers = {
 
         for (const [key, value] of Object.entries(datos)) {
           if (key === '_esCreacion') continue;
-          
+
           const dbKey = WMI_TO_DB_MAP[key] || key;
 
           if (SPEC_FIELDS.includes(dbKey)) {
