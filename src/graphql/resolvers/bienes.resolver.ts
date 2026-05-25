@@ -14,6 +14,7 @@ import { Segmento } from '../../entities/Segmento';
 
 export interface BienesFilter {
   estatus_operativo?: string;
+  es_capitalizable?: boolean;
   search?: string;
   // Multi-select arrays
   id_categoria?: number[];
@@ -57,6 +58,10 @@ export const bienesResolvers = {
       // ── Basic filters ────────────────────────────────────────
       if (filter?.estatus_operativo) {
         qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
+      }
+      if (filter?.es_capitalizable !== undefined && filter.es_capitalizable !== null) {
+        qb.innerJoin('Cat_CategoriasActivo', 'cat_cap', 'cat_cap.id_categoria = b.id_categoria');
+        qb.andWhere('cat_cap.es_capitalizable = :es_cap', { es_cap: filter.es_capitalizable ? 1 : 0 });
       }
       if (filter?.search) {
         qb.andWhere(
@@ -122,27 +127,30 @@ export const bienesResolvers = {
 
       // ── Count + Pagination ───────────────────────────────────
       const totalCount = await qb.getCount();
-      const first = pagination?.first ?? 20;
-      qb.take(Math.min(first, 200));
+      const first = Math.min(pagination?.first ?? 20, 20000);
 
+      let skip = 0;
       if (pagination?.after) {
-        const cursor = decodeCursor(pagination.after);
-        qb.andWhere('b.id_bien > :cursor', { cursor });
+        skip = parseInt(decodeCursor(pagination.after), 10);
+        if (isNaN(skip)) skip = 0;
       }
+
+      qb.skip(skip);
+      qb.take(first);
 
       qb.orderBy('b.fecha_actualizacion', 'DESC');
       const items = await qb.getMany();
 
-      const edges = items.map((node) => ({
+      const edges = items.map((node, index) => ({
         node,
-        cursor: Buffer.from(node.id_bien).toString('base64'),
+        cursor: Buffer.from(String(skip + index + 1)).toString('base64'),
       }));
 
       return {
         edges,
         pageInfo: {
           hasNextPage: items.length === first,
-          hasPreviousPage: !!pagination?.after,
+          hasPreviousPage: skip > 0,
           startCursor: edges[0]?.cursor,
           endCursor: edges[edges.length - 1]?.cursor,
           totalCount,
