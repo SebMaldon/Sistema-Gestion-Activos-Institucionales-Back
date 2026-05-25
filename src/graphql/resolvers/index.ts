@@ -85,6 +85,7 @@ export const resolvers = {
   Unidad: catalogosResolvers.Unidad,
   CatModelo: catalogosResolvers.CatModelo,
   Bien: bienesResolvers.Bien,
+  BienMonitor: bienesResolvers.BienMonitor,
   EspecificacionTI: bienesResolvers.EspecificacionTI,
   Garantia: transaccionalesResolvers.Garantia,
   Incidencia: transaccionalesResolvers.Incidencia,
