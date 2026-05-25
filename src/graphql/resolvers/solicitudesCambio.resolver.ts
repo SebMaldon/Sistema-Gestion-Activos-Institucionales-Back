@@ -61,13 +61,18 @@ export const solicitudesCambioResolvers = {
         throw new ValidationError('No se detectaron cambios para enviar.');
       }
 
+      // Función para comparar objetos sin importar el orden de las llaves
+      const isIdentical = (obj1: any, obj2: any) => {
+        const sorted1 = Object.keys(obj1 || {}).sort().reduce((acc, key) => { acc[key] = obj1[key]; return acc; }, {} as any);
+        const sorted2 = Object.keys(obj2 || {}).sort().reduce((acc, key) => { acc[key] = obj2[key]; return acc; }, {} as any);
+        return JSON.stringify(sorted1) === JSON.stringify(sorted2);
+      };
+
       const repo = AppDataSource.getRepository(SolicitudCambio);
 
-      // Si es una creación, validar que no existan duplicados de num_serie o num_inv en Bienes ni en otras solicitudes pendientes
       if (parsed._esCreacion) {
         const { num_serie, num_inv } = parsed;
 
-        // 1. Validar en tabla Bienes
         const bienRepo = AppDataSource.getRepository(Bien);
         const queryBien = bienRepo.createQueryBuilder('b');
         if (num_serie) queryBien.orWhere('b.num_serie = :num_serie', { num_serie });
@@ -77,7 +82,6 @@ export const solicitudesCambioResolvers = {
           throw new ConflictError('Ya existe un activo registrado con este número de serie o inventario.');
         }
 
-        // 2. Validar en solicitudes pendientes (JSON)
         const querySolicitud = repo.createQueryBuilder('s')
           .where("s.estado = 'PENDIENTE'")
           .andWhere(
@@ -86,7 +90,22 @@ export const solicitudesCambioResolvers = {
           );
         const existeSolicitud = await querySolicitud.getOne();
         if (existeSolicitud) {
-          throw new ConflictError('Ya existe una solicitud pendiente de creación para este número de serie o inventario.');
+          if (isIdentical(existeSolicitud.datos_nuevos, parsed)) {
+            throw new ConflictError('Ya habías mandado esta solicitud.');
+          } else {
+            existeSolicitud.datos_nuevos = parsed;
+            return repo.save(existeSolicitud);
+          }
+        }
+      } else {
+        const existeSolicitud = await repo.findOne({ where: { bien_id: idBien, estado: 'PENDIENTE' } });
+        if (existeSolicitud) {
+          if (isIdentical(existeSolicitud.datos_nuevos, parsed)) {
+            throw new ConflictError('Ya habías mandado esta solicitud.');
+          } else {
+            existeSolicitud.datos_nuevos = parsed;
+            return repo.save(existeSolicitud);
+          }
         }
       }
 
