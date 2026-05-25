@@ -265,7 +265,8 @@ export const catalogosResolvers = {
       const inmuebleRepo = AppDataSource.getRepository(Inmueble);
       const segmentoRepo = AppDataSource.getRepository(Segmento);
 
-      const [ciudadesRaw, municipiosRaw, nivelesRaw, regimenesRaw, velocidadesRaw, proveedoresRaw] = await Promise.all([
+      const [zonasRaw, ciudadesRaw, municipiosRaw, nivelesRaw, regimenesRaw, velocidadesRaw, proveedoresRaw] = await Promise.all([
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.clave_zona)', 'val').where('i.clave_zona IS NOT NULL AND i.clave_zona <> \'\'').orderBy('val', 'ASC').getRawMany(),
         inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.ciudad)', 'val').where('i.ciudad IS NOT NULL AND i.ciudad <> \'\'').orderBy('val', 'ASC').getRawMany(),
         inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.municipio)', 'val').where('i.municipio IS NOT NULL AND i.municipio <> \'\'').orderBy('val', 'ASC').getRawMany(),
         inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.nivel)', 'val').where('i.nivel IS NOT NULL').orderBy('val', 'ASC').getRawMany(),
@@ -275,6 +276,7 @@ export const catalogosResolvers = {
       ]);
 
       return {
+        zonas: zonasRaw.map(r => r.val),
         ciudades: ciudadesRaw.map(r => r.val),
         municipios: municipiosRaw.map(r => r.val),
         niveles: nivelesRaw.map(r => r.val),

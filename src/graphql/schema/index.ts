@@ -132,6 +132,7 @@ export const typeDefs = gql`
   }
 
   type DistinctFiltrosCatalog {
+    zonas: [String!]!
     ciudades: [String!]!
     municipios: [String!]!
     regimenes: [Int!]!
