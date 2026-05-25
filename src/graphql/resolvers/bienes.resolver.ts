@@ -419,6 +419,12 @@ export const bienesResolvers = {
     // Monitores asignados al equipo
     monitores: (parent: Bien, _: unknown, context: GraphQLContext) =>
       context.loaders.monitoresByBienLoader.load(parent.id_bien),
+      
+    // Para un monitor, obtener el PC al que está asignado
+    equipoAsignado: async (parent: Bien) => {
+      const rel = await AppDataSource.getRepository(BienMonitor).findOne({ where: { id_monitor: parent.id_bien } });
+      return rel || null;
+    },
   },
 
   // ── Field resolvers de BienMonitor ──────────────────────────────────────

@@ -340,6 +340,7 @@ export const typeDefs = gql`
     garantias: [Garantia!]
     notas: [Nota!]
     monitores: [BienMonitor!]
+    equipoAsignado: BienMonitor
   }
 
   type BienEdge {
