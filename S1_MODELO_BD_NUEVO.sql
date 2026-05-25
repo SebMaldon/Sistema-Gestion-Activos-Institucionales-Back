@@ -352,53 +352,6 @@ CREATE TABLE Bien_Atributos (
 );
 GO
 
--- ==========================================
--- DATOS SEMILLA: Atributos técnicos comunes
--- ==========================================
-INSERT INTO Cat_Atributos_Tecnicos (nombre_atributo, tipo_valor, unidad_medida, descripcion) VALUES
--- Hardware general
-('RAM',                 'NUMERO', 'GB',      'Memoria RAM instalada'),
-('Almacenamiento',      'NUMERO', 'GB',      'Capacidad de almacenamiento interno'),
-('CPU',                 'TEXT',   NULL,      'Procesador (modelo y velocidad)'),
-('Número de núcleos',   'NUMERO', 'núcleos', 'Cantidad de núcleos del procesador'),
-('Frecuencia CPU',      'NUMERO', 'GHz',     'Velocidad del procesador'),
--- Pantalla / Monitor
-('Tamaño de pantalla',  'NUMERO', 'pulgadas','Diagonal de la pantalla'),
-('Resolución',          'TEXT',   NULL,      'Resolución de pantalla (ej: 1920x1080)'),
-('Tipo de panel',       'TEXT',   NULL,      'Ej: IPS, TN, OLED'),
--- Red
-('Dirección IP',        'TEXT',   NULL,      'IP estática o última IP asignada'),
-('Dirección MAC',       'TEXT',   NULL,      'Dirección MAC de la interfaz principal'),
-('Puerto de red',       'TEXT',   NULL,      'Puerto físico del switch'),
-('Switch',              'TEXT',   NULL,      'Nombre o IP del switch al que se conecta'),
--- Móviles / Tablets
-('Batería',             'NUMERO', 'mAh',     'Capacidad de la batería'),
-('Sistema Operativo',   'TEXT',   NULL,      'SO y versión (ej: Android 14, iOS 17)'),
-('IMEI',                'TEXT',   NULL,      'IMEI del equipo móvil'),
-('Número de SIM',       'NUMERO', NULL,      'Cantidad de SIMs soportadas'),
--- Impresoras / Periféricos
-('Tecnología impresión','TEXT',   NULL,      'Ej: Láser, Inyección de tinta, Térmica'),
-('Velocidad impresión', 'NUMERO', 'ppm',     'Páginas por minuto'),
-('Conectividad',        'TEXT',   NULL,      'Ej: USB, WiFi, Ethernet, Bluetooth'),
--- Servidores
-('Cantidad de RAM DIMM','NUMERO', NULL,      'Número de módulos RAM instalados'),
-('Fuente de poder',     'NUMERO', 'W',       'Vatios de la fuente de alimentación'),
-('Tipo RAID',           'TEXT',   NULL,      'Configuración RAID del almacenamiento'),
--- Cuenta / Software
-('Cuenta de usuario',   'TEXT',   NULL,      'Usuario del sistema operativo o dominio'),
-('Licencia OS',         'TEXT',   NULL,      'Clave o número de licencia del SO'),
--- Otros
-('Voltaje',             'NUMERO', 'V',       'Voltaje de operación'),
-('Peso',                'NUMERO', 'kg',      'Peso del equipo');
-GO
-
--- Sugerencias de atributos por tipo de dispositivo (tipo_disp según catálogo existente)
--- NOTA: Ajustar los IDs de tipo_disp según los datos reales del catálogo
--- Ejemplo orientativo (se puede poblar después con los IDs correctos):
--- INSERT INTO Atributos_Por_TipoDispositivo (tipo_disp, id_atributo, es_requerido) VALUES ...
-
-
--- ==========================================
 
 CREATE TABLE Garantias (
     id_garantia INT IDENTITY(1,1) PRIMARY KEY,
@@ -600,15 +553,6 @@ CREATE TABLE Notificaciones_Lecturas (
 );
 GO
 
-CREATE TABLE Unidad_A_Cargo (
-    id_unidad_cargo varchar(50) not null,
-    id_rol_empleado int not null,
-    id_usuario int not null
-    constraint FK_UnidadCargo_RolEmpleado FOREIGN KEY (id_rol_empleado) REFERENCES Rol_empleados(id_rol_empleado),
-    constraint FK_UnidadCargo_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
-    constraint PK_UnidadCargo PRIMARY KEY (id_usuario, id_rol_empleado, id_unidad_cargo),
-    constraint FK_UnidadCargo_Unidades FOREIGN KEY (id_unidad_cargo) REFERENCES unidades(clave)
-);
 -- 1. Agregamos el tipo 'MULTIPLE' a la lógica
 -- Notificaciones_Mensajes se queda igual, pero ahora id_audiencia puede ser NULL 
 -- si el tipo_audiencia es 'MULTIPLE'.
@@ -628,6 +572,17 @@ CREATE TABLE Notificaciones_Destinatarios (
         REFERENCES unidades(clave)
 );
 GO
+
+
+CREATE TABLE Unidad_A_Cargo (
+    id_unidad_cargo varchar(50) not null,
+    id_rol_empleado int not null,
+    id_usuario int not null
+    constraint FK_UnidadCargo_RolEmpleado FOREIGN KEY (id_rol_empleado) REFERENCES Rol_empleados(id_rol_empleado),
+    constraint FK_UnidadCargo_Usuarios FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario),
+    constraint PK_UnidadCargo PRIMARY KEY (id_usuario, id_rol_empleado, id_unidad_cargo),
+    constraint FK_UnidadCargo_Unidades FOREIGN KEY (id_unidad_cargo) REFERENCES unidades(clave)
+);
 
 
 CREATE TABLE solicitudes_cambio (
