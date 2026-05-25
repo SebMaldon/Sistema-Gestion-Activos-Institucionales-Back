@@ -65,7 +65,7 @@ export const bienesResolvers = {
       }
       if (filter?.search) {
         qb.andWhere(
-          '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s)',
+          '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s)',
           { s: `%${filter.search}%` }
         );
       }
