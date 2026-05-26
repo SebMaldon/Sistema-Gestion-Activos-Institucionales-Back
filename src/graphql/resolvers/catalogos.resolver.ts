@@ -342,11 +342,21 @@ export const catalogosResolvers = {
     },
 
     // ── Proveedores
-    createProveedor: async (_: unknown, { nombre_proveedor }: any, context: GraphQLContext) => {
+    createProveedor: async (_: unknown, { nombre_proveedor, contactos }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      const repo = AppDataSource.getRepository(Proveedor);
-      return repo.save(repo.create({ nombre_proveedor }));
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(Proveedor);
+        const nuevoProveedor = await repo.save(repo.create({ nombre_proveedor }));
+        
+        if (contactos && contactos.length > 0) {
+          const contactoRepo = manager.getRepository(Contacto);
+          await Promise.all(contactos.map((c: any) => 
+            contactoRepo.save(contactoRepo.create({ ...c, id_proveedor: nuevoProveedor.id_proveedor }))
+          ));
+        }
+        return nuevoProveedor;
+      });
     },
     updateProveedor: async (_: unknown, { id_proveedor, nombre_proveedor }: any, context: GraphQLContext) => {
       requireAuth(context);

@@ -974,7 +974,7 @@ export const typeDefs = gql`
     deleteUnidad(clave: ID!): Boolean!
 
     # ── Proveedores
-    createProveedor(nombre_proveedor: String!): Proveedor!
+    createProveedor(nombre_proveedor: String!, contactos: [ContactoInput!]): Proveedor!
     updateProveedor(id_proveedor: ID!, nombre_proveedor: String): Proveedor!
     deleteProveedor(id_proveedor: ID!): Boolean!
 
