@@ -6,6 +6,7 @@ import { Nota } from '../../entities/Nota';
 import { Incidencia } from '../../entities/Incidencia';
 import { MovimientoInventario } from '../../entities/MovimientoInventario';
 import { BienMonitor } from '../../entities/BienMonitor';
+import { BienAtributo } from '../../entities/BienAtributo';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
@@ -247,6 +248,97 @@ export const bienesResolvers = {
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
       const bien = repo.create({ ...args, id_bien, qr_hash });
       return repo.save(bien);
+    },
+
+    createBienesBulk: async (_: unknown, { bienes }: { bienes: any[] }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      const queryRunner = AppDataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        const repoBien = queryRunner.manager.getRepository(Bien);
+        const repoEspecTI = queryRunner.manager.getRepository(EspecificacionTI);
+        const repoAttr = queryRunner.manager.getRepository(BienAtributo);
+        const repoMonitor = queryRunner.manager.getRepository(BienMonitor);
+
+        for (let i = 0; i < bienes.length; i++) {
+          const b = bienes[i];
+          const rowNum = i + 1;
+
+          if (!b.id_categoria) throw new ValidationError(`Fila ${rowNum}: Debe seleccionar la categoría del bien.`);
+          if (!b.id_unidad_medida) throw new ValidationError(`Fila ${rowNum}: Debe especificar la unidad de medida.`);
+          if (!b.estatus_operativo || b.estatus_operativo.trim() === '') {
+            throw new ValidationError(`Fila ${rowNum}: El estatus operativo es obligatorio.`);
+          }
+
+          if (b.num_serie && b.num_serie.trim() !== '') {
+            const dupSerie = await repoBien.findOne({ where: { num_serie: b.num_serie.trim() } });
+            if (dupSerie) {
+              throw new ValidationError(`Fila ${rowNum}: El número de serie "${b.num_serie.trim()}" ya está registrado.`);
+            }
+          }
+
+          if (b.num_inv && b.num_inv.trim() !== '') {
+            const dupInv = await repoBien.findOne({ where: { num_inv: b.num_inv.trim() } });
+            if (dupInv) {
+              throw new ValidationError(`Fila ${rowNum}: El número de inventario "${b.num_inv.trim()}" ya está registrado.`);
+            }
+          }
+
+          const id_bien = uuidv4();
+          const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
+          
+          const { especificacionTI, atributos, id_monitor, ...bienData } = b;
+          const bien = repoBien.create({ ...bienData, id_bien, qr_hash });
+          await repoBien.save(bien);
+
+          if (especificacionTI) {
+            const specs = repoEspecTI.create({ id_bien, ...especificacionTI });
+            await repoEspecTI.save(specs);
+          }
+
+          if (atributos && atributos.length > 0) {
+            for (const attr of atributos) {
+              const ba = repoAttr.create({
+                id_bien,
+                id_atributo: attr.id_atributo,
+                valor: attr.valor
+              });
+              await repoAttr.save(ba);
+            }
+          }
+
+          if (id_monitor) {
+            const monitorBien = await repoBien.findOne({ where: { id_bien: id_monitor } });
+            if (!monitorBien) throw new NotFoundError(`Fila ${rowNum}: Monitor asignado no existe.`);
+
+            const dup = await repoMonitor.findOne({ where: { id_monitor } });
+            if (dup) throw new ValidationError(`Fila ${rowNum}: El monitor ya está asignado a otro equipo.`);
+
+            // Sincronizar ubicación
+            monitorBien.id_segmento = b.id_segmento;
+            monitorBien.id_ubicacion = b.id_ubicacion;
+            monitorBien.clave_unidad_ref = b.clave_unidad_ref;
+            monitorBien.id_usuario_resguardo = b.id_usuario_resguardo;
+            monitorBien.fecha_actualizacion = new Date();
+            await repoBien.save(monitorBien);
+
+            const rel = repoMonitor.create({ id_bien, id_monitor });
+            await repoMonitor.save(rel);
+          }
+        }
+
+        await queryRunner.commitTransaction();
+        return true;
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+      } finally {
+        await queryRunner.release();
+      }
     },
 
     updateBien: async (_: unknown, { id_bien, ...updates }: any, context: GraphQLContext) => {
