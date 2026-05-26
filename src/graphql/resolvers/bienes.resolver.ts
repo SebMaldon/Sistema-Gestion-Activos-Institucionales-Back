@@ -118,9 +118,15 @@ export async function procesarMonitoresHelper(
 
     let catModelo = await modeloRepo.findOne({ where: { clave_modelo } });
     if (!catModelo) {
+      let modeloCleaned = (mon.modelo || '').trim();
+      if (marcaName && modeloCleaned.toLowerCase().startsWith(marcaName.toLowerCase())) {
+        while (modeloCleaned.toLowerCase().startsWith(marcaName.toLowerCase())) {
+          modeloCleaned = modeloCleaned.substring(marcaName.length).trim();
+        }
+      }
       catModelo = modeloRepo.create({
         clave_modelo,
-        descrip_disp: `${mon.marca || ''} ${mon.modelo || ''}`.trim() || 'Monitor',
+        descrip_disp: `${marcaName} ${modeloCleaned}`.trim() || 'Monitor',
         clave_marca: marcaEnt.clave_marca,
         // tipo_disp: null (no tiene tipo específico)
       });
