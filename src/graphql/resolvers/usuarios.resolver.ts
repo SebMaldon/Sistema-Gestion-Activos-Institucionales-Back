@@ -98,7 +98,7 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Usuario);
 
       const exists = await repo.findOne({ where: { matricula: args.matricula } });
@@ -178,7 +178,7 @@ export const usuariosResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
 
       const repo = AppDataSource.getRepository(Usuario);
 

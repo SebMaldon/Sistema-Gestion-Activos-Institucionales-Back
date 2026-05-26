@@ -283,7 +283,7 @@ export const notificacionesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(NotificacionMensaje);
       const msg = await repo.findOne({ where: { id_notificacion } });
       if (!msg) throw new NotFoundError('Notificación');

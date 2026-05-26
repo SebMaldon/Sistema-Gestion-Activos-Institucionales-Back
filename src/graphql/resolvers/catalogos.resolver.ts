@@ -334,7 +334,7 @@ export const catalogosResolvers = {
     },
     deleteMarca: async (_: unknown, { clave_marca }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Marca);
       const item = await repo.findOne({ where: { clave_marca: parseInt(clave_marca) } });
       if (item) await repo.remove(item);
@@ -359,7 +359,7 @@ export const catalogosResolvers = {
     },
     deleteProveedor: async (_: unknown, { id_proveedor }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Proveedor);
       const item = await repo.findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
       if (item) await repo.remove(item);
@@ -392,7 +392,7 @@ export const catalogosResolvers = {
     },
     deleteTipoDispositivo: async (_: unknown, { tipo_disp }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(TipoDispositivo);
       const item = await repo.findOne({ where: { tipo_disp: parseInt(tipo_disp) } });
       if (item) await repo.remove(item);
@@ -423,7 +423,7 @@ export const catalogosResolvers = {
     },
     deleteCatModelo: async (_: unknown, { clave_modelo }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatModelo);
       const item = await repo.findOne({ where: { clave_modelo } });
       if (item) await repo.remove(item);
@@ -433,12 +433,12 @@ export const catalogosResolvers = {
     // ── Cat_CategoriasActivo
     createCatCategoriaActivo: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       return AppDataSource.getRepository(CatCategoriaActivo).save(args);
     },
     updateCatCategoriaActivo: async (_: unknown, { id_categoria, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatCategoriaActivo);
       const item = await repo.findOne({ where: { id_categoria: parseInt(id_categoria) } });
       if (!item) throw new NotFoundError('Categoría');
@@ -447,7 +447,7 @@ export const catalogosResolvers = {
     },
     deleteCatCategoriaActivo: async (_: unknown, { id_categoria }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatCategoriaActivo);
       const item = await repo.findOne({ where: { id_categoria: parseInt(id_categoria) } });
       if (item) await repo.remove(item);
@@ -457,12 +457,12 @@ export const catalogosResolvers = {
     // ── Cat_UnidadesMedida
     createCatUnidadMedida: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       return AppDataSource.getRepository(CatUnidadMedida).save(args);
     },
     updateCatUnidadMedida: async (_: unknown, { id_unidad_medida, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatUnidadMedida);
       const item = await repo.findOne({ where: { id_unidad_medida: parseInt(id_unidad_medida) } });
       if (!item) throw new NotFoundError('Unidad de medida');
@@ -471,7 +471,7 @@ export const catalogosResolvers = {
     },
     deleteCatUnidadMedida: async (_: unknown, { id_unidad_medida }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatUnidadMedida);
       const item = await repo.findOne({ where: { id_unidad_medida: parseInt(id_unidad_medida) } });
       if (item) await repo.remove(item);

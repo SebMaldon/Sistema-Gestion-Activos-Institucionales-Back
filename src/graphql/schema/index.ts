@@ -688,6 +688,27 @@ export const typeDefs = gql`
   # ─────────────────────────────────────────────────────────
   # INPUT TYPES
   # ─────────────────────────────────────────────────────────
+  # ─── MONITORES WMI ─────────────────────────────────────
+  # Input para un monitor detectado por WMI
+  input MonitorWmiInput {
+    marca:    String
+    modelo:   String
+    num_serie: String
+  }
+
+  # Conflicto: el monitor ya estaba vinculado a otro equipo
+  type MonitorConflicto {
+    num_serie:      String!
+    num_inv_equipo_anterior: String
+    num_serie_equipo_anterior: String!
+  }
+
+  # Resultado de procesar monitores
+  type MonitoresResult {
+    ok:         Boolean!
+    conflictos: [MonitorConflicto!]!
+  }
+
   input AtributoInput {
     id_atributo: Int!
     valor: String!
@@ -1080,6 +1101,16 @@ export const typeDefs = gql`
     deleteBienAtributo(id_bien_atributo: ID!): Boolean!
     # Establece todos los atributos de un bien en una sola operación (upsert masivo)
     upsertBienAtributos(id_bien: ID!, atributos: [AtributoInput!]!): [BienAtributo!]!
+
+    # ── Monitores WMI ─────────────────────────────────────────
+    # Procesa los monitores escaneados por WMI y los vincula a la PC.
+    # Si forzar=false y hay conflictos, devuelve los conflictos sin aplicar cambios.
+    # Si forzar=true, mueve los monitores a esta PC aunque estén en otra.
+    procesarMonitoresEquipo(
+      id_bien_pc:  ID!
+      monitores:   [MonitorWmiInput!]!
+      forzar:      Boolean
+    ): MonitoresResult!
 
     # ── Solicitudes de Cambio (Maker-Checker) ────────────────
     solicitarActualizacionBien(idBien: ID!, datosNuevos: String!): SolicitudCambio!

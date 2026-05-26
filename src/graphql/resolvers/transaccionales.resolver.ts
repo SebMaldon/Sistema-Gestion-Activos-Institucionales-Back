@@ -170,7 +170,7 @@ export const transaccionalesResolvers = {
 
     deleteGarantia: async (_: unknown, { id_garantia }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Garantia);
       const item = await repo.findOne({ where: { id_garantia: parseInt(id_garantia) } });
       if (item) {
@@ -199,7 +199,7 @@ export const transaccionalesResolvers = {
 
     deleteTipoIncidencia: async (_: unknown, { id_tipo_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(TipoIncidencia);
       const item = await repo.findOne({ where: { id_tipo_incidencia: parseInt(id_tipo_incidencia) } });
       if (item) {
@@ -343,7 +343,7 @@ export const transaccionalesResolvers = {
 
     deleteIncidencia: async (_: unknown, { id_incidencia }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]); // Solo Maestro (id_rol = 1)
+      requireRole(context, [ROLES.MAESTRO]); // Solo Maestro (id_rol = 1)
       
       const notaRepo = AppDataSource.getRepository(Nota);
       const incidenciaRepo = AppDataSource.getRepository(Incidencia);
@@ -381,7 +381,7 @@ export const transaccionalesResolvers = {
 
     deleteNota: async (_: unknown, { id_nota }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Nota);
       const nota = await repo.findOne({ where: { id_nota: parseInt(id_nota) } });
       if (nota) {

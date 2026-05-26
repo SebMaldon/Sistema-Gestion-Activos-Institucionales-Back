@@ -106,7 +106,7 @@ export const atributosResolvers = {
 
     deleteAtributo: async (_: unknown, { id_atributo }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CatAtributoTecnico);
       const item = await repo.findOne({ where: { id_atributo: parseInt(id_atributo) } });
       if (!item) throw new NotFoundError('Atributo');

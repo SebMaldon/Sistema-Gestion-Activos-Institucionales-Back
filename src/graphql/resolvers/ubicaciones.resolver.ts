@@ -70,7 +70,7 @@ export const ubicacionesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Ubicacion);
       const item = await repo.findOne({ where: { id_ubicacion: parseInt(id_ubicacion) } });
       if (item) await repo.remove(item);

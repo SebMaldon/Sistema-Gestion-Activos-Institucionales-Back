@@ -6,6 +6,7 @@ import { Usuario } from '../../entities/Usuario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
+import { procesarMonitoresHelper } from './bienes.resolver';
 
 // Campos que pertenecen a la tabla Bienes
 const BIEN_FIELDS = [
@@ -32,7 +33,7 @@ export const solicitudesCambioResolvers = {
   Query: {
     obtenerSolicitudesPendientes: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
 
       return AppDataSource.getRepository(SolicitudCambio).find({
         where: { estado: 'PENDIENTE' },
@@ -125,7 +126,7 @@ export const solicitudesCambioResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
 
       return AppDataSource.transaction(async (manager) => {
         const solicitud = await manager.findOne(SolicitudCambio, {
@@ -204,7 +205,15 @@ export const solicitudesCambioResolvers = {
           }
         }
 
-        // ── Marcar solicitud como aprobada ──
+        // ── Procesar monitores WMI si vienen en datos ────────────────────────
+        const monitoresWmi = datos.monitores;
+        if (Array.isArray(monitoresWmi) && monitoresWmi.length > 0) {
+          const idBienPC = bien ? bien.id_bien : solicitud.bien_id;
+          // En aprobación de admin: forzar=true (el admin decide aprobar, movemos monitores)
+          await procesarMonitoresHelper(manager, idBienPC, monitoresWmi, true);
+        }
+
+        // ── Marcar solicitud como aprobada ──────────────────────────────
         solicitud.estado = 'APROBADO';
         solicitud.usuario_aprobador_id = context.user!.id_usuario;
         solicitud.fecha_resolucion = new Date();
@@ -220,7 +229,7 @@ export const solicitudesCambioResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
 
       const repo = AppDataSource.getRepository(SolicitudCambio);
       const solicitud = await repo.findOne({

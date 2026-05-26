@@ -82,7 +82,7 @@ export const movimientosResolvers = {
 
     updateMovimiento: async (_: unknown, { id_movimiento, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(MovimientoInventario);
       const item = await repo.findOne({ where: { id_movimiento: parseInt(id_movimiento) } });
       if (!item) throw new NotFoundError('Movimiento');
@@ -92,7 +92,7 @@ export const movimientosResolvers = {
 
     deleteMovimiento: async (_: unknown, { id_movimiento }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN]);
+      requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(MovimientoInventario);
       const item = await repo.findOne({ where: { id_movimiento: parseInt(id_movimiento) } });
       if (item) {

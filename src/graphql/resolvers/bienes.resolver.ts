@@ -6,11 +6,187 @@ import { Nota } from '../../entities/Nota';
 import { Incidencia } from '../../entities/Incidencia';
 import { MovimientoInventario } from '../../entities/MovimientoInventario';
 import { BienMonitor } from '../../entities/BienMonitor';
+import { CatModelo } from '../../entities/CatModelo';
+import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
+import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
+import { Marca } from '../../entities/Marca';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Segmento } from '../../entities/Segmento';
+import { EntityManager } from 'typeorm';
+
+// ── Interface: monitor detectado por WMI ──────────────────────────────────────
+export interface MonitorWmiInput {
+  marca?: string;
+  modelo?: string;
+  num_serie?: string;
+}
+
+export interface MonitorConflicto {
+  num_serie: string;
+  num_inv_equipo_anterior?: string;
+  num_serie_equipo_anterior: string;
+}
+
+/**
+ * Helper compartido: procesa la lista de monitores WMI para una PC.
+ * - Busca/crea el modelo MON-{marca}-{modelo} en Cat_Modelos.
+ * - Busca/crea el Bien del monitor (sin num_inv).
+ * - Detecta si el monitor estaba vinculado a otra PC → conflicto.
+ * - Si forzar=true o sin conflictos: aplica cambios y sincroniza Bien_Monitores.
+ * Devuelve { ok, conflictos }.
+ */
+export async function procesarMonitoresHelper(
+  manager: EntityManager,
+  id_bien_pc: string,
+  monitoresWmi: MonitorWmiInput[],
+  forzar: boolean
+): Promise<{ ok: boolean; conflictos: MonitorConflicto[] }> {
+  const bienRepo    = manager.getRepository(Bien);
+  const modeloRepo  = manager.getRepository(CatModelo);
+  const bmRepo      = manager.getRepository(BienMonitor);
+
+  // Obtener IDs de catálogo dinámicamente
+  // Categoría: busca la que contenga 'computo' o 'cómputo' en el nombre
+  const catRepo     = manager.getRepository(CatCategoriaActivo);
+  const umRepo      = manager.getRepository(CatUnidadMedida);
+
+  const catComputo  = await catRepo
+    .createQueryBuilder('c')
+    .where("LOWER(c.nombre_categoria) LIKE '%computo%' OR LOWER(c.nombre_categoria) LIKE '%cómputo%'")
+    .getOne();
+  const id_categoria = catComputo?.id_categoria ?? 1;
+
+  const umPza       = await umRepo
+    .createQueryBuilder('u')
+    .where("LOWER(u.abreviatura) = 'pza' OR LOWER(u.nombre_unidad) LIKE '%pieza%'")
+    .getOne();
+  const id_unidad_medida = umPza?.id_unidad_medida ?? 1;
+
+  // Bien padre (PC)
+  const pc = await bienRepo.findOne({ where: { id_bien: id_bien_pc } });
+  if (!pc) throw new NotFoundError('PC (bien)');
+
+  // Detectar conflictos: monitores con num_serie vinculados a OTRA PC
+  const conflictos: MonitorConflicto[] = [];
+
+  for (const mon of monitoresWmi) {
+    if (!mon.num_serie) continue;
+    const bienMon = await bienRepo.findOne({ where: { num_serie: mon.num_serie } });
+    if (!bienMon) continue; // nuevo, no hay conflicto
+
+    const relExistente = await bmRepo.findOne({ where: { id_monitor: bienMon.id_bien } });
+    if (relExistente && relExistente.id_bien !== id_bien_pc) {
+      // Está vinculado a otro equipo
+      const equipoAnterior = await bienRepo.findOne({ where: { id_bien: relExistente.id_bien } });
+      conflictos.push({
+        num_serie: mon.num_serie,
+        num_inv_equipo_anterior: equipoAnterior?.num_inv ?? undefined,
+        num_serie_equipo_anterior: equipoAnterior?.num_serie ?? relExistente.id_bien,
+      });
+    }
+  }
+
+  // Si hay conflictos y no forzar → devolver sin cambios
+  if (conflictos.length > 0 && !forzar) {
+    return { ok: false, conflictos };
+  }
+
+  // Aplicar cambios
+  const idsMonitoresNuevos: string[] = [];
+
+  for (const mon of monitoresWmi) {
+    if (!mon.num_serie) continue;
+
+    // 1. Upsert modelo en Cat_Modelos
+    const marcaClean  = (mon.marca  || 'GENERICO').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 15);
+    const modeloClean = (mon.modelo || 'MONITOR').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 20);
+    const clave_modelo = `MON-${marcaClean}-${modeloClean}`.substring(0, 30);
+
+    // Buscar o crear la Marca
+    const marcaName = (mon.marca || 'GENERICO').trim();
+    let marcaEnt = await manager.getRepository(Marca)
+      .createQueryBuilder('m')
+      .where('LOWER(m.marca) = LOWER(:nombre)', { nombre: marcaName })
+      .getOne();
+    if (!marcaEnt) {
+      marcaEnt = await manager.getRepository(Marca).save({ marca: marcaName });
+    }
+
+    let catModelo = await modeloRepo.findOne({ where: { clave_modelo } });
+    if (!catModelo) {
+      catModelo = modeloRepo.create({
+        clave_modelo,
+        descrip_disp: `${mon.marca || ''} ${mon.modelo || ''}`.trim() || 'Monitor',
+        clave_marca: marcaEnt.clave_marca,
+        // tipo_disp: null (no tiene tipo específico)
+      });
+      await modeloRepo.save(catModelo);
+    } else if (!catModelo.clave_marca) {
+      catModelo.clave_marca = marcaEnt.clave_marca;
+      await modeloRepo.save(catModelo);
+    }
+
+    // 2. Buscar o crear Bien del monitor
+    let bienMon = await bienRepo.findOne({ where: { num_serie: mon.num_serie } });
+    if (!bienMon) {
+      const id_monitor = uuidv4();
+      const qr_hash    = Buffer.from(`IMSS-${id_monitor}`).toString('base64');
+      bienMon = bienRepo.create({
+        id_bien: id_monitor,
+        qr_hash,
+        id_categoria,
+        id_unidad_medida,
+        num_serie: mon.num_serie,
+        // num_inv: dejado vacío (monitor no tiene número de inventario)
+        clave_modelo,
+        estatus_operativo: 'ACTIVO',
+        id_segmento:           pc.id_segmento,
+        id_ubicacion:          pc.id_ubicacion,
+        clave_unidad_ref:      pc.clave_unidad_ref,
+        id_usuario_resguardo:  pc.id_usuario_resguardo,
+      });
+      await bienRepo.save(bienMon);
+    } else {
+      // Actualizar ubicación/segmento/usuario para que coincida con la PC
+      bienMon.id_segmento          = pc.id_segmento;
+      bienMon.id_ubicacion         = pc.id_ubicacion;
+      bienMon.clave_unidad_ref     = pc.clave_unidad_ref;
+      bienMon.id_usuario_resguardo = pc.id_usuario_resguardo;
+      bienMon.fecha_actualizacion  = new Date();
+      bienMon.num_inv              = null as any; // Limpiar num_inv si lo tuviera por reglas anteriores
+      // Actualizar siempre la clave_modelo con el nuevo MON-{marca}-{modelo}
+      bienMon.clave_modelo = clave_modelo;
+      await bienRepo.save(bienMon);
+    }
+
+    idsMonitoresNuevos.push(bienMon.id_bien);
+
+    // 3. Desconectar monitor de equipo anterior si existe
+    const relVieja = await bmRepo.findOne({ where: { id_monitor: bienMon.id_bien } });
+    if (relVieja && relVieja.id_bien !== id_bien_pc) {
+      await bmRepo.remove(relVieja);
+    }
+
+    // 4. Crear relación Bien_Monitores si no existe
+    const relActual = await bmRepo.findOne({ where: { id_bien: id_bien_pc, id_monitor: bienMon.id_bien } });
+    if (!relActual) {
+      await bmRepo.save(bmRepo.create({ id_bien: id_bien_pc, id_monitor: bienMon.id_bien }));
+    }
+  }
+
+  // 5. Desvincular monitores viejos que ya no estén conectados físicamente
+  const relsActuales = await bmRepo.find({ where: { id_bien: id_bien_pc } });
+  for (const rel of relsActuales) {
+    if (!idsMonitoresNuevos.includes(rel.id_monitor)) {
+      await bmRepo.remove(rel);
+    }
+  }
+
+  return { ok: true, conflictos: forzar ? conflictos : [] };
+}
 
 export interface BienesFilter {
   estatus_operativo?: string;
@@ -375,6 +551,20 @@ export const bienesResolvers = {
       if (!rel) throw new NotFoundError('Asignación de monitor');
       await repo.remove(rel);
       return true;
+    },
+
+    // ── Procesar monitores WMI (Rol Maestro, directo) ──────────────────────
+    procesarMonitoresEquipo: async (
+      _: unknown,
+      { id_bien_pc, monitores, forzar = false }: { id_bien_pc: string; monitores: MonitorWmiInput[]; forzar?: boolean },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      return AppDataSource.transaction(async (manager) =>
+        procesarMonitoresHelper(manager, id_bien_pc, monitores, forzar)
+      );
     },
   },
 
