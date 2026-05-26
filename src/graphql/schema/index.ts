@@ -714,6 +714,43 @@ export const typeDefs = gql`
     valor: String!
   }
 
+  input EspecificacionTIBulkInput {
+    cpu_info: String
+    ram_gb: Int
+    almacenamiento_gb: Int
+    mac_address: String
+    dir_ip: String
+    dir_mac: String
+    puerto_red: String
+    switch_red: String
+    modelo_so: String
+    cuenta_windows: String
+    correo: String
+    last_scan: String
+    tipo_user: String
+    nombre_host: String
+    windows_serial: String
+  }
+
+  input BienBulkInput {
+    id_categoria: Int!
+    id_unidad_medida: Int!
+    id_segmento: Int
+    id_ubicacion: Int
+    num_serie: String
+    num_inv: String
+    cantidad: Float
+    estatus_operativo: String
+    clave_unidad_ref: String
+    clave_modelo: String
+    id_usuario_resguardo: Int
+    fecha_adquisicion: Date
+
+    especificacionTI: EspecificacionTIBulkInput
+    atributos: [AtributoInput!]
+    id_monitor: ID
+  }
+
   input UnidadACargoInput {
     id_rol_empleado: Int!
     id_usuario: Int!
@@ -852,6 +889,9 @@ export const typeDefs = gql`
       fecha_adquisicion: Date
     ): Bien!
     deleteBien(id_bien: ID!): Boolean!
+
+    # ── Carga Masiva
+    createBienesBulk(bienes: [BienBulkInput!]!): Boolean!
 
     # ── Especificaciones TI (upsert: crea o actualiza)
     upsertEspecificacionTI(

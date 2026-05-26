@@ -6,6 +6,7 @@ import { Nota } from '../../entities/Nota';
 import { Incidencia } from '../../entities/Incidencia';
 import { MovimientoInventario } from '../../entities/MovimientoInventario';
 import { BienMonitor } from '../../entities/BienMonitor';
+import { BienAtributo } from '../../entities/BienAtributo';
 import { CatModelo } from '../../entities/CatModelo';
 import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
@@ -44,22 +45,22 @@ export async function procesarMonitoresHelper(
   monitoresWmi: MonitorWmiInput[],
   forzar: boolean
 ): Promise<{ ok: boolean; conflictos: MonitorConflicto[] }> {
-  const bienRepo    = manager.getRepository(Bien);
-  const modeloRepo  = manager.getRepository(CatModelo);
-  const bmRepo      = manager.getRepository(BienMonitor);
+  const bienRepo = manager.getRepository(Bien);
+  const modeloRepo = manager.getRepository(CatModelo);
+  const bmRepo = manager.getRepository(BienMonitor);
 
   // Obtener IDs de catálogo dinámicamente
   // Categoría: busca la que contenga 'computo' o 'cómputo' en el nombre
-  const catRepo     = manager.getRepository(CatCategoriaActivo);
-  const umRepo      = manager.getRepository(CatUnidadMedida);
+  const catRepo = manager.getRepository(CatCategoriaActivo);
+  const umRepo = manager.getRepository(CatUnidadMedida);
 
-  const catComputo  = await catRepo
+  const catComputo = await catRepo
     .createQueryBuilder('c')
     .where("LOWER(c.nombre_categoria) LIKE '%computo%' OR LOWER(c.nombre_categoria) LIKE '%cómputo%'")
     .getOne();
   const id_categoria = catComputo?.id_categoria ?? 1;
 
-  const umPza       = await umRepo
+  const umPza = await umRepo
     .createQueryBuilder('u')
     .where("LOWER(u.abreviatura) = 'pza' OR LOWER(u.nombre_unidad) LIKE '%pieza%'")
     .getOne();
@@ -101,7 +102,7 @@ export async function procesarMonitoresHelper(
     if (!mon.num_serie) continue;
 
     // 1. Upsert modelo en Cat_Modelos
-    const marcaClean  = (mon.marca  || 'GENERICO').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 15);
+    const marcaClean = (mon.marca || 'GENERICO').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 15);
     const modeloClean = (mon.modelo || 'MONITOR').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 20);
     const clave_modelo = `MON-${marcaClean}-${modeloClean}`.substring(0, 30);
 
@@ -133,7 +134,7 @@ export async function procesarMonitoresHelper(
     let bienMon = await bienRepo.findOne({ where: { num_serie: mon.num_serie } });
     if (!bienMon) {
       const id_monitor = uuidv4();
-      const qr_hash    = Buffer.from(`IMSS-${id_monitor}`).toString('base64');
+      const qr_hash = Buffer.from(`IMSS-${id_monitor}`).toString('base64');
       bienMon = bienRepo.create({
         id_bien: id_monitor,
         qr_hash,
@@ -143,20 +144,20 @@ export async function procesarMonitoresHelper(
         // num_inv: dejado vacío (monitor no tiene número de inventario)
         clave_modelo,
         estatus_operativo: 'ACTIVO',
-        id_segmento:           pc.id_segmento,
-        id_ubicacion:          pc.id_ubicacion,
-        clave_unidad_ref:      pc.clave_unidad_ref,
-        id_usuario_resguardo:  pc.id_usuario_resguardo,
+        id_segmento: pc.id_segmento,
+        id_ubicacion: pc.id_ubicacion,
+        clave_unidad_ref: pc.clave_unidad_ref,
+        id_usuario_resguardo: pc.id_usuario_resguardo,
       });
       await bienRepo.save(bienMon);
     } else {
       // Actualizar ubicación/segmento/usuario para que coincida con la PC
-      bienMon.id_segmento          = pc.id_segmento;
-      bienMon.id_ubicacion         = pc.id_ubicacion;
-      bienMon.clave_unidad_ref     = pc.clave_unidad_ref;
+      bienMon.id_segmento = pc.id_segmento;
+      bienMon.id_ubicacion = pc.id_ubicacion;
+      bienMon.clave_unidad_ref = pc.clave_unidad_ref;
       bienMon.id_usuario_resguardo = pc.id_usuario_resguardo;
-      bienMon.fecha_actualizacion  = new Date();
-      bienMon.num_inv              = null as any; // Limpiar num_inv si lo tuviera por reglas anteriores
+      bienMon.fecha_actualizacion = new Date();
+      bienMon.num_inv = null as any; // Limpiar num_inv si lo tuviera por reglas anteriores
       // Actualizar siempre la clave_modelo con el nuevo MON-{marca}-{modelo}
       bienMon.clave_modelo = clave_modelo;
       await bienRepo.save(bienMon);
@@ -425,6 +426,97 @@ export const bienesResolvers = {
       return repo.save(bien);
     },
 
+    createBienesBulk: async (_: unknown, { bienes }: { bienes: any[] }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      const queryRunner = AppDataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        const repoBien = queryRunner.manager.getRepository(Bien);
+        const repoEspecTI = queryRunner.manager.getRepository(EspecificacionTI);
+        const repoAttr = queryRunner.manager.getRepository(BienAtributo);
+        const repoMonitor = queryRunner.manager.getRepository(BienMonitor);
+
+        for (let i = 0; i < bienes.length; i++) {
+          const b = bienes[i];
+          const rowNum = i + 1;
+
+          if (!b.id_categoria) throw new ValidationError(`Fila ${rowNum}: Debe seleccionar la categoría del bien.`);
+          if (!b.id_unidad_medida) throw new ValidationError(`Fila ${rowNum}: Debe especificar la unidad de medida.`);
+          if (!b.estatus_operativo || b.estatus_operativo.trim() === '') {
+            throw new ValidationError(`Fila ${rowNum}: El estatus operativo es obligatorio.`);
+          }
+
+          if (b.num_serie && b.num_serie.trim() !== '') {
+            const dupSerie = await repoBien.findOne({ where: { num_serie: b.num_serie.trim() } });
+            if (dupSerie) {
+              throw new ValidationError(`Fila ${rowNum}: El número de serie "${b.num_serie.trim()}" ya está registrado.`);
+            }
+          }
+
+          if (b.num_inv && b.num_inv.trim() !== '') {
+            const dupInv = await repoBien.findOne({ where: { num_inv: b.num_inv.trim() } });
+            if (dupInv) {
+              throw new ValidationError(`Fila ${rowNum}: El número de inventario "${b.num_inv.trim()}" ya está registrado.`);
+            }
+          }
+
+          const id_bien = uuidv4();
+          const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
+
+          const { especificacionTI, atributos, id_monitor, ...bienData } = b;
+          const bien = repoBien.create({ ...bienData, id_bien, qr_hash });
+          await repoBien.save(bien);
+
+          if (especificacionTI) {
+            const specs = repoEspecTI.create({ id_bien, ...especificacionTI });
+            await repoEspecTI.save(specs);
+          }
+
+          if (atributos && atributos.length > 0) {
+            for (const attr of atributos) {
+              const ba = repoAttr.create({
+                id_bien,
+                id_atributo: attr.id_atributo,
+                valor: attr.valor
+              });
+              await repoAttr.save(ba);
+            }
+          }
+
+          if (id_monitor) {
+            const monitorBien = await repoBien.findOne({ where: { id_bien: id_monitor } });
+            if (!monitorBien) throw new NotFoundError(`Fila ${rowNum}: Monitor asignado no existe.`);
+
+            const dup = await repoMonitor.findOne({ where: { id_monitor } });
+            if (dup) throw new ValidationError(`Fila ${rowNum}: El monitor ya está asignado a otro equipo.`);
+
+            // Sincronizar ubicación
+            monitorBien.id_segmento = b.id_segmento;
+            monitorBien.id_ubicacion = b.id_ubicacion;
+            monitorBien.clave_unidad_ref = b.clave_unidad_ref;
+            monitorBien.id_usuario_resguardo = b.id_usuario_resguardo;
+            monitorBien.fecha_actualizacion = new Date();
+            await repoBien.save(monitorBien);
+
+            const rel = repoMonitor.create({ id_bien, id_monitor });
+            await repoMonitor.save(rel);
+          }
+        }
+
+        await queryRunner.commitTransaction();
+        return true;
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+      } finally {
+        await queryRunner.release();
+      }
+    },
+
     updateBien: async (_: unknown, { id_bien, ...updates }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
@@ -511,10 +603,10 @@ export const bienesResolvers = {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
-      const bienRepo    = AppDataSource.getRepository(Bien);
+      const bienRepo = AppDataSource.getRepository(Bien);
       const monitorRepo = AppDataSource.getRepository(BienMonitor);
 
-      const equipo  = await bienRepo.findOne({ where: { id_bien } });
+      const equipo = await bienRepo.findOne({ where: { id_bien } });
       if (!equipo) throw new NotFoundError('Equipo');
 
       const monitorBien = await bienRepo.findOne({ where: { id_bien: id_monitor } });
@@ -525,11 +617,11 @@ export const bienesResolvers = {
       if (dup) throw new ValidationError('Este monitor ya está asignado a ese equipo.');
 
       // Sincronizar ubicación del monitor con el equipo
-      monitorBien.id_segmento       = equipo.id_segmento;
-      monitorBien.id_ubicacion      = equipo.id_ubicacion;
-      monitorBien.clave_unidad_ref  = equipo.clave_unidad_ref;
+      monitorBien.id_segmento = equipo.id_segmento;
+      monitorBien.id_ubicacion = equipo.id_ubicacion;
+      monitorBien.clave_unidad_ref = equipo.clave_unidad_ref;
       monitorBien.id_usuario_resguardo = equipo.id_usuario_resguardo;
-      monitorBien.fecha_actualizacion  = new Date();
+      monitorBien.fecha_actualizacion = new Date();
       await bienRepo.save(monitorBien);
 
       // Crear la relación
@@ -547,7 +639,7 @@ export const bienesResolvers = {
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       const repo = AppDataSource.getRepository(BienMonitor);
-      const rel  = await repo.findOne({ where: { id_bien_monitor: parseInt(id_bien_monitor) } });
+      const rel = await repo.findOne({ where: { id_bien_monitor: parseInt(id_bien_monitor) } });
       if (!rel) throw new NotFoundError('Asignación de monitor');
       await repo.remove(rel);
       return true;
@@ -609,7 +701,7 @@ export const bienesResolvers = {
     // Monitores asignados al equipo
     monitores: (parent: Bien, _: unknown, context: GraphQLContext) =>
       context.loaders.monitoresByBienLoader.load(parent.id_bien),
-      
+
     // Para un monitor, obtener el PC al que está asignado
     equipoAsignado: async (parent: Bien) => {
       const rel = await AppDataSource.getRepository(BienMonitor).findOne({ where: { id_monitor: parent.id_bien } });
