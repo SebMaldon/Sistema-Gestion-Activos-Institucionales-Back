@@ -7,6 +7,8 @@ import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
 import { procesarMonitoresHelper } from './bienes.resolver';
+import { NotificacionMensaje } from '../../entities/NotificacionMensaje';
+import { crearLecturaParaDestinatarios } from './notificaciones.resolver';
 
 // Campos que pertenecen a la tabla Bienes
 const BIEN_FIELDS = [
@@ -28,6 +30,38 @@ const WMI_TO_DB_MAP: Record<string, string> = {
   'tipo_usuario_pc': 'tipo_user',
   'nom_pc': 'nombre_host'
 };
+
+async function notificarCambioPendiente(user: any, parsed: any, idBien: string) {
+  if (user && [ROLES.USUARIO, ROLES.SIN_ACCESO].includes(user.id_rol)) {
+    try {
+      const msgRepo = AppDataSource.getRepository(NotificacionMensaje);
+      const matriculaSol = user.matricula;
+      const numSerie = parsed.num_serie || '';
+      
+      let identificadorActivo = numSerie;
+      if (!identificadorActivo) {
+        const bien = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien: idBien } });
+        identificadorActivo = bien?.num_serie || idBien;
+      }
+
+      const titulo = 'Solicitud de Cambio Pendiente';
+      const mensaje = `El usuario con matrícula ${matriculaSol} ha enviado una solicitud de cambios para el activo: ${identificadorActivo}.`;
+
+      const nuevaNotif = await msgRepo.save(
+        msgRepo.create({
+          titulo,
+          mensaje,
+          tipo_audiencia: 'ROL',
+          id_audiencia: ROLES.MAESTRO,
+        })
+      );
+
+      await crearLecturaParaDestinatarios(nuevaNotif.id_notificacion, 'ROL', ROLES.MAESTRO);
+    } catch (err) {
+      console.error('Error al crear notificación para solicitud de cambio:', err);
+    }
+  }
+}
 
 export const solicitudesCambioResolvers = {
   Query: {
@@ -95,7 +129,9 @@ export const solicitudesCambioResolvers = {
             throw new ConflictError('Ya habías mandado esta solicitud.');
           } else {
             existeSolicitud.datos_nuevos = parsed;
-            return repo.save(existeSolicitud);
+            const res = await repo.save(existeSolicitud);
+            await notificarCambioPendiente(context.user, parsed, idBien);
+            return res;
           }
         }
       } else {
@@ -105,7 +141,9 @@ export const solicitudesCambioResolvers = {
             throw new ConflictError('Ya habías mandado esta solicitud.');
           } else {
             existeSolicitud.datos_nuevos = parsed;
-            return repo.save(existeSolicitud);
+            const res = await repo.save(existeSolicitud);
+            await notificarCambioPendiente(context.user, parsed, idBien);
+            return res;
           }
         }
       }
@@ -117,7 +155,9 @@ export const solicitudesCambioResolvers = {
         estado: 'PENDIENTE',
       });
 
-      return repo.save(solicitud);
+      const res = await repo.save(solicitud);
+      await notificarCambioPendiente(context.user, parsed, idBien);
+      return res;
     },
 
     aprobarCambio: async (

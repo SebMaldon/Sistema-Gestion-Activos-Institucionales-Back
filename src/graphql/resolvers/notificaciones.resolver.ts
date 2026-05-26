@@ -33,7 +33,7 @@ function mensajeAplicaAUsuario(msg: NotificacionMensaje, user: UsuarioPayload): 
  * Inserta filas en Notificaciones_Lecturas para todos los usuarios destinatarios
  * de un nuevo mensaje. Usa raw query para eficiencia (INSERT múltiple).
  */
-async function crearLecturaParaDestinatarios(
+export async function crearLecturaParaDestinatarios(
   id_notificacion: number,
   tipo_audiencia: string,
   id_audiencia: number | undefined
