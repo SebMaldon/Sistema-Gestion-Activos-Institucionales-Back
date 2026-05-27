@@ -101,11 +101,6 @@ export async function procesarMonitoresHelper(
   for (const mon of monitoresWmi) {
     if (!mon.num_serie) continue;
 
-    // 1. Upsert modelo en Cat_Modelos
-    const marcaClean = (mon.marca || 'GENERICO').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 15);
-    const modeloClean = (mon.modelo || 'MONITOR').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 20);
-    const clave_modelo = `MON-${marcaClean}-${modeloClean}`.substring(0, 30);
-
     // Buscar o crear la Marca
     const marcaName = (mon.marca || 'GENERICO').trim();
     let marcaEnt = await manager.getRepository(Marca)
@@ -116,14 +111,20 @@ export async function procesarMonitoresHelper(
       marcaEnt = await manager.getRepository(Marca).save({ marca: marcaName });
     }
 
+    // Limpiar marca de la descripción del modelo antes de generar clave_modelo y guardar
+    let modeloCleaned = (mon.modelo || '').trim();
+    if (marcaName && modeloCleaned.toLowerCase().startsWith(marcaName.toLowerCase())) {
+      while (modeloCleaned.toLowerCase().startsWith(marcaName.toLowerCase())) {
+        modeloCleaned = modeloCleaned.substring(marcaName.length).trim();
+      }
+    }
+
+    const marcaClean = marcaName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 15);
+    const modeloClean = (modeloCleaned || 'MONITOR').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 20);
+    const clave_modelo = `MON-${marcaClean}-${modeloClean}`.substring(0, 30);
+
     let catModelo = await modeloRepo.findOne({ where: { clave_modelo } });
     if (!catModelo) {
-      let modeloCleaned = (mon.modelo || '').trim();
-      if (marcaName && modeloCleaned.toLowerCase().startsWith(marcaName.toLowerCase())) {
-        while (modeloCleaned.toLowerCase().startsWith(marcaName.toLowerCase())) {
-          modeloCleaned = modeloCleaned.substring(marcaName.length).trim();
-        }
-      }
       catModelo = modeloRepo.create({
         clave_modelo,
         descrip_disp: `${marcaName} ${modeloCleaned}`.trim() || 'Monitor',
