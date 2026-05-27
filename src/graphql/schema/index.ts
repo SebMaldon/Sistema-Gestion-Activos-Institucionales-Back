@@ -916,7 +916,7 @@ export const typeDefs = gql`
     # ── Monitores asignados a equipos
     # Asigna un monitor (bien) a un equipo (PC/Laptop)
     # Sincroniza automáticamente la ubicación del monitor con el equipo
-    asignarMonitor(id_bien: ID!, id_monitor: ID!): BienMonitor!
+    asignarMonitor(id_bien: ID!, id_monitor: ID!, forzar: Boolean): BienMonitor!
     # Elimina la asignación (no borra el bien monitor del inventario)
     desasignarMonitor(id_bien_monitor: ID!): Boolean!
 
