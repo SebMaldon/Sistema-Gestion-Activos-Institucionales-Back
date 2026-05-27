@@ -96,7 +96,7 @@ async function bootstrap() {
   // 6. Montar middleware GraphQL
   app.use(
     '/graphql',
-    cors<cors.CorsRequest>({ origin: '*', credentials: true }),
+    cors<cors.CorsRequest>({ origin: '*' }),
     express.json({ limit: '10mb' }),
     (req, _res, next) => {
       req.body = req.body || {};
