@@ -604,7 +604,7 @@ export const bienesResolvers = {
     // ── Asignar monitor a un equipo (PC o Laptop) ──────────────────────────
     asignarMonitor: async (
       _: unknown,
-      { id_bien, id_monitor }: { id_bien: string; id_monitor: string },
+      { id_bien, id_monitor, forzar = false }: { id_bien: string; id_monitor: string; forzar?: boolean },
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -619,9 +619,33 @@ export const bienesResolvers = {
       const monitorBien = await bienRepo.findOne({ where: { id_bien: id_monitor } });
       if (!monitorBien) throw new NotFoundError('Monitor (bien)');
 
-      // Verificar que no esté ya asignado
+      // Verificar que no esté ya asignado al MISMO equipo
       const dup = await monitorRepo.findOne({ where: { id_bien, id_monitor } });
       if (dup) throw new ValidationError('Este monitor ya está asignado a ese equipo.');
+
+      // Verificar si el monitor está asignado a OTRO equipo
+      const relOtroEquipo = await monitorRepo.findOne({ where: { id_monitor } });
+      if (relOtroEquipo && relOtroEquipo.id_bien !== id_bien) {
+        if (!forzar) {
+          // Obtener info del equipo anterior para mostrar en el mensaje
+          const equipoAnterior = await bienRepo.findOne({ where: { id_bien: relOtroEquipo.id_bien } });
+          const equipoNombre = equipoAnterior
+            ? [
+                equipoAnterior.num_inv ? `INV: ${equipoAnterior.num_inv}` : null,
+                equipoAnterior.num_serie ? `S/N: ${equipoAnterior.num_serie}` : null,
+              ]
+                .filter(Boolean)
+                .join(' / ') || `ID: ${equipoAnterior.id_bien.substring(0, 8)}…`
+            : 'otro equipo';
+          // Código de extensión para que el front pueda detectarlo
+          const err: any = new ValidationError(
+            `MONITOR_EN_USO:${equipoNombre}:Este monitor ya está asignado a ${equipoNombre}. ¿Deseas forzar la reasignación?`
+          );
+          throw err;
+        }
+        // forzar=true → desasignar del equipo anterior primero
+        await monitorRepo.remove(relOtroEquipo);
+      }
 
       // Sincronizar ubicación del monitor con el equipo
       monitorBien.id_segmento = equipo.id_segmento;
