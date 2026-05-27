@@ -128,7 +128,18 @@ export const notificacionesResolvers = {
         };
       });
 
-      return mostrarOcultas ? resultado : resultado.filter((n) => !n.oculta);
+      const ahora = new Date();
+      const limite24h = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
+
+      return mostrarOcultas
+        ? resultado
+        : resultado.filter((n) => {
+            if (n.oculta) return false;
+            if (n.leida && n.fecha_lectura && new Date(n.fecha_lectura) < limite24h) {
+              return false;
+            }
+            return true;
+          });
     },
 
     // ── Conteo de no leídas para el badge del frontend
