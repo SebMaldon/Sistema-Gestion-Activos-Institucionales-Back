@@ -283,6 +283,10 @@ CREATE TABLE Especificaciones_TI (
     switch_red VARCHAR(50),
     modelo_so VARCHAR(50),
     windows_serial VARCHAR(100),
+    cuenta_windows VARCHAR(64),
+    tipo_user VARCHAR(50),
+    nombre_host VARCHAR(100),
+    correo VARCHAR(100),
     CONSTRAINT FK_Especificaciones_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
 );
 GO
@@ -292,7 +296,6 @@ CREATE TABLE Cuentas_PC (
     id_bien UNIQUEIDENTIFIER NOT NULL,
     cuenta_windows VARCHAR(64),
     tipo_user VARCHAR(50),
-    nombre_host VARCHAR(100),
     correo VARCHAR(100),
     CONSTRAINT FK_Cuentas_PC_Bien FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien)
 );
@@ -610,7 +613,6 @@ CREATE TABLE solicitudes_cambio (
     usuario_aprobador_id INT NULL,
     fecha_resolucion DATETIME NULL,
     comentarios NVARCHAR(MAX) NULL,
-    CONSTRAINT fk_solicitud_bien FOREIGN KEY (bien_id) REFERENCES bienes(id_bien),
     CONSTRAINT fk_solicitud_solicitante FOREIGN KEY (usuario_solicitante_id) REFERENCES usuarios(id_usuario),
     CONSTRAINT fk_solicitud_aprobador FOREIGN KEY (usuario_aprobador_id) REFERENCES usuarios(id_usuario),
     CONSTRAINT chk_json_datos CHECK (ISJSON(datos_nuevos) = 1) -- Esta validación asegura que el texto sea un JSON válido

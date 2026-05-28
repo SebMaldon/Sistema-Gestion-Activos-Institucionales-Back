@@ -10,8 +10,8 @@ export class SolicitudCambio {
   @PrimaryGeneratedColumn({ name: 'id' })
   id!: number;
 
-  @Column({ name: 'bien_id', type: 'uniqueidentifier' })
-  bien_id!: string;
+  @Column({ name: 'bien_id', type: 'uniqueidentifier', nullable: true })
+  bien_id?: string;
 
   @Column({ name: 'usuario_solicitante_id', type: 'int' })
   usuario_solicitante_id!: number;

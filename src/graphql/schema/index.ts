@@ -340,6 +340,7 @@ export const typeDefs = gql`
     modelo: CatModelo
     usuarioResguardo: Usuario
     especificacionTI: EspecificacionTI
+    cuentasPC: [CuentaPC!]
     garantias: [Garantia!]
     notas: [Nota!]
     monitores: [BienMonitor!]
@@ -402,12 +403,19 @@ export const typeDefs = gql`
     puerto_red: String
     switch_red: String
     modelo_so: String
-    cuenta_windows: String
-    correo: String
     last_scan: String
-    tipo_user: String
-    nombre_host: String
     windows_serial: String
+    nombre_host: String
+    bien: Bien
+  }
+
+  # ─── CUENTAS PC ─────────────────────────────────────────
+  type CuentaPC {
+    id_cuenta: ID!
+    id_bien: ID!
+    cuenta_windows: String
+    tipo_user: String
+    correo: String
     bien: Bien
   }
 
@@ -617,6 +625,10 @@ export const typeDefs = gql`
     # ── Especificaciones TI
     especificacionTI(id_bien: ID!): EspecificacionTI
 
+    # ── Cuentas PC (1:N por bien)
+    cuentasPC(id_bien: ID!): [CuentaPC!]!
+    cuentaPC(id_cuenta: ID!): CuentaPC
+
     # ── Garantías
     garantias(id_bien: ID, estado_garantia: String): [Garantia!]!
     garantia(id_garantia: ID!): Garantia
@@ -727,12 +739,14 @@ export const typeDefs = gql`
     puerto_red: String
     switch_red: String
     modelo_so: String
-    cuenta_windows: String
-    correo: String
     last_scan: String
-    tipo_user: String
-    nombre_host: String
     windows_serial: String
+  }
+
+  input CuentaPCInput {
+    cuenta_windows: String
+    tipo_user: String
+    correo: String
   }
 
   input BienBulkInput {
@@ -910,13 +924,15 @@ export const typeDefs = gql`
       puerto_red: String
       switch_red: String
       modelo_so: String
-      cuenta_windows: String
-      correo: String
       last_scan: String
-      tipo_user: String
-      nombre_host: String
       windows_serial: String
+      nombre_host: String
     ): EspecificacionTI!
+
+    # ── Cuentas PC (1:N por bien)
+    createCuentaPC(id_bien: ID!, data: CuentaPCInput!): CuentaPC!
+    updateCuentaPC(id_cuenta: ID!, data: CuentaPCInput!): CuentaPC!
+    deleteCuentaPC(id_cuenta: ID!): Boolean!
 
     # ── Monitores asignados a equipos
     # Asigna un monitor (bien) a un equipo (PC/Laptop)
@@ -1166,7 +1182,7 @@ export const typeDefs = gql`
   # ─── SOLICITUDES DE CAMBIO (Maker-Checker) ─────────────────
   type SolicitudCambio {
     id: ID!
-    bien_id: ID!
+    bien_id: ID
     usuario_solicitante_id: Int!
     datos_nuevos: String!
     estado: String!

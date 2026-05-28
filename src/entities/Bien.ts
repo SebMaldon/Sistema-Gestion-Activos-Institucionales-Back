@@ -16,6 +16,7 @@ import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
 import { BienAtributo } from './BienAtributo';
 import { BienMonitor } from './BienMonitor';
+import { CuentaPC } from './CuentaPC';
 
 @Entity('Bienes')
 export class Bien {
@@ -123,4 +124,8 @@ export class Bien {
   // Monitores asignados a este equipo (solo aplica a PCs y Laptops)
   @OneToMany(() => BienMonitor, (bm) => bm.equipo)
   monitores?: BienMonitor[];
+
+  // Cuentas de usuario asociadas a esta PC/Laptop (1:N)
+  @OneToMany(() => CuentaPC, (c) => c.bien)
+  cuentasPC?: CuentaPC[];
 }

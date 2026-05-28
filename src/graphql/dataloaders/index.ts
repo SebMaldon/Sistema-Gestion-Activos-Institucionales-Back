@@ -16,6 +16,7 @@ import { Bien } from '../../entities/Bien';
 import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
 import { BienMonitor } from '../../entities/BienMonitor';
+import { CuentaPC } from '../../entities/CuentaPC';
 
 function toMap<K, V>(items: V[], keyFn: (item: V) => K): Map<K, V> {
   return new Map<K, V>(items.map((item) => [keyFn(item), item] as [K, V]));
@@ -192,6 +193,21 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k) ?? []);
   });
 
+  // ── CuentasPC agrupadas por id_bien
+  const cuentasPCByBienLoader = new DataLoader<string, CuentaPC[]>(async (keys) => {
+    const items = await AppDataSource.getRepository(CuentaPC).find({
+      where: { id_bien: In(keys as string[]) },
+      order: { id_cuenta: 'ASC' },
+    });
+    const map = new Map<string, CuentaPC[]>();
+    items.forEach((c: CuentaPC) => {
+      const arr = map.get(c.id_bien) ?? [];
+      arr.push(c);
+      map.set(c.id_bien, arr);
+    });
+    return keys.map((k) => map.get(k) ?? []);
+  });
+
   return {
     marcaLoader,
     tipoDispositivoLoader,
@@ -209,6 +225,7 @@ export function createDataLoaders() {
     notasByIncidenciaLoader,
     notasByBienLoader,
     monitoresByBienLoader,
+    cuentasPCByBienLoader,
   };
 }
 

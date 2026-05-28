@@ -2,6 +2,7 @@ import { AppDataSource } from '../../config/database';
 import { SolicitudCambio } from '../../entities/SolicitudCambio';
 import { Bien } from '../../entities/Bien';
 import { EspecificacionTI } from '../../entities/EspecificacionTI';
+import { CuentaPC } from '../../entities/CuentaPC';
 import { Usuario } from '../../entities/Usuario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
@@ -18,9 +19,14 @@ const BIEN_FIELDS = [
 ];
 
 const SPEC_FIELDS = [
-  'nombre_host', 'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
+  'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
   'dir_ip', 'dir_mac', 'puerto_red', 'switch_red', 'modelo_so',
-  'cuenta_windows', 'correo', 'last_scan', 'tipo_user', 'windows_serial',
+  'last_scan', 'windows_serial',
+];
+
+// Campos que pertenecen a la nueva tabla Cuentas_PC
+const CUENTA_FIELDS = [
+  'nombre_host', 'cuenta_windows', 'correo', 'tipo_user',
 ];
 
 const WMI_TO_DB_MAP: Record<string, string> = {
@@ -106,6 +112,7 @@ export const solicitudesCambioResolvers = {
       const repo = AppDataSource.getRepository(SolicitudCambio);
 
       if (parsed._esCreacion) {
+        parsed._idBienTemporal = idBien;
         const { num_serie, num_inv } = parsed;
 
         const bienRepo = AppDataSource.getRepository(Bien);
@@ -149,7 +156,7 @@ export const solicitudesCambioResolvers = {
       }
 
       const solicitud = repo.create({
-        bien_id: idBien,
+        bien_id: parsed._esCreacion ? undefined : idBien,
         usuario_solicitante_id: context.user!.id_usuario,
         datos_nuevos: parsed,
         estado: 'PENDIENTE',
@@ -181,13 +188,16 @@ export const solicitudesCambioResolvers = {
         // ── Separar campos de Bien vs Especificaciones TI ──
         const bienUpdates: Record<string, any> = {};
         const specUpdates: Record<string, any> = {};
+        const cuentaUpdates: Record<string, any> = {};
 
         for (const [key, value] of Object.entries(datos)) {
           if (key === '_esCreacion') continue;
 
           const dbKey = WMI_TO_DB_MAP[key] || key;
 
-          if (SPEC_FIELDS.includes(dbKey)) {
+          if (CUENTA_FIELDS.includes(dbKey)) {
+            cuentaUpdates[dbKey] = value;
+          } else if (SPEC_FIELDS.includes(dbKey)) {
             if (dbKey === 'last_scan' && value) {
               specUpdates[dbKey] = new Date(value as string);
             } else {
@@ -200,14 +210,18 @@ export const solicitudesCambioResolvers = {
         }
 
         // ── Verificar que el bien existe ──
-        const bien = await manager.findOne(Bien, { where: { id_bien: solicitud.bien_id } });
+        let bien = null;
+        if (solicitud.bien_id) {
+          bien = await manager.findOne(Bien, { where: { id_bien: solicitud.bien_id } });
+        }
 
         if (!bien) {
           // Es una creación: el bien no existe aún
           // Para creaciones, datos debe incluir los campos obligatorios
-          const qr_hash = Buffer.from(`IMSS-${solicitud.bien_id}`).toString('base64');
+          const newIdBien = datos._idBienTemporal || solicitud.bien_id;
+          const qr_hash = Buffer.from(`IMSS-${newIdBien}`).toString('base64');
           const newBien = manager.create(Bien, {
-            id_bien: solicitud.bien_id,
+            id_bien: newIdBien,
             qr_hash,
             id_categoria: datos.id_categoria ?? 1,
             id_unidad_medida: datos.id_unidad_medida ?? 1,
@@ -222,6 +236,15 @@ export const solicitudesCambioResolvers = {
               ...specUpdates,
             });
             await manager.save(EspecificacionTI, spec);
+          }
+
+          // Guardar cuentas PC si hay
+          if (Object.keys(cuentaUpdates).length > 0) {
+            const cuenta = manager.create(CuentaPC, {
+              id_bien: savedBien.id_bien,
+              ...cuentaUpdates,
+            });
+            await manager.save(CuentaPC, cuenta);
           }
         } else {
           // Es una actualización
@@ -243,12 +266,24 @@ export const solicitudesCambioResolvers = {
               await manager.save(EspecificacionTI, spec);
             }
           }
+
+          // Actualizar/crear cuenta PC si hay campos de cuenta
+          if (Object.keys(cuentaUpdates).length > 0) {
+            const existingCuentas = await manager.find(CuentaPC, { where: { id_bien: bien.id_bien } });
+            if (existingCuentas.length > 0) {
+              // Actualiza la primera cuenta (comportamiento compatible)
+              await manager.update(CuentaPC, { id_cuenta: existingCuentas[0].id_cuenta }, cuentaUpdates);
+            } else {
+              const cuenta = manager.create(CuentaPC, { id_bien: bien.id_bien, ...cuentaUpdates });
+              await manager.save(CuentaPC, cuenta);
+            }
+          }
         }
 
         // ── Procesar monitores WMI si vienen en datos ────────────────────────
         const monitoresWmi = datos.monitores;
         if (Array.isArray(monitoresWmi) && monitoresWmi.length > 0) {
-          const idBienPC = bien ? bien.id_bien : solicitud.bien_id;
+          const idBienPC = (bien ? bien.id_bien : (datos._idBienTemporal || solicitud.bien_id)) as string;
           // En aprobación de admin: forzar=true (el admin decide aprobar, movemos monitores)
           await procesarMonitoresHelper(manager, idBienPC, monitoresWmi, true);
         }
@@ -291,7 +326,7 @@ export const solicitudesCambioResolvers = {
       return JSON.stringify(parent.datos_nuevos);
     },
     bien: (parent: SolicitudCambio, _: unknown, context: GraphQLContext) =>
-      context.loaders.bienLoader.load(parent.bien_id),
+      parent.bien_id ? context.loaders.bienLoader.load(parent.bien_id) : null,
     solicitante: (parent: SolicitudCambio, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.usuario_solicitante_id),
     aprobador: (parent: SolicitudCambio, _: unknown, context: GraphQLContext) =>

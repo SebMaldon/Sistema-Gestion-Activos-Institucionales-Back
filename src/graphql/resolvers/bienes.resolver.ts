@@ -16,6 +16,7 @@ import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middlewar
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Segmento } from '../../entities/Segmento';
+import { CuentaPC } from '../../entities/CuentaPC';
 import { EntityManager } from 'typeorm';
 
 // ── Interface: monitor detectado por WMI ──────────────────────────────────────
@@ -398,6 +399,17 @@ export const bienesResolvers = {
       requireAuth(context);
       return AppDataSource.getRepository(BienMonitor).find({ where: { id_bien } });
     },
+
+    // ── Cuentas PC ────────────────────────────────────────────────────────
+    cuentasPC: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(CuentaPC).find({ where: { id_bien }, order: { id_cuenta: 'ASC' } });
+    },
+
+    cuentaPC: async (_: unknown, { id_cuenta }: { id_cuenta: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(CuentaPC).findOne({ where: { id_cuenta: parseInt(id_cuenta) } });
+    },
   },
 
   Mutation: {
@@ -689,6 +701,46 @@ export const bienesResolvers = {
         procesarMonitoresHelper(manager, id_bien_pc, monitores, forzar)
       );
     },
+
+    // ── Cuentas PC ───────────────────────────────────────────────────────
+    createCuentaPC: async (
+      _: unknown,
+      { id_bien, data }: { id_bien: string; data: Partial<CuentaPC> },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(CuentaPC);
+      return repo.save(repo.create({ id_bien, ...data }));
+    },
+
+    updateCuentaPC: async (
+      _: unknown,
+      { id_cuenta, data }: { id_cuenta: string; data: Partial<CuentaPC> },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(CuentaPC);
+      const cuenta = await repo.findOne({ where: { id_cuenta: parseInt(id_cuenta) } });
+      if (!cuenta) throw new NotFoundError('CuentaPC');
+      repo.merge(cuenta, data);
+      return repo.save(cuenta);
+    },
+
+    deleteCuentaPC: async (
+      _: unknown,
+      { id_cuenta }: { id_cuenta: string },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(CuentaPC);
+      const cuenta = await repo.findOne({ where: { id_cuenta: parseInt(id_cuenta) } });
+      if (!cuenta) throw new NotFoundError('CuentaPC');
+      await repo.remove(cuenta);
+      return true;
+    },
   },
 
   // ── Field resolvers usando DataLoaders
@@ -738,6 +790,10 @@ export const bienesResolvers = {
       const rel = await AppDataSource.getRepository(BienMonitor).findOne({ where: { id_monitor: parent.id_bien } });
       return rel || null;
     },
+
+    // Cuentas PC asociadas a este bien (1:N)
+    cuentasPC: (parent: Bien, _: unknown, context: GraphQLContext) =>
+      context.loaders.cuentasPCByBienLoader.load(parent.id_bien),
   },
 
   // ── Field resolvers de BienMonitor ──────────────────────────────────────
@@ -750,6 +806,11 @@ export const bienesResolvers = {
 
   EspecificacionTI: {
     bien: async (parent: EspecificacionTI) =>
+      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
+  },
+
+  CuentaPC: {
+    bien: async (parent: CuentaPC) =>
       AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
   },
 };
