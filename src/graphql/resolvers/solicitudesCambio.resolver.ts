@@ -21,12 +21,12 @@ const BIEN_FIELDS = [
 const SPEC_FIELDS = [
   'cpu_info', 'ram_gb', 'almacenamiento_gb', 'mac_address',
   'dir_ip', 'dir_mac', 'puerto_red', 'switch_red', 'modelo_so',
-  'last_scan', 'windows_serial',
+  'last_scan', 'windows_serial', 'nombre_host',
 ];
 
 // Campos que pertenecen a la nueva tabla Cuentas_PC
 const CUENTA_FIELDS = [
-  'nombre_host', 'cuenta_windows', 'correo', 'tipo_user',
+  'cuenta_windows', 'correo', 'tipo_user',
 ];
 
 const WMI_TO_DB_MAP: Record<string, string> = {
