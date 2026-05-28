@@ -8,6 +8,7 @@ import { Segmento } from './Segmento';
 import { Bien } from './Bien';
 import { Incidencia } from './Incidencia';
 import { MovimientoInventario } from './MovimientoInventario';
+import { Inmueble } from './Inmueble';
 
 @Entity('Usuarios')
 export class Usuario {
@@ -36,6 +37,10 @@ export class Usuario {
   @Column({ name: 'id_unidad', type: 'int', nullable: true })
   id_unidad?: number;
 
+  // FK a la unidad física (tabla: unidades) — clave varchar de la clínica/hospital
+  @Column({ name: 'clave_unidad', type: 'varchar', length: 50, nullable: true })
+  clave_unidad?: string;
+
   @Column({ name: 'estatus', type: 'bit', default: 1 })
   estatus!: boolean;
 
@@ -49,6 +54,11 @@ export class Usuario {
   @ManyToOne(() => Segmento, (s) => s.usuarios, { nullable: true })
   @JoinColumn({ name: 'id_unidad' })
   segmento?: Segmento;
+
+  // Unidad física (clínica/hospital) a la que pertenece el usuario
+  @ManyToOne(() => Inmueble, { nullable: true })
+  @JoinColumn({ name: 'clave_unidad' })
+  unidadFisica?: Inmueble;
 
   @OneToMany(() => Bien, (bien) => bien.usuarioResguardo)
   bienesResguardados?: Bien[];

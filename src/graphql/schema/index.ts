@@ -296,11 +296,14 @@ export const typeDefs = gql`
     tipo_usuario: String
     correo_electronico: String
     id_rol: Int!
-    id_unidad: Int
+    id_unidad: Int          # FK al segmento de red (segmentos.id_segmento)
+    clave_unidad: String    # FK a la unidad física (unidades.clave)
     estatus: Boolean!
     rol: Rol
     # segmento de red al que pertenece el usuario (id_unidad es FK a segmentos.id_segmento)
     segmento: Segmento
+    # unidad física (clínica/hospital) a la que pertenece el usuario
+    unidadFisica: Unidad
   }
 
   type AuthPayload {
@@ -842,6 +845,7 @@ export const typeDefs = gql`
       password: String
       id_rol: Int
       id_unidad: Int
+      clave_unidad: String
     ): Usuario!
     updateUsuario(
       id_usuario: ID!
@@ -850,6 +854,7 @@ export const typeDefs = gql`
       correo_electronico: String
       id_rol: Int
       id_unidad: Int
+      clave_unidad: String
       estatus: Boolean
     ): Usuario!
     deleteUsuario(id_usuario: ID!): Boolean!

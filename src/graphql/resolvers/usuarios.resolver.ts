@@ -94,6 +94,7 @@ export const usuariosResolvers = {
         password?: string;
         id_rol?: number;
         id_unidad?: number;
+        clave_unidad?: string;
       },
       context: GraphQLContext
     ) => {
@@ -111,6 +112,7 @@ export const usuariosResolvers = {
         correo_electronico: args.correo_electronico,
         id_rol: args.id_rol ?? ROLES.USUARIO,
         id_unidad: args.id_unidad,
+        clave_unidad: args.clave_unidad,
         estatus: true,
       });
 
@@ -133,6 +135,7 @@ export const usuariosResolvers = {
         correo_electronico?: string;
         id_rol?: number;
         id_unidad?: number;
+        clave_unidad?: string;
         estatus?: boolean;
       },
       context: GraphQLContext
@@ -218,6 +221,9 @@ export const usuariosResolvers = {
     // id_unidad (int) FK a segmentos.id_segmento
     segmento: (parent: Usuario, _: unknown, context: GraphQLContext) =>
       parent.id_unidad ? context.loaders.segmentoLoader.load(parent.id_unidad) : null,
+    // clave_unidad (varchar) FK a unidades.clave — unidad física (clínica/hospital)
+    unidadFisica: (parent: Usuario, _: unknown, context: GraphQLContext) =>
+      parent.clave_unidad ? context.loaders.unidadLoader.load(parent.clave_unidad) : null,
     // Normalizar BIT de SQL Server
     estatus: (parent: Usuario) => Boolean(parent.estatus),
   },

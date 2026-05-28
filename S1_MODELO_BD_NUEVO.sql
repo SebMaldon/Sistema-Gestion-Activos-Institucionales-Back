@@ -206,10 +206,12 @@ CREATE TABLE Usuarios (
     correo_electronico VARCHAR(70),
     password_hash VARCHAR(255) NULL, -- MODIFICADO: Acepta NULL para el rol "Sin Acceso"
     id_rol INT NOT NULL DEFAULT 3,
-    id_unidad int NULL,              -- NUEVO: Enlace a la tabla de unidades
+    id_unidad int NULL,              -- FK al segmento de red (tabla: segmentos)
+    clave_unidad VARCHAR(50) NULL,   -- NUEVO: FK a la clave de la unidad física (tabla: unidades)
     estatus BIT DEFAULT 1,
     CONSTRAINT FK_Usuarios_Roles FOREIGN KEY (id_rol) REFERENCES Roles(id_rol),
-    CONSTRAINT FK_Usuarios_Unidades FOREIGN KEY (id_unidad) REFERENCES segmentos(id_segmento)
+    CONSTRAINT FK_Usuarios_Segmentos FOREIGN KEY (id_unidad) REFERENCES segmentos(id_segmento),  -- nombre corregido: apunta a segmentos
+    CONSTRAINT FK_Usuarios_Unidades FOREIGN KEY (clave_unidad) REFERENCES unidades(clave)        -- FK real a la unidad física
 );
 GO
 -- ==========================================
