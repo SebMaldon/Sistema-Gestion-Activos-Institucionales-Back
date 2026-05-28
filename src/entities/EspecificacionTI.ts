@@ -21,7 +21,7 @@ export class EspecificacionTI {
   @Column({ name: 'mac_address', type: 'varchar', length: 50, nullable: true })
   mac_address?: string;
 
-  @Column({ name: 'dir_ip', type: 'varchar', length: 15, nullable: true })
+  @Column({ name: 'dir_ip', type: 'varchar', length: 100, nullable: true })
   dir_ip?: string;
 
   @Column({ name: 'dir_mac', type: 'varchar', length: 17, nullable: true })

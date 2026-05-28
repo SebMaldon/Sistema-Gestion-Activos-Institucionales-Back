@@ -276,7 +276,7 @@ CREATE TABLE Especificaciones_TI (
     ram_gb INT,
     almacenamiento_gb INT,
     mac_address VARCHAR(50),
-    dir_ip VARCHAR(15),
+    dir_ip VARCHAR(200),
     dir_mac VARCHAR(17),
     last_scan DATETIME,
     puerto_red VARCHAR(15),
