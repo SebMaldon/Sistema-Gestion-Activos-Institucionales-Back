@@ -20,6 +20,13 @@ CREATE TABLE Cat_Unidades (
     jefatura_asignada VARCHAR(120)
 );
 GO
+
+CREATE TABLE Folio_Salidas (
+Folio varchar(43) PRIMARY KEY
+); 
+GO
+
+
 --Tipo de unidades
 CREATE TABLE [dbo].[TipoUnidades](
 	[IDTipo] [int] IDENTITY(1,1) NOT NULL,
@@ -265,24 +272,30 @@ GO
 -- Nota: La relación de monitores se gestiona en la tabla Bien_Monitores (many-to-many)
 CREATE TABLE Especificaciones_TI (
     id_bien UNIQUEIDENTIFIER PRIMARY KEY,
-    cuenta_windows VARCHAR(64),
     cpu_info VARCHAR(100),
     ram_gb INT,
     almacenamiento_gb INT,
     mac_address VARCHAR(50),
     dir_ip VARCHAR(15),
     dir_mac VARCHAR(17),
-    correo VARCHAR(100),
     last_scan DATETIME,
     puerto_red VARCHAR(15),
     switch_red VARCHAR(50),
     modelo_so VARCHAR(50),
-    tipo_user VARCHAR(50),
-    nombre_host VARCHAR(100),
     windows_serial VARCHAR(100),
     CONSTRAINT FK_Especificaciones_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
 );
 GO
+
+CREATE TABLE Cuentas_PC (
+    id_cuenta INT IDENTITY(1,1) PRIMARY KEY,
+    id_bien UNIQUEIDENTIFIER NOT NULL,
+    cuenta_windows VARCHAR(64),
+    tipo_user VARCHAR(50),
+    nombre_host VARCHAR(100),
+    correo VARCHAR(100),
+    CONSTRAINT FK_Cuentas_PC_Bien FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien)
+);
 
 -- ==========================================
 -- Relación equipo ↔ monitores (Many-to-Many)
