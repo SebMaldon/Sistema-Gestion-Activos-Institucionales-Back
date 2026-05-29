@@ -156,7 +156,7 @@ export const solicitudesCambioResolvers = {
       }
 
       const solicitud = repo.create({
-        bien_id: parsed._esCreacion ? undefined : idBien,
+        bien_id: idBien,
         usuario_solicitante_id: context.user!.id_usuario,
         datos_nuevos: parsed,
         estado: 'PENDIENTE',
@@ -169,7 +169,7 @@ export const solicitudesCambioResolvers = {
 
     aprobarCambio: async (
       _: unknown,
-      { solicitudId }: { solicitudId: number },
+      { solicitudId, camposAprobados }: { solicitudId: number; camposAprobados?: string[] },
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -191,20 +191,27 @@ export const solicitudesCambioResolvers = {
         const cuentaUpdates: Record<string, any> = {};
 
         for (const [key, value] of Object.entries(datos)) {
-          if (key === '_esCreacion') continue;
+          if (key === '_esCreacion' || key === 'cuentasList' || key === 'monitores') continue;
+
+          // Si el front manda camposAprobados, ignorar los que no están
+          if (camposAprobados && !camposAprobados.includes(key)) continue;
 
           const dbKey = WMI_TO_DB_MAP[key] || key;
+          let finalValue = value;
+          if (finalValue === '' && ['id_segmento', 'id_ubicacion', 'id_categoria', 'id_unidad_medida', 'id_usuario_resguardo'].includes(dbKey)) {
+            finalValue = null;
+          }
 
           if (CUENTA_FIELDS.includes(dbKey)) {
-            cuentaUpdates[dbKey] = value;
+            cuentaUpdates[dbKey] = finalValue;
           } else if (SPEC_FIELDS.includes(dbKey)) {
-            if (dbKey === 'last_scan' && value) {
-              specUpdates[dbKey] = new Date(value as string);
+            if (dbKey === 'last_scan' && finalValue) {
+              specUpdates[dbKey] = new Date(finalValue as string);
             } else {
-              specUpdates[dbKey] = value;
+              specUpdates[dbKey] = finalValue;
             }
           } else if (BIEN_FIELDS.includes(dbKey)) {
-            bienUpdates[dbKey] = value;
+            bienUpdates[dbKey] = finalValue;
           }
           // Campos desconocidos se ignoran silenciosamente
         }
@@ -246,6 +253,19 @@ export const solicitudesCambioResolvers = {
             });
             await manager.save(CuentaPC, cuenta);
           }
+          
+          // Cuentas PC - Solo si están en camposAprobados o no se envió el filtro
+          if (Array.isArray(datos.cuentasList) && (!camposAprobados || camposAprobados.includes('cuentasList'))) {
+            for (const c of datos.cuentasList) {
+              const cuenta = manager.create(CuentaPC, {
+                id_bien: savedBien.id_bien,
+                cuenta_windows: c.cuenta_windows,
+                correo: c.correo,
+                tipo_user: c.tipo_user,
+              });
+              await manager.save(CuentaPC, cuenta);
+            }
+          }
         } else {
           // Es una actualización
           if (Object.keys(bienUpdates).length > 0) {
@@ -267,7 +287,7 @@ export const solicitudesCambioResolvers = {
             }
           }
 
-          // Actualizar/crear cuenta PC si hay campos de cuenta
+          // Actualizar/crear cuenta PC si hay campos de cuenta root
           if (Object.keys(cuentaUpdates).length > 0) {
             const existingCuentas = await manager.find(CuentaPC, { where: { id_bien: bien.id_bien } });
             if (existingCuentas.length > 0) {
@@ -278,14 +298,35 @@ export const solicitudesCambioResolvers = {
               await manager.save(CuentaPC, cuenta);
             }
           }
+
+          // Guardar cuentasList de WMI si hay
+          if (Array.isArray(datos.cuentasList) && (!camposAprobados || camposAprobados.includes('cuentasList'))) {
+            for (const c of datos.cuentasList) {
+              if (c.id_cuenta && !c._new) {
+                await manager.update(CuentaPC, { id_cuenta: c.id_cuenta }, {
+                  cuenta_windows: c.cuenta_windows,
+                  correo: c.correo,
+                  tipo_user: c.tipo_user,
+                });
+              } else {
+                const cuenta = manager.create(CuentaPC, {
+                  id_bien: bien.id_bien,
+                  cuenta_windows: c.cuenta_windows,
+                  correo: c.correo,
+                  tipo_user: c.tipo_user,
+                });
+                await manager.save(CuentaPC, cuenta);
+              }
+            }
+          }
         }
 
         // ── Procesar monitores WMI si vienen en datos ────────────────────────
-        const monitoresWmi = datos.monitores;
-        if (Array.isArray(monitoresWmi) && monitoresWmi.length > 0) {
+        // Monitores - Solo si están en camposAprobados o no se envió el filtro
+        if (Array.isArray(datos.monitores) && (!camposAprobados || camposAprobados.includes('monitores'))) {
           const idBienPC = (bien ? bien.id_bien : (datos._idBienTemporal || solicitud.bien_id)) as string;
           // En aprobación de admin: forzar=true (el admin decide aprobar, movemos monitores)
-          await procesarMonitoresHelper(manager, idBienPC, monitoresWmi, true);
+          await procesarMonitoresHelper(manager, idBienPC, datos.monitores, true);
         }
 
         // ── Marcar solicitud como aprobada ──────────────────────────────

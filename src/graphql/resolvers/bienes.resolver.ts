@@ -540,6 +540,10 @@ export const bienesResolvers = {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
+      ['id_segmento', 'id_ubicacion', 'id_categoria', 'id_unidad_medida', 'id_usuario_resguardo'].forEach(key => {
+        if (updates[key] === '') updates[key] = null;
+      });
+
       if (updates.estatus_operativo !== undefined && updates.estatus_operativo.trim() === '') {
         throw new ValidationError('El estatus operativo no puede estar vacío al actualizar.');
       }
@@ -586,10 +590,14 @@ export const bienesResolvers = {
       }
 
       const notaRepo = AppDataSource.getRepository(Nota);
+      const cuentaRepo = AppDataSource.getRepository(CuentaPC);
       const bienRepo = AppDataSource.getRepository(Bien);
 
       const notas = await notaRepo.find({ where: { id_bien } });
       if (notas.length > 0) await notaRepo.remove(notas);
+
+      const cuentas = await cuentaRepo.find({ where: { id_bien } });
+      if (cuentas.length > 0) await cuentaRepo.remove(cuentas);
 
       const bien = await bienRepo.findOne({ where: { id_bien } });
       if (bien) await bienRepo.remove(bien);

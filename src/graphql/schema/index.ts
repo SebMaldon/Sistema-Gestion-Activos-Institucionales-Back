@@ -1186,7 +1186,7 @@ export const typeDefs = gql`
 
     # ── Solicitudes de Cambio (Maker-Checker) ────────────────
     solicitarActualizacionBien(idBien: ID!, datosNuevos: String!): SolicitudCambio!
-    aprobarCambio(solicitudId: Int!): Boolean!
+    aprobarCambio(solicitudId: Int!, camposAprobados: [String!]): Boolean!
     rechazarCambio(solicitudId: Int!, motivo: String): Boolean!
 
     # ── Salidas de Bienes — Folio ─────────────────────────────
