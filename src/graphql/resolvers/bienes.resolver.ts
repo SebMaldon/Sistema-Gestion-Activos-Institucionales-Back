@@ -246,7 +246,12 @@ export const bienesResolvers = {
       }
       if (filter?.es_capitalizable !== undefined && filter.es_capitalizable !== null) {
         qb.innerJoin('Cat_CategoriasActivo', 'cat_cap', 'cat_cap.id_categoria = b.id_categoria');
-        qb.andWhere('cat_cap.es_capitalizable = :es_cap', { es_cap: filter.es_capitalizable ? 1 : 0 });
+        if (filter.es_capitalizable) {
+          qb.andWhere('cat_cap.es_capitalizable = 1');
+          qb.andWhere('b.num_inv IS NOT NULL AND b.num_inv != \'\'');
+        } else {
+          qb.andWhere('(cat_cap.es_capitalizable = 0 OR b.num_inv IS NULL OR b.num_inv = \'\')');
+        }
       }
       if (filter?.search) {
         qb.andWhere(
