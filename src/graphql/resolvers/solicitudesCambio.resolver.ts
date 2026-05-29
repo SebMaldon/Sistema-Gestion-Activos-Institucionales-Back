@@ -301,22 +301,17 @@ export const solicitudesCambioResolvers = {
 
           // Guardar cuentasList de WMI si hay
           if (Array.isArray(datos.cuentasList) && (!camposAprobados || camposAprobados.includes('cuentasList'))) {
+            // Eliminar cuentas previas para reemplazar con la lista actualizada
+            await manager.delete(CuentaPC, { id_bien: bien.id_bien });
+
             for (const c of datos.cuentasList) {
-              if (c.id_cuenta && !c._new) {
-                await manager.update(CuentaPC, { id_cuenta: c.id_cuenta }, {
-                  cuenta_windows: c.cuenta_windows,
-                  correo: c.correo,
-                  tipo_user: c.tipo_user,
-                });
-              } else {
-                const cuenta = manager.create(CuentaPC, {
-                  id_bien: bien.id_bien,
-                  cuenta_windows: c.cuenta_windows,
-                  correo: c.correo,
-                  tipo_user: c.tipo_user,
-                });
-                await manager.save(CuentaPC, cuenta);
-              }
+              const cuenta = manager.create(CuentaPC, {
+                id_bien: bien.id_bien,
+                cuenta_windows: c.cuenta_windows,
+                correo: c.correo,
+                tipo_user: c.tipo_user,
+              });
+              await manager.save(CuentaPC, cuenta);
             }
           }
         }
