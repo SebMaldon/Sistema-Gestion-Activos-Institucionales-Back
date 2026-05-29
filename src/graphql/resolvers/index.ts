@@ -10,6 +10,7 @@ import { bitacoraResolvers } from './bitacora.resolver';
 import { notificacionesResolvers } from './notificaciones.resolver';
 import { atributosResolvers } from './atributos.resolver';
 import { solicitudesCambioResolvers } from './solicitudesCambio.resolver';
+import { salidasResolvers } from './salidas.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -66,6 +67,7 @@ export const resolvers = {
     ...notificacionesResolvers.Query,
     ...atributosResolvers.Query,
     ...solicitudesCambioResolvers.Query,
+    ...salidasResolvers.Query,
   },
 
   Mutation: {
@@ -79,6 +81,7 @@ export const resolvers = {
     ...notificacionesResolvers.Mutation,
     ...atributosResolvers.Mutation,
     ...solicitudesCambioResolvers.Mutation,
+    ...salidasResolvers.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────

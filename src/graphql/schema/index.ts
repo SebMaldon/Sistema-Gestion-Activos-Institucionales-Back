@@ -4,6 +4,12 @@ export const typeDefs = gql`
   scalar DateTime
   scalar Date
 
+  # ─── FOLIO SALIDAS ──────────────────────────────────────
+  type FolioSalidas {
+    folio_actual: String!
+    siguiente:    String!
+  }
+
   # ─── ATRIBUTOS TÉCNICOS ─────────────────────────────────
   # Catálogo maestro de atributos (RAM, CPU, Pantalla, IMEI, etc.)
   type CatAtributoTecnico {
@@ -698,6 +704,11 @@ export const typeDefs = gql`
 
     # ── Solicitudes de Cambio (Maker-Checker)
     obtenerSolicitudesPendientes: [SolicitudCambio!]!
+
+    # ── Salidas de Bienes — Folio
+    folioSalidas: FolioSalidas!
+    # Busca usuario por matrícula exacta (para autocompletado en formulario de salidas)
+    usuarioPorMatricula(matricula: String!): Usuario
   }
 
   # ─────────────────────────────────────────────────────────
@@ -1177,6 +1188,12 @@ export const typeDefs = gql`
     solicitarActualizacionBien(idBien: ID!, datosNuevos: String!): SolicitudCambio!
     aprobarCambio(solicitudId: Int!): Boolean!
     rechazarCambio(solicitudId: Int!, motivo: String): Boolean!
+
+    # ── Salidas de Bienes — Folio ─────────────────────────────
+    # Registra el folio siguiente y lo devuelve (operación atómica)
+    confirmarFolio: FolioSalidas!
+    # Solo Maestro: insertar un folio manualmente en la tabla Folio_Salidas
+    setFolioManual(folio: String!): FolioSalidas!
   }
 
   # ─── SOLICITUDES DE CAMBIO (Maker-Checker) ─────────────────
