@@ -3,7 +3,8 @@ import { env } from '../config/environment';
 
 const { combine, timestamp, colorize, printf, errors } = winston.format;
 
-const logFormat = printf(({ level, message, timestamp: ts, stack }) => {
+const logFormat = printf((info: any) => {
+  const { level, message, timestamp: ts, stack } = info;
   return `${ts} [${level}]: ${stack || message}`;
 });
 
