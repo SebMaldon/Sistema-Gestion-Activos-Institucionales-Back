@@ -301,13 +301,17 @@ export const transaccionalesResolvers = {
       if (!incidencia) throw new NotFoundError('Incidencia');
 
       const notaRepo = AppDataSource.getRepository(Nota);
-      return notaRepo.save(
+      const saved = await notaRepo.save(
         notaRepo.create({
           id_incidencia: parseInt(id_incidencia),
           id_usuario_autor: context.user!.id_usuario,
           contenido_nota,
         })
       );
+
+      const loaded = await notaRepo.findOne({ where: { id_nota: saved.id_nota } });
+      if (!loaded) throw new NotFoundError('Nota');
+      return loaded;
     },
 
     resolverIncidencia: async (
@@ -370,13 +374,17 @@ export const transaccionalesResolvers = {
       if (!bien) throw new NotFoundError('Bien');
 
       const notaRepo = AppDataSource.getRepository(Nota);
-      return notaRepo.save(
+      const saved = await notaRepo.save(
         notaRepo.create({
           id_bien,
           id_usuario_autor: context.user!.id_usuario,
           contenido_nota,
         })
       );
+
+      const loaded = await notaRepo.findOne({ where: { id_nota: saved.id_nota } });
+      if (!loaded) throw new NotFoundError('Nota');
+      return loaded;
     },
 
     deleteNota: async (_: unknown, { id_nota }: any, context: GraphQLContext) => {
