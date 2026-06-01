@@ -26,6 +26,12 @@ Folio varchar(43) PRIMARY KEY
 ); 
 GO
 
+CREATE TABLE Archivos (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    Archivo VARCHAR(100) NOT NULL
+);
+GO
+
 
 --Tipo de unidades
 CREATE TABLE [dbo].[TipoUnidades](
@@ -156,6 +162,7 @@ CREATE TABLE [dbo].[unidades](
 	[NOInmueble] [int] NULL,
 	[Regimen] [int] NULL,
 	[TipoUnidad] [int] NULL,
+    Ubicación_coordenada VARCHAR(MAX) NULL,
  CONSTRAINT [PK_unidades] PRIMARY KEY CLUSTERED 
 (
 	[clave] ASC
@@ -176,6 +183,13 @@ GO
 ALTER TABLE [dbo].[TipoUnidades] CHECK CONSTRAINT [FK_TipoUnidades_ClasificacionesUnidades]
 GO
 
+CREATE TABLE Tipos_Enlaces (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    TipoEnlace VARCHAR(50) NOT NULL
+);
+GO
+
+
 -- NUEVA TABLA: Segmentos (Operativas / Red)
 CREATE TABLE [dbo].[segmentos](
     [id_segmento] [int] IDENTITY(1,1) PRIMARY KEY, -- Modificado para est�ndar de llaves for�neas
@@ -195,7 +209,8 @@ CREATE TABLE [dbo].[segmentos](
     [Diagrama_Red] [nvarchar](max) NULL,
     [Fecha_act_diag] [varbinary](50) NULL,
     [fecha_diag] [varchar](50) NULL,
-    constraint FK_CLAVE_SEGMENTOS_UNIDADES FOREIGN KEY (clave) REFERENCES unidades(clave)
+    constraint FK_CLAVE_SEGMENTOS_UNIDADES FOREIGN KEY (clave) REFERENCES unidades(clave),
+    constraint FK_TipoEnlace_Segmentos FOREIGN KEY (TipoEnlace) REFERENCES Tipos_Enlaces(ID)
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
@@ -275,18 +290,16 @@ CREATE TABLE Especificaciones_TI (
     cpu_info VARCHAR(100),
     ram_gb INT,
     almacenamiento_gb INT,
-    mac_address VARCHAR(50),
+    mac_address VARCHAR(200),
     dir_ip VARCHAR(200),
-    dir_mac VARCHAR(17),
+    dir_mac VARCHAR(200),
     last_scan DATETIME,
     puerto_red VARCHAR(15),
     switch_red VARCHAR(50),
     modelo_so VARCHAR(50),
     windows_serial VARCHAR(100),
-    cuenta_windows VARCHAR(64),
-    tipo_user VARCHAR(50),
     nombre_host VARCHAR(100),
-    correo VARCHAR(100),
+    version_office VARCHAR(100),
     CONSTRAINT FK_Especificaciones_Bienes FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
 );
 GO
@@ -298,6 +311,15 @@ CREATE TABLE Cuentas_PC (
     tipo_user VARCHAR(50),
     correo VARCHAR(100),
     CONSTRAINT FK_Cuentas_PC_Bien FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien)
+);
+
+CREATE TABLE Programas_PC (
+    id_programa_pc INT IDENTITY(1,1) PRIMARY KEY,
+    id_bien UNIQUEIDENTIFIER NOT NULL,
+    programa VARCHAR(100) NOT NULL,
+    version_act VARCHAR(50),
+    fecha_actualizacion DATE,
+    CONSTRAINT FK_Programas_PC_Bien FOREIGN KEY (id_bien) REFERENCES Bienes(id_bien) ON DELETE CASCADE
 );
 
 -- ==========================================
@@ -617,3 +639,20 @@ CREATE TABLE solicitudes_cambio (
     CONSTRAINT fk_solicitud_aprobador FOREIGN KEY (usuario_aprobador_id) REFERENCES usuarios(id_usuario),
     CONSTRAINT chk_json_datos CHECK (ISJSON(datos_nuevos) = 1) -- Esta validación asegura que el texto sea un JSON válido
 );
+
+CREATE TABLE Mesa_Correspondencia (
+    Folio INT NOT NULL PRIMARY KEY,
+    NoOficio VARCHAR(25) NULL,
+    FechaRecepcion DATETIME NULL,
+    FechaOficio DATETIME NULL,
+    Remitente VARCHAR(50) NULL,
+    Clave_unidad varchar(50) NULL,
+    id_ubicacion int NULL,
+    Descripcion VARCHAR(MAX) NULL,
+    Tipo INT NULL,
+    Archivo INT NULL
+    constraint FK_Mesa_Ubicacion FOREIGN KEY (id_ubicacion) REFERENCES Ubicaciones(id_ubicacion),
+    constraint FK_Mesa_Unidades FOREIGN KEY (Clave_unidad) REFERENCES unidades(clave),
+    constraint FK_Mesa_Archivos FOREIGN KEY (Archivo) REFERENCES Archivos(ID)
+);
+GO
