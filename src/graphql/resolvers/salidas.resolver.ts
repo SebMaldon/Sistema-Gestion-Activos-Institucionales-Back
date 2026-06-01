@@ -32,7 +32,10 @@ export const salidasResolvers = {
       requireAuth(context);
       if (!matricula || matricula.length < 2) return null;
       const repo = AppDataSource.getRepository(Usuario);
-      const usuario = await repo.findOne({ where: { matricula } });
+      const usuario = await repo.findOne({ 
+        where: { matricula },
+        relations: ['unidadFisica']
+      });
       return usuario || null;
     },
   },

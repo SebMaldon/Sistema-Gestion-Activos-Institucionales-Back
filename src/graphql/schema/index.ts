@@ -394,6 +394,9 @@ export const typeDefs = gql`
     # EAV attribute filter
     atributo_id: Int
     atributo_valor: String
+    # Quick filters
+    con_notas_recientes: Boolean
+    sin_inventario: Boolean
   }
 
   # ─── ESPECIFICACIONES TI ────────────────────────────────
@@ -627,6 +630,7 @@ export const typeDefs = gql`
     bienByNumSerie(num_serie: String!): Bien
     bienByNumInv(num_inv: String!): Bien
     bienByTermino(termino: String!): Bien
+    checkBienesExistBySerie(series: [String!]!): [String!]!
 
     # ── Especificaciones TI
     especificacionTI(id_bien: ID!): EspecificacionTI

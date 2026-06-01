@@ -228,6 +228,9 @@ export interface BienesFilter {
   // EAV
   atributo_id?: number;
   atributo_valor?: string;
+  // Quick Filters
+  con_notas_recientes?: boolean;
+  sin_inventario?: boolean;
 }
 
 export const bienesResolvers = {
@@ -308,6 +311,21 @@ export const bienesResolvers = {
         if (filter.garantia_fin_hasta) qb.andWhere('gf.fecha_fin <= :gfh', { gfh: filter.garantia_fin_hasta });
       }
 
+      // ── Quick Filters ────────────────────────────────────────
+      if (filter?.con_notas_recientes) {
+        qb.innerJoin('Notas', 'n', 'n.id_bien = b.id_bien');
+        // Filter notes created within the last 30 days
+        qb.andWhere('n.fecha_creacion >= DATEADD(day, -30, GETDATE())');
+      }
+
+      if (filter?.sin_inventario) {
+        // Red color means "es_capitalizable = 0" AND "num_inv is null or empty or N/D"
+        // The user says "sin_inventario" applies to no capitalizables. 
+        qb.leftJoin('Cat_CategoriasActivo', 'cat_cap2', 'cat_cap2.id_categoria = b.id_categoria');
+        qb.andWhere('(cat_cap2.es_capitalizable = 0 OR cat_cap2.es_capitalizable IS NULL)');
+        qb.andWhere('(b.num_inv IS NULL OR b.num_inv = \'\' OR b.num_inv = \'N/D\')');
+      }
+
       // ── EAV Attribute filter ─────────────────────────────────
       if (filter?.atributo_id != null && filter?.atributo_valor) {
         qb.innerJoin('Bien_Atributos', 'ba', 'ba.id_bien = b.id_bien');
@@ -381,6 +399,17 @@ export const bienesResolvers = {
         .orWhere('b.num_inv = :termino', { termino })
         .orWhere('e.dir_ip = :termino', { termino })
         .getOne();
+    },
+
+    checkBienesExistBySerie: async (_: unknown, { series }: { series: string[] }, context: GraphQLContext) => {
+      requireAuth(context);
+      if (!series || series.length === 0) return [];
+      const bienes = await AppDataSource.getRepository(Bien)
+        .createQueryBuilder('b')
+        .select('b.num_serie')
+        .where('b.num_serie IN (:...series)', { series })
+        .getMany();
+      return bienes.map(b => b.num_serie);
     },
 
     // Lista todos los bienes cuyo modelo tiene nombre_tipo LIKE '%Monitor%'
@@ -475,9 +504,46 @@ export const bienesResolvers = {
           }
 
           if (b.num_serie && b.num_serie.trim() !== '') {
-            const dupSerie = await repoBien.findOne({ where: { num_serie: b.num_serie.trim() } });
-            if (dupSerie) {
-              throw new ValidationError(`Fila ${rowNum}: El número de serie "${b.num_serie.trim()}" ya está registrado.`);
+            let existingBien = await repoBien.findOne({ where: { num_serie: b.num_serie.trim() } });
+
+            if (existingBien) {
+              const { especificacionTI, atributos, id_monitor, ...bienData } = b;
+
+              if (bienData.num_inv && bienData.num_inv.trim() !== '') {
+                const dupInv = await repoBien.findOne({ where: { num_inv: bienData.num_inv.trim() } });
+                if (dupInv && dupInv.id_bien !== existingBien.id_bien) {
+                  throw new ValidationError(`Fila ${rowNum}: El número de inventario "${bienData.num_inv.trim()}" ya está registrado.`);
+                }
+              }
+
+              Object.keys(bienData).forEach(key => {
+                if (bienData[key] === null || bienData[key] === undefined || bienData[key] === '') {
+                  delete bienData[key];
+                }
+              });
+
+              bienData.fecha_actualizacion = new Date();
+              repoBien.merge(existingBien, bienData);
+              await repoBien.save(existingBien);
+
+              if (especificacionTI) {
+                Object.keys(especificacionTI).forEach(k => {
+                  if (especificacionTI[k] === null || especificacionTI[k] === undefined || especificacionTI[k] === '') {
+                    delete especificacionTI[k];
+                  }
+                });
+                if (Object.keys(especificacionTI).length > 0) {
+                  let existingSpecs = await repoEspecTI.findOne({ where: { id_bien: existingBien.id_bien } });
+                  if (existingSpecs) {
+                    repoEspecTI.merge(existingSpecs, especificacionTI);
+                    await repoEspecTI.save(existingSpecs);
+                  } else {
+                    const newSpecs = repoEspecTI.create({ id_bien: existingBien.id_bien, ...especificacionTI });
+                    await repoEspecTI.save(newSpecs);
+                  }
+                }
+              }
+              continue;
             }
           }
 
