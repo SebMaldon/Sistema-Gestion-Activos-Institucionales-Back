@@ -416,6 +416,7 @@ export const typeDefs = gql`
     last_scan: String
     windows_serial: String
     nombre_host: String
+    version_office: String
     bien: Bien
   }
 
@@ -782,7 +783,6 @@ export const typeDefs = gql`
   input ProgramaInput {
     nombre_programa: String
     version: String
-    editor: String
     fecha_instalacion: String
   }
 
@@ -980,7 +980,7 @@ export const typeDefs = gql`
     # Asigna un monitor (bien) a un equipo (PC/Laptop)
     # Sincroniza automáticamente la ubicación del monitor con el equipo
     asignarMonitor(id_bien: ID!, id_monitor: ID!, forzar: Boolean): BienMonitor!
-    syncMonitoresPC(id_bien: ID!, monitores: [MonitorInput!]!): Boolean!
+    syncMonitoresPC(id_bien: ID!, monitores: [MonitorWmiInput!]!): Boolean!
     # Elimina la asignación (no borra el bien monitor del inventario)
     desasignarMonitor(id_bien_monitor: ID!): Boolean!
 

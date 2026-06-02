@@ -42,6 +42,9 @@ export class EspecificacionTI {
   @Column({ name: 'windows_serial', type: 'varchar', length: 100, nullable: true })
   windows_serial?: string;
 
+  @Column({ name: 'version_office', type: 'varchar', length: 100, nullable: true })
+  version_office?: string;
+
   @OneToOne(() => Bien, (bien) => bien.especificacionTI, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_bien' })
   bien?: Bien;

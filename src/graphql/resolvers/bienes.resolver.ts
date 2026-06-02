@@ -871,7 +871,17 @@ export const bienesResolvers = {
         const repo = manager.getRepository(ProgramasPC);
         await repo.delete({ id_bien });
         if (programas && programas.length > 0) {
-          const toSave = programas.map(p => repo.create({ id_bien, ...p }));
+          const mapped = programas.map((p: any) => {
+            if (p.fecha_instalacion === '') p.fecha_instalacion = null;
+            if (p.nombre_programa && p.nombre_programa.length > 100) {
+              p.nombre_programa = p.nombre_programa.substring(0, 100);
+            }
+            if (p.version && p.version.length > 50) {
+              p.version = p.version.substring(0, 50);
+            }
+            return { id_bien, ...p };
+          });
+          const toSave = repo.create(mapped);
           await repo.save(toSave);
         }
         return true;

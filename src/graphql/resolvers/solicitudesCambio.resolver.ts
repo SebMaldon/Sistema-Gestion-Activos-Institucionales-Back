@@ -156,7 +156,17 @@ export const solicitudesCambioResolvers = {
           }
 
           if (Array.isArray(parsed.programas) && parsed.programas.length > 0) {
-            const toSave = parsed.programas.map((p: any) => manager.create(ProgramasPC, { id_bien: newIdBien, ...p }));
+            const mapped = parsed.programas.map((p: any) => {
+              if (p.fecha_instalacion === '') p.fecha_instalacion = null;
+              if (p.nombre_programa && p.nombre_programa.length > 100) {
+                p.nombre_programa = p.nombre_programa.substring(0, 100);
+              }
+              if (p.version && p.version.length > 50) {
+                p.version = p.version.substring(0, 50);
+              }
+              return { id_bien: newIdBien, ...p };
+            });
+            const toSave = manager.create(ProgramasPC, mapped);
             await manager.save(ProgramasPC, toSave);
           }
 
@@ -380,7 +390,17 @@ export const solicitudesCambioResolvers = {
           const repo = manager.getRepository(ProgramasPC);
           await repo.delete({ id_bien: idBienPC });
           if (datos.programas.length > 0) {
-            const toSave = datos.programas.map((p: any) => repo.create({ id_bien: idBienPC, ...p }));
+            const mapped = datos.programas.map((p: any) => {
+              if (p.fecha_instalacion === '') p.fecha_instalacion = null;
+              if (p.nombre_programa && p.nombre_programa.length > 100) {
+                p.nombre_programa = p.nombre_programa.substring(0, 100);
+              }
+              if (p.version && p.version.length > 50) {
+                p.version = p.version.substring(0, 50);
+              }
+              return { id_bien: idBienPC, ...p };
+            });
+            const toSave = repo.create(mapped);
             await repo.save(toSave);
           }
         }
