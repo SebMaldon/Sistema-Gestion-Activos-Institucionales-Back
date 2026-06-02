@@ -560,6 +560,47 @@ export const typeDefs = gql`
     totalUsuarios: Int!
   }
 
+  # ─── ARCHIVOS Y CORRESPONDENCIA ────────────────────────
+  type Archivo {
+    ID: ID!
+    Archivo: String!
+  }
+
+  type MesaCorrespondencia {
+    Folio: Int!
+    NoOficio: String
+    FechaRecepcion: DateTime
+    FechaOficio: DateTime
+    Remitente: String
+    Clave_unidad: String
+    id_ubicacion: Int
+    Descripcion: String
+    Tipo: Int
+    Archivo: Int
+    unidad: Unidad
+    ubicacion: Ubicacion
+    archivo_ref: Archivo
+  }
+
+  input MesaCorrespondenciaInput {
+    NoOficio: String
+    FechaRecepcion: DateTime
+    FechaOficio: DateTime
+    Remitente: String
+    Clave_unidad: String
+    id_ubicacion: Int
+    Descripcion: String
+    Tipo: Int
+    Archivo: Int
+  }
+
+  input CorrespondenciaFilterInput {
+    Tipo: Int
+    NoOficio: String
+    Folio: Int
+    PalabraClave: String
+  }
+
   # ─────────────────────────────────────────────────────────
   # QUERIES
   # ─────────────────────────────────────────────────────────
@@ -729,6 +770,10 @@ export const typeDefs = gql`
     folioSalidas: FolioSalidas!
     # Busca usuario por matrícula exacta (para autocompletado en formulario de salidas)
     usuarioPorMatricula(matricula: String!): Usuario
+
+    # ── Mesa Correspondencia
+    getArchivos: [Archivo!]!
+    getMesaCorrespondencias(filter: CorrespondenciaFilterInput): [MesaCorrespondencia!]!
   }
 
   # ─────────────────────────────────────────────────────────
@@ -1226,6 +1271,9 @@ export const typeDefs = gql`
     confirmarFolio: FolioSalidas!
     # Solo Maestro: insertar un folio manualmente en la tabla Folio_Salidas
     setFolioManual(folio: String!): FolioSalidas!
+
+    # ── Mesa Correspondencia ────────────────────────────────
+    crearMesaCorrespondencia(input: MesaCorrespondenciaInput!): MesaCorrespondencia!
   }
 
   # ─── SOLICITUDES DE CAMBIO (Maker-Checker) ─────────────────

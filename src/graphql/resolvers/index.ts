@@ -11,6 +11,7 @@ import { notificacionesResolvers } from './notificaciones.resolver';
 import { atributosResolvers } from './atributos.resolver';
 import { solicitudesCambioResolvers } from './solicitudesCambio.resolver';
 import { salidasResolvers } from './salidas.resolver';
+import { mesaCorrespondenciaResolver } from './mesaCorrespondencia.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -68,6 +69,7 @@ export const resolvers = {
     ...atributosResolvers.Query,
     ...solicitudesCambioResolvers.Query,
     ...salidasResolvers.Query,
+    ...mesaCorrespondenciaResolver.Query,
   },
 
   Mutation: {
@@ -82,6 +84,7 @@ export const resolvers = {
     ...atributosResolvers.Mutation,
     ...solicitudesCambioResolvers.Mutation,
     ...salidasResolvers.Mutation,
+    ...mesaCorrespondenciaResolver.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────

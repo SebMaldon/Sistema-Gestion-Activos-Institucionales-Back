@@ -645,7 +645,7 @@ CREATE TABLE Mesa_Correspondencia (
     NoOficio VARCHAR(25) NULL,
     FechaRecepcion DATETIME NULL,
     FechaOficio DATETIME NULL,
-    Remitente VARCHAR(50) NULL,
+    Remitente VARCHAR(MAX) NULL,
     Clave_unidad varchar(50) NULL,
     id_ubicacion int NULL,
     Descripcion VARCHAR(MAX) NULL,
