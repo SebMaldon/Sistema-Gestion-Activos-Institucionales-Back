@@ -3,6 +3,7 @@ import { SolicitudCambio } from '../../entities/SolicitudCambio';
 import { Bien } from '../../entities/Bien';
 import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { CuentaPC } from '../../entities/CuentaPC';
+import { ProgramasPC } from '../../entities/ProgramasPC';
 import { Usuario } from '../../entities/Usuario';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
@@ -43,7 +44,7 @@ async function notificarCambioPendiente(user: any, parsed: any, idBien: string) 
       const msgRepo = AppDataSource.getRepository(NotificacionMensaje);
       const matriculaSol = user.matricula;
       const numSerie = parsed.num_serie || '';
-      
+
       let identificadorActivo = numSerie;
       if (!identificadorActivo) {
         const bien = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien: idBien } });
@@ -112,7 +113,6 @@ export const solicitudesCambioResolvers = {
       const repo = AppDataSource.getRepository(SolicitudCambio);
 
       if (parsed._esCreacion) {
-        parsed._idBienTemporal = idBien;
         const { num_serie, num_inv } = parsed;
 
         const bienRepo = AppDataSource.getRepository(Bien);
@@ -124,23 +124,73 @@ export const solicitudesCambioResolvers = {
           throw new ConflictError('Ya existe un activo registrado con este número de serie o inventario.');
         }
 
-        const querySolicitud = repo.createQueryBuilder('s')
-          .where("s.estado = 'PENDIENTE'")
-          .andWhere(
-            "(JSON_VALUE(s.datos_nuevos, '$.num_serie') = :num_serie OR JSON_VALUE(s.datos_nuevos, '$.num_inv') = :num_inv)",
-            { num_serie: num_serie || '', num_inv: num_inv || '' }
-          );
-        const existeSolicitud = await querySolicitud.getOne();
-        if (existeSolicitud) {
-          if (isIdentical(existeSolicitud.datos_nuevos, parsed)) {
-            throw new ConflictError('Ya habías mandado esta solicitud.');
-          } else {
-            existeSolicitud.datos_nuevos = parsed;
-            const res = await repo.save(existeSolicitud);
-            await notificarCambioPendiente(context.user, parsed, idBien);
-            return res;
+        return AppDataSource.transaction(async (manager) => {
+          const newIdBien = idBien;
+          const qr_hash = Buffer.from(`IMSS-${newIdBien}`).toString('base64');
+          const newBien = manager.create(Bien, {
+            id_bien: newIdBien,
+            qr_hash,
+            id_categoria: parsed.id_categoria ?? 1,
+            id_unidad_medida: parsed.id_unidad_medida ?? 1,
+            num_serie: parsed.num_serie,
+            num_inv: parsed.num_inv,
+            fecha_adquisicion: parsed.fecha_adquisicion,
+            estatus_operativo: 'PENDIENTE_APROBACION'
+          });
+          await manager.save(Bien, newBien);
+
+          const specUpdates: Record<string, any> = {};
+          for (const key of Object.keys(parsed)) {
+            const dbKey = WMI_TO_DB_MAP[key] || key;
+            if (SPEC_FIELDS.includes(dbKey)) {
+              if (dbKey === 'last_scan' && parsed[key]) {
+                specUpdates[dbKey] = new Date(parsed[key] as string);
+              } else {
+                specUpdates[dbKey] = parsed[key];
+              }
+            }
           }
-        }
+          if (Object.keys(specUpdates).length > 0) {
+            const spec = manager.create(EspecificacionTI, { id_bien: newIdBien, ...specUpdates });
+            await manager.save(EspecificacionTI, spec);
+          }
+
+          if (Array.isArray(parsed.programas) && parsed.programas.length > 0) {
+            const toSave = parsed.programas.map((p: any) => manager.create(ProgramasPC, { id_bien: newIdBien, ...p }));
+            await manager.save(ProgramasPC, toSave);
+          }
+
+          if (Array.isArray(parsed.cuentasList) && parsed.cuentasList.length > 0) {
+            const toSave = parsed.cuentasList.map((c: any) => manager.create(CuentaPC, {
+              id_bien: newIdBien,
+              cuenta_windows: c.cuenta_windows,
+              correo: c.correo,
+              tipo_user: c.tipo_user
+            }));
+            await manager.save(CuentaPC, toSave);
+          }
+
+          if (Array.isArray(parsed.monitores) && parsed.monitores.length > 0) {
+            await procesarMonitoresHelper(manager, newIdBien, parsed.monitores, false);
+          }
+
+          const adminFields = ['estatus_operativo', 'clave_unidad_ref', 'id_segmento', 'id_ubicacion', 'clave_modelo', 'id_usuario_resguardo'];
+          const adminData: Record<string, any> = { _esCreacion: true, _idBienTemporal: newIdBien };
+          for (const field of adminFields) {
+            if (parsed[field] !== undefined) adminData[field] = parsed[field];
+          }
+
+          const solicitud = manager.create(SolicitudCambio, {
+            bien_id: newIdBien,
+            usuario_solicitante_id: context.user!.id_usuario,
+            datos_nuevos: adminData,
+            estado: 'PENDIENTE',
+          });
+          const res = await manager.save(SolicitudCambio, solicitud);
+          await notificarCambioPendiente(context.user, adminData, newIdBien);
+          return res;
+        });
+
       } else {
         const existeSolicitud = await repo.findOne({ where: { bien_id: idBien, estado: 'PENDIENTE' } });
         if (existeSolicitud) {
@@ -253,7 +303,7 @@ export const solicitudesCambioResolvers = {
             });
             await manager.save(CuentaPC, cuenta);
           }
-          
+
           // Cuentas PC - Solo si están en camposAprobados o no se envió el filtro
           if (Array.isArray(datos.cuentasList) && (!camposAprobados || camposAprobados.includes('cuentasList'))) {
             for (const c of datos.cuentasList) {
@@ -322,6 +372,17 @@ export const solicitudesCambioResolvers = {
           const idBienPC = (bien ? bien.id_bien : (datos._idBienTemporal || solicitud.bien_id)) as string;
           // En aprobación de admin: forzar=true (el admin decide aprobar, movemos monitores)
           await procesarMonitoresHelper(manager, idBienPC, datos.monitores, true);
+        }
+
+        // ── Procesar Programas PC si vienen en datos ────────────────────────
+        if (Array.isArray(datos.programas) && (!camposAprobados || camposAprobados.includes('programas'))) {
+          const idBienPC = (bien ? bien.id_bien : (datos._idBienTemporal || solicitud.bien_id)) as string;
+          const repo = manager.getRepository(ProgramasPC);
+          await repo.delete({ id_bien: idBienPC });
+          if (datos.programas.length > 0) {
+            const toSave = datos.programas.map((p: any) => repo.create({ id_bien: idBienPC, ...p }));
+            await repo.save(toSave);
+          }
         }
 
         // ── Marcar solicitud como aprobada ──────────────────────────────

@@ -17,6 +17,7 @@ import { MovimientoInventario } from './MovimientoInventario';
 import { BienAtributo } from './BienAtributo';
 import { BienMonitor } from './BienMonitor';
 import { CuentaPC } from './CuentaPC';
+import { ProgramasPC } from './ProgramasPC';
 
 @Entity('Bienes')
 export class Bien {
@@ -128,4 +129,8 @@ export class Bien {
   // Cuentas de usuario asociadas a esta PC/Laptop (1:N)
   @OneToMany(() => CuentaPC, (c) => c.bien)
   cuentasPC?: CuentaPC[];
+
+  // Programas instalados (1:N)
+  @OneToMany(() => ProgramasPC, (p) => p.bien)
+  programasPC?: ProgramasPC[];
 }

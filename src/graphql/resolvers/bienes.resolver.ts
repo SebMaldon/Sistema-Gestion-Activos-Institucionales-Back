@@ -17,6 +17,7 @@ import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/erro
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Segmento } from '../../entities/Segmento';
 import { CuentaPC } from '../../entities/CuentaPC';
+import { ProgramasPC } from '../../entities/ProgramasPC';
 import { EntityManager } from 'typeorm';
 
 // ── Interface: monitor detectado por WMI ──────────────────────────────────────
@@ -444,6 +445,12 @@ export const bienesResolvers = {
       requireAuth(context);
       return AppDataSource.getRepository(CuentaPC).findOne({ where: { id_cuenta: parseInt(id_cuenta) } });
     },
+
+    // ── Programas PC ────────────────────────────────────────────────────────
+    programasPC: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(ProgramasPC).find({ where: { id_bien }, order: { id_programa: 'ASC' } });
+    },
   },
 
   Mutation: {
@@ -677,7 +684,6 @@ export const bienesResolvers = {
 
     upsertEspecificacionTI: async (_: unknown, { id_bien, ...specs }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       if (!id_bien || id_bien.trim() === '') {
         throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
@@ -774,7 +780,6 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
 
       return AppDataSource.transaction(async (manager) =>
         procesarMonitoresHelper(manager, id_bien_pc, monitores, forzar)
@@ -788,7 +793,6 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CuentaPC);
       return repo.save(repo.create({ id_bien, ...data }));
     },
@@ -799,7 +803,6 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CuentaPC);
       const cuenta = await repo.findOne({ where: { id_cuenta: parseInt(id_cuenta) } });
       if (!cuenta) throw new NotFoundError('CuentaPC');
@@ -813,12 +816,66 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(CuentaPC);
       const cuenta = await repo.findOne({ where: { id_cuenta: parseInt(id_cuenta) } });
       if (!cuenta) throw new NotFoundError('CuentaPC');
       await repo.remove(cuenta);
       return true;
+    },
+
+    // ── Sincronizar Cuentas PC ─────────────────────────────────────────────
+    syncCuentasPC: async (
+      _: unknown,
+      { id_bien, cuentas }: { id_bien: string; cuentas: Partial<CuentaPC>[] },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(CuentaPC);
+        await repo.delete({ id_bien });
+        if (cuentas && cuentas.length > 0) {
+          const toSave = cuentas.map(c => repo.create({ id_bien, ...c }));
+          await repo.save(toSave);
+        }
+        return true;
+      });
+    },
+
+    // ── Sincronizar Monitores PC ───────────────────────────────────────────
+    syncMonitoresPC: async (
+      _: unknown,
+      { id_bien, monitores }: { id_bien: string; monitores: any[] },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      return AppDataSource.transaction(async (manager) => {
+        if (Array.isArray(monitores) && monitores.length > 0) {
+          await procesarMonitoresHelper(manager, id_bien, monitores, false);
+        }
+        return true;
+      });
+    },
+
+    // ── Programas PC ───────────────────────────────────────────────────────
+    syncProgramasPC: async (
+      _: unknown,
+      { id_bien, programas }: { id_bien: string; programas: Partial<ProgramasPC>[] },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      console.log(`[syncProgramasPC] Recibidos ${programas?.length || 0} programas para el id_bien: ${id_bien}`);
+      if (programas && programas.length > 0) {
+        console.log(programas);
+      }
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(ProgramasPC);
+        await repo.delete({ id_bien });
+        if (programas && programas.length > 0) {
+          const toSave = programas.map(p => repo.create({ id_bien, ...p }));
+          await repo.save(toSave);
+        }
+        return true;
+      });
     },
   },
 
@@ -873,6 +930,10 @@ export const bienesResolvers = {
     // Cuentas PC asociadas a este bien (1:N)
     cuentasPC: (parent: Bien, _: unknown, context: GraphQLContext) =>
       context.loaders.cuentasPCByBienLoader.load(parent.id_bien),
+
+    // Programas PC (1:N)
+    programasPC: async (parent: Bien) =>
+      AppDataSource.getRepository(ProgramasPC).find({ where: { id_bien: parent.id_bien } }),
   },
 
   // ── Field resolvers de BienMonitor ──────────────────────────────────────
@@ -890,6 +951,11 @@ export const bienesResolvers = {
 
   CuentaPC: {
     bien: async (parent: CuentaPC) =>
+      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
+  },
+
+  ProgramasPC: {
+    bien: async (parent: ProgramasPC) =>
       AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
   },
 };

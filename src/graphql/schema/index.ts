@@ -351,6 +351,7 @@ export const typeDefs = gql`
     notas: [Nota!]
     monitores: [BienMonitor!]
     equipoAsignado: BienMonitor
+    programasPC: [ProgramasPC!]
   }
 
   type BienEdge {
@@ -425,6 +426,17 @@ export const typeDefs = gql`
     cuenta_windows: String
     tipo_user: String
     correo: String
+    bien: Bien
+  }
+
+  # ─── PROGRAMAS PC ───────────────────────────────────────
+  type ProgramasPC {
+    id_programa: ID!
+    id_bien: ID!
+    nombre_programa: String
+    version: String
+    editor: String
+    fecha_instalacion: String
     bien: Bien
   }
 
@@ -639,6 +651,9 @@ export const typeDefs = gql`
     cuentasPC(id_bien: ID!): [CuentaPC!]!
     cuentaPC(id_cuenta: ID!): CuentaPC
 
+    # ── Programas PC (1:N por bien)
+    programasPC(id_bien: ID!): [ProgramasPC!]!
+
     # ── Garantías
     garantias(id_bien: ID, estado_garantia: String): [Garantia!]!
     garantia(id_garantia: ID!): Garantia
@@ -762,6 +777,13 @@ export const typeDefs = gql`
     cuenta_windows: String
     tipo_user: String
     correo: String
+  }
+
+  input ProgramaInput {
+    nombre_programa: String
+    version: String
+    editor: String
+    fecha_instalacion: String
   }
 
   input BienBulkInput {
@@ -942,17 +964,23 @@ export const typeDefs = gql`
       last_scan: String
       windows_serial: String
       nombre_host: String
+      version_office: String
     ): EspecificacionTI!
 
     # ── Cuentas PC (1:N por bien)
     createCuentaPC(id_bien: ID!, data: CuentaPCInput!): CuentaPC!
     updateCuentaPC(id_cuenta: ID!, data: CuentaPCInput!): CuentaPC!
     deleteCuentaPC(id_cuenta: ID!): Boolean!
+    syncCuentasPC(id_bien: ID!, cuentas: [CuentaPCInput!]!): Boolean!
+
+    # ── Programas PC (sync total por bien)
+    syncProgramasPC(id_bien: ID!, programas: [ProgramaInput!]!): Boolean!
 
     # ── Monitores asignados a equipos
     # Asigna un monitor (bien) a un equipo (PC/Laptop)
     # Sincroniza automáticamente la ubicación del monitor con el equipo
     asignarMonitor(id_bien: ID!, id_monitor: ID!, forzar: Boolean): BienMonitor!
+    syncMonitoresPC(id_bien: ID!, monitores: [MonitorInput!]!): Boolean!
     # Elimina la asignación (no borra el bien monitor del inventario)
     desasignarMonitor(id_bien_monitor: ID!): Boolean!
 
