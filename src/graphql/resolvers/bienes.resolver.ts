@@ -320,11 +320,12 @@ export const bienesResolvers = {
       }
 
       if (filter?.sin_inventario) {
-        // Red color means "es_capitalizable = 0" AND "num_inv is null or empty or N/D"
-        // The user says "sin_inventario" applies to no capitalizables. 
-        qb.leftJoin('Cat_CategoriasActivo', 'cat_cap2', 'cat_cap2.id_categoria = b.id_categoria');
-        qb.andWhere('(cat_cap2.es_capitalizable = 0 OR cat_cap2.es_capitalizable IS NULL)');
+        // Red color means "num_inv is null or empty or N/D"
         qb.andWhere('(b.num_inv IS NULL OR b.num_inv = \'\' OR b.num_inv = \'N/D\')');
+        
+        // Only applies to PCs and Laptops (tipo_disp 3 and 4)
+        qb.leftJoin('Cat_Modelos', 'mod_si', 'mod_si.clave_modelo = b.clave_modelo');
+        qb.andWhere('mod_si.tipo_disp IN (3, 4)');
       }
 
       // ── EAV Attribute filter ─────────────────────────────────
