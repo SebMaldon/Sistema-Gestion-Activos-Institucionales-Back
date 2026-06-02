@@ -673,6 +673,7 @@ export const typeDefs = gql`
       estatus: Boolean
       id_unidad: Int
       search: String
+      roles: [Int]
       pagination: PaginationInput
     ): UsuariosConnection!
     usuario(id_usuario: ID!): Usuario

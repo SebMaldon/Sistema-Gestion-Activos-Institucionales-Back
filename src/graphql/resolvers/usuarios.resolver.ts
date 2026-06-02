@@ -18,11 +18,13 @@ export const usuariosResolvers = {
         estatus,
         id_unidad,
         search,
+        roles,
         pagination,
       }: {
         estatus?: boolean;
         id_unidad?: number;
         search?: string;
+        roles?: number[];
         pagination?: { first?: number; after?: string };
       },
       context: GraphQLContext
@@ -41,6 +43,9 @@ export const usuariosResolvers = {
           `(u.nombre_completo LIKE :s OR u.matricula LIKE :s OR u.correo_electronico LIKE :s)`,
           { s: `%${search}%` }
         );
+      }
+      if (roles && roles.length > 0) {
+        qb.andWhere('u.id_rol IN (:...roles)', { roles });
       }
 
       const totalCount = await qb.getCount();
