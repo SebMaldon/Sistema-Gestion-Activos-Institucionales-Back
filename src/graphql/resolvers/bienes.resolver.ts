@@ -459,7 +459,7 @@ export const bienesResolvers = {
     // ── Programas PC ────────────────────────────────────────────────────────
     programasPC: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(ProgramasPC).find({ where: { id_bien }, order: { id_programa: 'ASC' } });
+      return AppDataSource.getRepository(ProgramasPC).find({ where: { id_bien }, order: { programa: 'ASC' } });
     },
   },
 
@@ -483,6 +483,8 @@ export const bienesResolvers = {
         .createQueryBuilder()
         .update(Bien)
         .set({ forzar_sync: true })
+        .where('id_bien IN (SELECT id_bien FROM Especificaciones_TI WHERE last_scan IS NOT NULL)')
+        .andWhere("id_bien IN (SELECT id_bien FROM Programas_PC WHERE nombre LIKE 'Gestor Activos HW%')")
         .execute();
       return true;
     },
@@ -916,13 +918,13 @@ export const bienesResolvers = {
         if (programas && programas.length > 0) {
           const mapped = programas.map((p: any) => {
             if (p.fecha_instalacion === '') p.fecha_instalacion = null;
-            if (p.nombre_programa && p.nombre_programa.length > 100) {
-              p.nombre_programa = p.nombre_programa.substring(0, 100);
+            if (p.programa && p.programa.length > 100) {
+              p.programa = p.programa.substring(0, 100);
             }
             if (p.version && p.version.length > 50) {
               p.version = p.version.substring(0, 50);
             }
-            return { id_bien, ...p };
+            return { id_bien, ...p, programa: p.programa };
           });
           const toSave = repo.create(mapped);
           await repo.save(toSave);

@@ -1,16 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Bien } from './Bien';
 
 @Entity('programas_pc')
 export class ProgramasPC {
-  @PrimaryGeneratedColumn({ name: 'id_programa_pc' })
-  id_programa!: number;
-
-  @Column({ name: 'id_bien', type: 'uniqueidentifier' })
+  @PrimaryColumn({ name: 'id_bien', type: 'uniqueidentifier' })
   id_bien!: string;
 
-  @Column({ name: 'programa', type: 'varchar', length: 100 })
-  nombre_programa!: string;
+  @PrimaryColumn({ name: 'programa', type: 'varchar', length: 100 })
+  programa!: string;
 
   @Column({ name: 'version_act', type: 'varchar', length: 50, nullable: true })
   version?: string;

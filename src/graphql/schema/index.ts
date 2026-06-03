@@ -432,9 +432,9 @@ export const typeDefs = gql`
 
   # ─── PROGRAMAS PC ───────────────────────────────────────
   type ProgramasPC {
-    id_programa: ID!
+
     id_bien: ID!
-    nombre_programa: String
+    programa: String
     version: String
     editor: String
     fecha_instalacion: String
@@ -830,7 +830,7 @@ export const typeDefs = gql`
   }
 
   input ProgramaInput {
-    nombre_programa: String
+    programa: String
     version: String
     fecha_instalacion: String
   }

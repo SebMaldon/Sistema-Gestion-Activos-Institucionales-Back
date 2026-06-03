@@ -264,6 +264,7 @@ CREATE TABLE Bienes (
     id_usuario_resguardo INT,
     fecha_adquisicion DATE,
     fecha_actualizacion DATETIME DEFAULT CAST(GETUTCDATE() AT TIME ZONE 'UTC' AT TIME ZONE 'Mountain Standard Time (Mexico)' AS DATETIME),
+    forzar_sync bit NOT NULL DEFAULT 0, -- Flag para forzar sincronización con sistemas externos
     CONSTRAINT FK_Bienes_Categorias FOREIGN KEY (id_categoria) REFERENCES Cat_CategoriasActivo(id_categoria),
     CONSTRAINT FK_Bienes_UnidadMedida FOREIGN KEY (id_unidad_medida) REFERENCES Cat_UnidadesMedida(id_unidad_medida),
     CONSTRAINT FK_Bienes_SegmentoOperativo FOREIGN KEY (id_segmento) REFERENCES segmentos(id_segmento),
@@ -314,7 +315,6 @@ CREATE TABLE Cuentas_PC (
 );
 
 CREATE TABLE Programas_PC (
-    id_programa_pc INT IDENTITY(1,1) PRIMARY KEY,
     id_bien UNIQUEIDENTIFIER NOT NULL,
     programa VARCHAR(100) NOT NULL,
     version_act VARCHAR(50),
