@@ -483,8 +483,7 @@ export const bienesResolvers = {
         .createQueryBuilder()
         .update(Bien)
         .set({ forzar_sync: true })
-        .where('id_bien IN (SELECT id_bien FROM Especificaciones_TI WHERE last_scan IS NOT NULL)')
-        .andWhere("id_bien IN (SELECT id_bien FROM Programas_PC WHERE nombre LIKE 'Gestor Activos HW%')")
+        .where("id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')")
         .execute();
       return true;
     },
