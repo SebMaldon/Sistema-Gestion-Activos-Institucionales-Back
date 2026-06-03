@@ -135,6 +135,7 @@ export const usuariosResolvers = {
         ...updates
       }: {
         id_usuario: string;
+        matricula?: string;
         nombre_completo?: string;
         tipo_usuario?: string;
         correo_electronico?: string;

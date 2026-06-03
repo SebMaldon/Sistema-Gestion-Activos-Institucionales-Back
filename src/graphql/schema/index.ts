@@ -946,6 +946,7 @@ export const typeDefs = gql`
     ): Usuario!
     updateUsuario(
       id_usuario: ID!
+      matricula: String
       nombre_completo: String
       tipo_usuario: String
       correo_electronico: String
