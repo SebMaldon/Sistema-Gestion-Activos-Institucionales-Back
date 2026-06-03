@@ -687,6 +687,9 @@ export const typeDefs = gql`
     bienByTermino(termino: String!): Bien
     checkBienesExistBySerie(series: [String!]!): [String!]!
 
+    # ── Forzar Sincronización
+    checkSyncPending(num_serie: String!): Boolean!
+
     # ── Especificaciones TI
     especificacionTI(id_bien: ID!): EspecificacionTI
 
@@ -992,6 +995,11 @@ export const typeDefs = gql`
       fecha_adquisicion: Date
     ): Bien!
     deleteBien(id_bien: ID!): Boolean!
+
+    # ── Forzar Sincronización
+    setSyncPending(id_bien: ID!): Boolean!
+    setSyncPendingAll: Boolean!
+    clearSyncPending(num_serie: String!): Boolean!
 
     # ── Carga Masiva
     createBienesBulk(bienes: [BienBulkInput!]!): Boolean!

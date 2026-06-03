@@ -414,6 +414,15 @@ export const bienesResolvers = {
       return bienes.map(b => b.num_serie);
     },
 
+    // ── Forzar Sincronización
+    checkSyncPending: async (_: unknown, { num_serie }: { num_serie: string }, context: GraphQLContext) => {
+      // Permitimos a ti_autosync (o sin auth total si fuera necesario, pero la WinApp envía token)
+      requireAuth(context);
+      const bien = await AppDataSource.getRepository(Bien).findOne({ where: { num_serie } });
+      if (!bien) return false;
+      return !!bien.forzar_sync;
+    },
+
     // Lista todos los bienes cuyo modelo tiene nombre_tipo LIKE '%Monitor%'
     bienesMonitor: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
@@ -455,6 +464,39 @@ export const bienesResolvers = {
   },
 
   Mutation: {
+    // ── Forzar Sincronización
+    setSyncPending: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(Bien);
+      const bien = await repo.findOne({ where: { id_bien } });
+      if (!bien) throw new NotFoundError('Bien');
+      bien.forzar_sync = true;
+      await repo.save(bien);
+      return true;
+    },
+
+    setSyncPendingAll: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      await AppDataSource.getRepository(Bien)
+        .createQueryBuilder()
+        .update(Bien)
+        .set({ forzar_sync: true })
+        .execute();
+      return true;
+    },
+
+    clearSyncPending: async (_: unknown, { num_serie }: { num_serie: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      const repo = AppDataSource.getRepository(Bien);
+      const bien = await repo.findOne({ where: { num_serie } });
+      if (!bien) return false;
+      bien.forzar_sync = false;
+      await repo.save(bien);
+      return true;
+    },
+
     createBien: async (_: unknown, args: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);

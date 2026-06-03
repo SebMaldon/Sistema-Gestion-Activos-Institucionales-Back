@@ -52,6 +52,9 @@ export class Bien {
   @Column({ name: 'qr_hash', type: 'varchar', length: 255, nullable: true, unique: true })
   qr_hash?: string;
 
+  @Column({ name: 'forzar_sync', type: 'bit', default: 0 })
+  forzar_sync!: boolean;
+
   // FK a la tabla unidades (datos físicos, antes llamada "inmuebles")
   @Column({ name: 'clave_unidad_ref', type: 'varchar', length: 50, nullable: true })
   clave_unidad_ref?: string;
