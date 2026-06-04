@@ -258,10 +258,35 @@ export const bienesResolvers = {
         }
       }
       if (filter?.search) {
-        qb.andWhere(
-          '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s)',
-          { s: `%${filter.search}%` }
-        );
+        qb.leftJoin('Especificaciones_TI', 'ti_search', 'ti_search.id_bien = b.id_bien');
+        
+        const term = filter.search.trim();
+        // Check if it looks like an IP address (at least starting like one)
+        const isIP = /^[0-9]{1,3}(\.[0-9]{1,3}){1,3}/.test(term);
+        
+        if (isIP) {
+          // Si es una IP, buscamos que coincida exactamente o en una lista separada por comas,
+          // evitando que '11.1.19.20' coincida con '11.1.19.201'
+          qb.andWhere(
+            '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s ' +
+            'OR ti_search.dir_ip = :exact ' +
+            'OR ti_search.dir_ip LIKE :start ' +
+            'OR ti_search.dir_ip LIKE :end ' +
+            'OR ti_search.dir_ip LIKE :mid)',
+            { 
+              s: `%${term}%`,
+              exact: term,
+              start: `${term},%`,
+              end: `%, ${term}`,
+              mid: `%, ${term},%`
+            }
+          );
+        } else {
+          qb.andWhere(
+            '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s)',
+            { s: `%${term}%` }
+          );
+        }
       }
 
       // ── Multi-select IN filters ──────────────────────────────
@@ -399,7 +424,12 @@ export const bienesResolvers = {
         .orWhere('b.qr_hash = :termino', { termino })
         .orWhere('b.num_serie = :termino', { termino })
         .orWhere('b.num_inv = :termino', { termino })
-        .orWhere('e.dir_ip = :termino', { termino })
+        .orWhere('(e.dir_ip = :termino OR e.dir_ip LIKE :termino_start OR e.dir_ip LIKE :termino_end OR e.dir_ip LIKE :termino_mid)', { 
+           termino: termino, 
+           termino_start: termino + ',%', 
+           termino_end: '% ' + termino, 
+           termino_mid: '%, ' + termino + ',%' 
+        })
         .getOne();
     },
 
