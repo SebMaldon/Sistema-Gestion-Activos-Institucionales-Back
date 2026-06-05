@@ -232,6 +232,7 @@ export interface BienesFilter {
   // Quick Filters
   con_notas_recientes?: boolean;
   sin_inventario?: boolean;
+  inconvenientes?: boolean;
 }
 
 export const bienesResolvers = {
@@ -353,6 +354,20 @@ export const bienesResolvers = {
         qb.andWhere('mod_si.tipo_disp IN (3, 4)');
       }
 
+      if (filter?.inconvenientes) {
+        qb.leftJoin('Cat_Modelos', 'mod_inc', 'mod_inc.clave_modelo = b.clave_modelo');
+        qb.leftJoin('Especificaciones_TI', 'ti_inc', 'ti_inc.id_bien = b.id_bien');
+        qb.andWhere(`(
+          (mod_inc.tipo_disp IN (3, 4) AND (b.num_inv IS NULL OR b.num_inv = '' OR b.num_inv = 'N/D'))
+          OR
+          (ti_inc.dir_ip IS NOT NULL AND ti_inc.dir_ip != '' AND ti_inc.dir_ip IN (
+            SELECT dir_ip FROM Especificaciones_TI
+            WHERE dir_ip IS NOT NULL AND dir_ip != ''
+            GROUP BY dir_ip HAVING COUNT(*) > 1
+          ))
+        )`);
+      }
+
       // ── EAV Attribute filter ─────────────────────────────────
       if (filter?.atributo_id != null && filter?.atributo_valor) {
         qb.innerJoin('Bien_Atributos', 'ba', 'ba.id_bien = b.id_bien');
@@ -430,7 +445,7 @@ export const bienesResolvers = {
            termino_end: '% ' + termino, 
            termino_mid: '%, ' + termino + ',%' 
         })
-        .getOne();
+        .getMany();
     },
 
     checkBienesExistBySerie: async (_: unknown, { series }: { series: string[] }, context: GraphQLContext) => {
@@ -442,6 +457,20 @@ export const bienesResolvers = {
         .where('b.num_serie IN (:...series)', { series })
         .getMany();
       return bienes.map(b => b.num_serie);
+    },
+
+    checkDuplicateIP: async (_: unknown, { dir_ip, id_bien_exclude }: { dir_ip: string; id_bien_exclude?: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      if (!dir_ip || dir_ip.trim() === '') return [];
+      const qb = AppDataSource.getRepository(Bien)
+        .createQueryBuilder('b')
+        .innerJoin('Especificaciones_TI', 'e', 'e.id_bien = b.id_bien')
+        .leftJoinAndSelect('b.modelo', 'm')
+        .where('e.dir_ip = :dir_ip', { dir_ip: dir_ip.trim() });
+      if (id_bien_exclude) {
+        qb.andWhere('b.id_bien != :id_bien_exclude', { id_bien_exclude });
+      }
+      return qb.getMany();
     },
 
     // ── Forzar Sincronización
@@ -525,6 +554,19 @@ export const bienesResolvers = {
       if (!bien) return false;
       bien.forzar_sync = false;
       await repo.save(bien);
+      return true;
+    },
+
+    clearIpFromOtherBienes: async (_: unknown, { dir_ip, id_bien_exclude }: { dir_ip: string; id_bien_exclude?: string }, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      if (!dir_ip || dir_ip.trim() === '') return false;
+      const cleanIp = dir_ip.trim();
+      const qb = AppDataSource.getRepository(EspecificacionTI).createQueryBuilder().update(EspecificacionTI).set({ dir_ip: '' }).where('dir_ip = :cleanIp', { cleanIp });
+      if (id_bien_exclude) {
+        qb.andWhere('id_bien != :id_bien_exclude', { id_bien_exclude });
+      }
+      await qb.execute();
       return true;
     },
 
@@ -1018,6 +1060,37 @@ export const bienesResolvers = {
     // Programas PC (1:N)
     programasPC: async (parent: Bien) =>
       AppDataSource.getRepository(ProgramasPC).find({ where: { id_bien: parent.id_bien } }),
+
+    inconvenientes: async (parent: Bien, _: unknown, context: GraphQLContext) => {
+      const inc: string[] = [];
+      
+      // 1. Condición A: Tipo de bien es PC o Laptop y NO tiene num_inv
+      let tipo_disp = parent.modelo?.tipo_disp;
+      if (tipo_disp === undefined && parent.clave_modelo) {
+        const mod = await AppDataSource.getRepository(CatModelo).findOne({ where: { clave_modelo: parent.clave_modelo }});
+        tipo_disp = mod?.tipo_disp;
+      }
+      const isPcOrLaptop = tipo_disp === 3 || tipo_disp === 4;
+      const noInv = !parent.num_inv || parent.num_inv === '' || parent.num_inv === 'N/D';
+      if (isPcOrLaptop && noInv) {
+        inc.push('Sin número de inventario');
+      }
+
+      // 2. Condición B: IP Duplicada
+      let dir_ip = parent.especificacionTI?.dir_ip;
+      if (dir_ip === undefined) {
+        const ti = await AppDataSource.getRepository(EspecificacionTI).findOne({ where: { id_bien: parent.id_bien }});
+        dir_ip = ti?.dir_ip;
+      }
+      if (dir_ip && dir_ip.trim() !== '') {
+        const count = await AppDataSource.getRepository(EspecificacionTI).count({ where: { dir_ip: dir_ip.trim() } });
+        if (count > 1) {
+          inc.push('IP Repetida: ' + dir_ip.trim());
+        }
+      }
+
+      return inc;
+    }
   },
 
   // ── Field resolvers de BienMonitor ──────────────────────────────────────

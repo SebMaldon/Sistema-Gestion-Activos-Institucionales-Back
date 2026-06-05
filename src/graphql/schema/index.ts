@@ -352,6 +352,7 @@ export const typeDefs = gql`
     monitores: [BienMonitor!]
     equipoAsignado: BienMonitor
     programasPC: [ProgramasPC!]
+    inconvenientes: [String!]
   }
 
   type BienEdge {
@@ -397,6 +398,7 @@ export const typeDefs = gql`
     atributo_valor: String
     # Quick filters
     con_notas_recientes: Boolean
+    inconvenientes: Boolean
     sin_inventario: Boolean
   }
 
@@ -684,8 +686,9 @@ export const typeDefs = gql`
     bienByQR(qr_hash: String!): Bien
     bienByNumSerie(num_serie: String!): Bien
     bienByNumInv(num_inv: String!): Bien
-    bienByTermino(termino: String!): Bien
+    bienByTermino(termino: String!): [Bien!]!
     checkBienesExistBySerie(series: [String!]!): [String!]!
+    checkDuplicateIP(dir_ip: String!, id_bien_exclude: ID): [Bien!]!
 
     # ── Forzar Sincronización
     checkSyncPending(num_serie: String!): Boolean!
@@ -1000,6 +1003,7 @@ export const typeDefs = gql`
     setSyncPending(id_bien: ID!): Boolean!
     setSyncPendingAll: Boolean!
     clearSyncPending(num_serie: String!): Boolean!
+    clearIpFromOtherBienes(dir_ip: String!, id_bien_exclude: ID): Boolean!
 
     # ── Carga Masiva
     createBienesBulk(bienes: [BienBulkInput!]!): Boolean!
