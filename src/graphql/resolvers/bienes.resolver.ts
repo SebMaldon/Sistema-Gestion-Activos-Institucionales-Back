@@ -630,7 +630,7 @@ export const bienesResolvers = {
             let existingBien = await repoBien.findOne({ where: { num_serie: b.num_serie.trim() } });
 
             if (existingBien) {
-              const { especificacionTI, atributos, id_monitor, ...bienData } = b;
+              const { especificacionTI, atributos, id_monitor, serie_monitor_asignado, ...bienData } = b;
 
               if (bienData.num_inv && bienData.num_inv.trim() !== '') {
                 const dupInv = await repoBien.findOne({ where: { num_inv: bienData.num_inv.trim() } });
@@ -680,7 +680,7 @@ export const bienesResolvers = {
           const id_bien = uuidv4();
           const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
 
-          const { especificacionTI, atributos, id_monitor, ...bienData } = b;
+          const { especificacionTI, atributos, id_monitor, serie_monitor_asignado, ...bienData } = b;
           const bien = repoBien.create({ ...bienData, id_bien, qr_hash });
           await repoBien.save(bien);
 
@@ -700,12 +700,19 @@ export const bienesResolvers = {
             }
           }
 
-          if (id_monitor) {
-            const monitorBien = await repoBien.findOne({ where: { id_bien: id_monitor } });
+          if (id_monitor || serie_monitor_asignado) {
+            let monitorBien;
+            if (id_monitor) {
+              monitorBien = await repoBien.findOne({ where: { id_bien: id_monitor } });
+            } else {
+              monitorBien = await repoBien.findOne({ where: { num_serie: serie_monitor_asignado.trim() } });
+            }
             if (!monitorBien) throw new NotFoundError(`Fila ${rowNum}: Monitor asignado no existe.`);
 
-            const dup = await repoMonitor.findOne({ where: { id_monitor } });
-            if (dup) throw new ValidationError(`Fila ${rowNum}: El monitor ya está asignado a otro equipo.`);
+            const actualIdMonitor = monitorBien.id_bien;
+
+            const dup = await repoMonitor.findOne({ where: { id_monitor: actualIdMonitor } });
+            if (dup && dup.id_bien !== id_bien) throw new ValidationError(`Fila ${rowNum}: El monitor ya está asignado a otro equipo.`);
 
             // Sincronizar ubicación
             monitorBien.id_segmento = b.id_segmento;
@@ -715,8 +722,10 @@ export const bienesResolvers = {
             monitorBien.fecha_actualizacion = new Date();
             await repoBien.save(monitorBien);
 
-            const rel = repoMonitor.create({ id_bien, id_monitor });
-            await repoMonitor.save(rel);
+            if (!dup) {
+              const rel = repoMonitor.create({ id_bien, id_monitor: actualIdMonitor });
+              await repoMonitor.save(rel);
+            }
           }
         }
 

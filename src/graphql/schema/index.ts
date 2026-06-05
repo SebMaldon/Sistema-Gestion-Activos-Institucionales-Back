@@ -855,6 +855,7 @@ export const typeDefs = gql`
     especificacionTI: EspecificacionTIBulkInput
     atributos: [AtributoInput!]
     id_monitor: ID
+    serie_monitor_asignado: String
   }
 
   input UnidadACargoInput {
