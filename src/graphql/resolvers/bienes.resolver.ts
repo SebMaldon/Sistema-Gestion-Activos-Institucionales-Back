@@ -1006,7 +1006,19 @@ export const bienesResolvers = {
             }
             return { id_bien, ...p, programa: p.programa };
           });
-          const toSave = repo.create(mapped);
+
+          // Eliminar duplicados basándose en el nombre del programa
+          const uniqueProgramas = [];
+          const seenProgramas = new Set();
+          for (const item of mapped) {
+            const key = (item.programa || '').trim().toLowerCase();
+            if (!seenProgramas.has(key)) {
+              seenProgramas.add(key);
+              uniqueProgramas.push(item);
+            }
+          }
+
+          const toSave = repo.create(uniqueProgramas);
           await repo.save(toSave);
         }
         return true;
