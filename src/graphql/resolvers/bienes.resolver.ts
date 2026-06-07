@@ -1029,19 +1029,38 @@ export const bienesResolvers = {
             return { id_bien, ...p, programa: p.programa };
           });
 
-          // Eliminar duplicados basándose en el nombre del programa
+          // Eliminar duplicados o hacerlos únicos basándose en el nombre del programa
           const uniqueProgramas = [];
-          const seenProgramas = new Set();
+          const seenProgramas = new Map<string, any>();
+
           for (const item of mapped) {
-            const key = (item.programa || '').trim().toLowerCase();
+            let key = (item.programa || '').trim().toLowerCase();
             if (!seenProgramas.has(key)) {
-              seenProgramas.add(key);
+              seenProgramas.set(key, item);
               uniqueProgramas.push(item);
+            } else {
+              // Ya existe un programa con este nombre
+              const existing = seenProgramas.get(key);
+              const v1 = (existing.version || '').trim().toLowerCase();
+              const v2 = (item.version || '').trim().toLowerCase();
+
+              // Si la versión es diferente, diferenciamos el nombre para poder guardar ambos
+              if (v1 !== v2 && v2 !== '') {
+                item.programa = `${item.programa} (v. ${item.version})`;
+                if (item.programa.length > 100) item.programa = item.programa.substring(0, 100);
+                
+                let newKey = item.programa.trim().toLowerCase();
+                if (!seenProgramas.has(newKey)) {
+                  seenProgramas.set(newKey, item);
+                  uniqueProgramas.push(item);
+                }
+              }
+              // Si la versión es la misma, es un duplicado idéntico y se ignora
             }
           }
 
           const toSave = repo.create(uniqueProgramas);
-          await repo.save(toSave);
+          await repo.save(toSave, { chunk: 100 });
         }
         return true;
       });
