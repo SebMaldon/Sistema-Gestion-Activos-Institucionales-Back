@@ -997,7 +997,29 @@ export const bienesResolvers = {
         await repo.delete({ id_bien });
         if (programas && programas.length > 0) {
           const mapped = programas.map((p: any) => {
-            if (p.fecha_instalacion === '') p.fecha_instalacion = null;
+            if (!p.fecha_instalacion || p.fecha_instalacion.trim() === '') {
+              p.fecha_instalacion = null;
+            } else {
+              let f = p.fecha_instalacion.trim();
+              if (/^\d{8}$/.test(f)) {
+                p.fecha_instalacion = `${f.substring(0,4)}-${f.substring(4,6)}-${f.substring(6,8)}`;
+              } else if (f.includes('/')) {
+                const parts = f.split('/');
+                if (parts.length === 3 && parts[2].length === 4) {
+                  p.fecha_instalacion = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                } else if (parts.length === 3 && parts[0].length === 4) {
+                  p.fecha_instalacion = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                } else {
+                  p.fecha_instalacion = null;
+                }
+              } else if (f.includes('-')) {
+                const parts = f.split('-');
+                if (parts.length === 3 && parts[2].length === 4) {
+                  p.fecha_instalacion = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+              }
+            }
+
             if (p.programa && p.programa.length > 100) {
               p.programa = p.programa.substring(0, 100);
             }
