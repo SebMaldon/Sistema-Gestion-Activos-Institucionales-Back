@@ -273,7 +273,8 @@ export const bienesResolvers = {
             'OR ti_search.dir_ip = :exact ' +
             'OR ti_search.dir_ip LIKE :start ' +
             'OR ti_search.dir_ip LIKE :end ' +
-            'OR ti_search.dir_ip LIKE :mid)',
+            'OR ti_search.dir_ip LIKE :mid ' +
+            'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
             { 
               s: `%${term}%`,
               exact: term,
@@ -284,7 +285,8 @@ export const bienesResolvers = {
           );
         } else {
           qb.andWhere(
-            '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s)',
+            '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s ' +
+            'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
             { s: `%${term}%` }
           );
         }
