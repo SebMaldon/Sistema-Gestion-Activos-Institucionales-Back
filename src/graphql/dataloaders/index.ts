@@ -84,8 +84,8 @@ export function createDataLoaders() {
     const items = await AppDataSource.getRepository(EspecificacionTI).find({
       where: { id_bien: In(keys as string[]) },
     });
-    const map = toMap<string, EspecificacionTI>(items, (s) => s.id_bien);
-    return keys.map((k) => map.get(k));
+    const map = toMap<string, EspecificacionTI>(items, (s) => s.id_bien.toLowerCase());
+    return keys.map((k) => map.get(k.toLowerCase()));
   });
 
   // ── Garantías agrupadas por id_bien
@@ -95,11 +95,11 @@ export function createDataLoaders() {
     });
     const map = new Map<string, Garantia[]>();
     items.forEach((g: Garantia) => {
-      const arr = map.get(g.id_bien) ?? [];
+      const arr = map.get(g.id_bien.toLowerCase()) ?? [];
       arr.push(g);
-      map.set(g.id_bien, arr);
+      map.set(g.id_bien.toLowerCase(), arr);
     });
-    return keys.map((k) => map.get(k) ?? []);
+    return keys.map((k) => map.get(k.toLowerCase()) ?? []);
   });
 
   // ── Categorías Activo (id_categoria: int)
@@ -134,8 +134,8 @@ export function createDataLoaders() {
     const items = await AppDataSource.getRepository(Bien).find({
       where: { id_bien: In(keys as string[]) },
     });
-    const map = toMap<string, Bien>(items, (b) => b.id_bien);
-    return keys.map((k) => map.get(k));
+    const map = toMap<string, Bien>(items, (b) => b.id_bien.toLowerCase());
+    return keys.map((k) => map.get(k.toLowerCase()));
   });
 
   // ── TiposIncidencia (id_tipo_incidencia: int)
@@ -172,11 +172,12 @@ export function createDataLoaders() {
     const map = new Map<string, Nota[]>();
     items.forEach((n: Nota) => {
       if (!n.id_bien) return;
-      const arr = map.get(n.id_bien) ?? [];
+      const key = n.id_bien.toLowerCase();
+      const arr = map.get(key) ?? [];
       arr.push(n);
-      map.set(n.id_bien, arr);
+      map.set(key, arr);
     });
-    return keys.map((k) => map.get(k) ?? []);
+    return keys.map((k) => map.get(k.toLowerCase()) ?? []);
   });
 
   // ── Monitores agrupados por id_bien (el equipo)
@@ -186,11 +187,12 @@ export function createDataLoaders() {
     });
     const map = new Map<string, BienMonitor[]>();
     items.forEach((m: BienMonitor) => {
-      const arr = map.get(m.id_bien) ?? [];
+      const key = m.id_bien.toLowerCase();
+      const arr = map.get(key) ?? [];
       arr.push(m);
-      map.set(m.id_bien, arr);
+      map.set(key, arr);
     });
-    return keys.map((k) => map.get(k) ?? []);
+    return keys.map((k) => map.get(k.toLowerCase()) ?? []);
   });
 
   // ── CuentasPC agrupadas por id_bien
@@ -201,11 +203,12 @@ export function createDataLoaders() {
     });
     const map = new Map<string, CuentaPC[]>();
     items.forEach((c: CuentaPC) => {
-      const arr = map.get(c.id_bien) ?? [];
+      const key = c.id_bien.toLowerCase();
+      const arr = map.get(key) ?? [];
       arr.push(c);
-      map.set(c.id_bien, arr);
+      map.set(key, arr);
     });
-    return keys.map((k) => map.get(k) ?? []);
+    return keys.map((k) => map.get(k.toLowerCase()) ?? []);
   });
 
   return {

@@ -816,6 +816,46 @@ export const bienesResolvers = {
         throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
       }
 
+      // -- Auto-assign id_segmento based on dir_ip --
+      if (specs.dir_ip && specs.dir_ip.trim() !== '') {
+        try {
+          const ipRegex = /^(\d{1,3}\.){3}\d{1,3}/;
+          const ips = String(specs.dir_ip).split('/').map(i => i.trim());
+          const firstIpStr = ips.find(i => ipRegex.test(i));
+
+          if (firstIpStr) {
+            const firstIp = firstIpStr.match(ipRegex)?.[0];
+            if (firstIp) {
+              const ipToInt = (ip: string) => ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+              const pcIpInt = ipToInt(firstIp);
+
+              const segRepo = AppDataSource.getRepository(Segmento);
+              const segmentos = await segRepo.find();
+              
+              const match = segmentos.find(s => {
+                if (!s.ip || !s.bits) return false;
+                try {
+                  const networkInt = ipToInt(s.ip);
+                  const mask = (~((1 << (32 - s.bits)) - 1)) >>> 0;
+                  return (pcIpInt & mask) === (networkInt & mask);
+                } catch (e) { return false; }
+              });
+
+              if (match) {
+                const bienRepo = AppDataSource.getRepository(Bien);
+                const bien = await bienRepo.findOne({ where: { id_bien } });
+                if (bien && bien.id_segmento !== match.id_segmento) {
+                  bien.id_segmento = match.id_segmento;
+                  await bienRepo.save(bien);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error al asignar segmento automáticamente:", error);
+        }
+      }
+
       const repo = AppDataSource.getRepository(EspecificacionTI);
       const existing = await repo.findOne({ where: { id_bien } });
       if (existing) {
