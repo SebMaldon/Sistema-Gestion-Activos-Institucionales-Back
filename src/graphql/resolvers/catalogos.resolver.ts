@@ -67,6 +67,17 @@ export const catalogosResolvers = {
     catCategoriaActivo: async (_: unknown, { id_categoria }: { id_categoria: string }) =>
       AppDataSource.getRepository(CatCategoriaActivo).findOne({ where: { id_categoria: parseInt(id_categoria) } }),
 
+    catEstatusBienes: async () => {
+      const result = await AppDataSource.getRepository(Bien)
+        .createQueryBuilder('b')
+        .select('DISTINCT(b.estatus_operativo)', 'estatus')
+        .where('b.estatus_operativo IS NOT NULL')
+        .andWhere("b.estatus_operativo != ''")
+        .orderBy('b.estatus_operativo', 'ASC')
+        .getRawMany();
+      return result.map(r => r.estatus);
+    },
+
     // ── Cat_UnidadesMedida
     catUnidadesMedida: async () =>
       AppDataSource.getRepository(CatUnidadMedida).find({ order: { nombre_unidad: 'ASC' } }),

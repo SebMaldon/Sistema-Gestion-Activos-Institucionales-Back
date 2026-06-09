@@ -646,6 +646,8 @@ export const typeDefs = gql`
     catCategoriasActivo: [CatCategoriaActivo!]!
     catCategoriaActivo(id_categoria: ID!): CatCategoriaActivo
 
+    catEstatusBienes: [String!]!
+
     # ── Catálogos — Unidades de Medida
     catUnidadesMedida: [CatUnidadMedida!]!
     catUnidadMedida(id_unidad_medida: ID!): CatUnidadMedida
