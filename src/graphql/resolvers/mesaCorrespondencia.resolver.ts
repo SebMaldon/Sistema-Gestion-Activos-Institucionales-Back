@@ -10,7 +10,7 @@ export const mesaCorrespondenciaResolver = {
       const repository = AppDataSource.getRepository(Archivo);
       return await repository.find();
     },
-    getMesaCorrespondencias: async (_: any, { filter }: { filter: any }) => {
+    getMesaCorrespondencias: async (_: any, { filter, pagination }: { filter: any, pagination: any }) => {
       const qb = AppDataSource.getRepository(MesaCorrespondencia)
         .createQueryBuilder('mc')
         .leftJoinAndSelect('mc.unidad', 'unidad')
@@ -33,7 +33,35 @@ export const mesaCorrespondenciaResolver = {
         }
       }
 
-      return await qb.getMany();
+      const totalCount = await qb.getCount();
+      const first = Math.min(pagination?.first ?? 30, 20000);
+
+      let skip = 0;
+      if (pagination?.after) {
+        skip = parseInt(Buffer.from(pagination.after, 'base64').toString('ascii'), 10);
+        if (isNaN(skip)) skip = 0;
+      }
+
+      qb.skip(skip);
+      qb.take(first);
+
+      const items = await qb.getMany();
+
+      const edges = items.map((node, index) => ({
+        node,
+        cursor: Buffer.from(String(skip + index + 1)).toString('base64'),
+      }));
+
+      return {
+        edges,
+        pageInfo: {
+          hasNextPage: items.length === first,
+          hasPreviousPage: skip > 0,
+          startCursor: edges[0]?.cursor,
+          endCursor: edges[edges.length - 1]?.cursor,
+          totalCount,
+        },
+      };
     }
   },
   Mutation: {

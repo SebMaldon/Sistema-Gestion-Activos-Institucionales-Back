@@ -400,6 +400,9 @@ export const typeDefs = gql`
     con_notas_recientes: Boolean
     inconvenientes: Boolean
     sin_inventario: Boolean
+    # Sorting
+    sort_by: String
+    sort_dir: String
   }
 
   # ─── ESPECIFICACIONES TI ────────────────────────────────
@@ -582,6 +585,16 @@ export const typeDefs = gql`
     unidad: Unidad
     ubicacion: Ubicacion
     archivo_ref: Archivo
+  }
+
+  type MesaCorrespondenciaEdge {
+    node: MesaCorrespondencia!
+    cursor: String!
+  }
+
+  type MesaCorrespondenciaConnection {
+    edges: [MesaCorrespondenciaEdge!]!
+    pageInfo: PageInfo!
   }
 
   input MesaCorrespondenciaInput {
@@ -780,7 +793,7 @@ export const typeDefs = gql`
 
     # ── Mesa Correspondencia
     getArchivos: [Archivo!]!
-    getMesaCorrespondencias(filter: CorrespondenciaFilterInput): [MesaCorrespondencia!]!
+    getMesaCorrespondencias(filter: CorrespondenciaFilterInput, pagination: PaginationInput): MesaCorrespondenciaConnection!
   }
 
   # ─────────────────────────────────────────────────────────

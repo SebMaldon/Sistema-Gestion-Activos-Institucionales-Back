@@ -152,7 +152,7 @@ export async function procesarMonitoresHelper(
         num_serie: mon.num_serie,
         // num_inv: dejado vacío (monitor no tiene número de inventario)
         clave_modelo,
-        estatus_operativo: 'ACTIVO',
+        estatus_operativo: 'ALTA',
         id_segmento: pc.id_segmento,
         id_ubicacion: pc.id_ubicacion,
         clave_unidad_ref: pc.clave_unidad_ref,
@@ -233,6 +233,9 @@ export interface BienesFilter {
   con_notas_recientes?: boolean;
   sin_inventario?: boolean;
   inconvenientes?: boolean;
+  // Sorting
+  sort_by?: string;
+  sort_dir?: string;
 }
 
 export const bienesResolvers = {
@@ -390,7 +393,53 @@ export const bienesResolvers = {
       qb.skip(skip);
       qb.take(first);
 
-      qb.orderBy('b.fecha_actualizacion', 'DESC');
+      let sortDir: 'ASC' | 'DESC' = (filter?.sort_dir?.toUpperCase() === 'ASC') ? 'ASC' : 'DESC';
+
+      if (filter?.sort_by === 'id_serie') {
+        qb.addSelect('COALESCE(b.num_inv, b.num_serie)', 'sort_id_serie');
+        qb.orderBy('sort_id_serie', sortDir);
+      } else if (filter?.sort_by === 'modelo_categoria') {
+        if (!filter.tipo_disp?.length && !filter.clave_marca?.length) {
+          qb.leftJoin('Cat_Modelos', 'mod_sort', 'mod_sort.clave_modelo = b.clave_modelo');
+          qb.addSelect('mod_sort.descrip_disp');
+          qb.orderBy('mod_sort.descrip_disp', sortDir);
+        } else {
+          qb.addSelect('mod.descrip_disp');
+          qb.orderBy('mod.descrip_disp', sortDir);
+        }
+      } else if (filter?.sort_by === 'unidad_ubicacion') {
+        qb.leftJoin('Ubicaciones', 'ub_sort', 'ub_sort.id_ubicacion = b.id_ubicacion');
+        qb.addSelect('ub_sort.nombre_ubicacion');
+        qb.orderBy('ub_sort.nombre_ubicacion', sortDir);
+      } else if (filter?.sort_by === 'resguardo') {
+        qb.leftJoin('Usuarios', 'usr_sort', 'usr_sort.id_usuario = b.id_usuario_resguardo');
+        qb.addSelect('usr_sort.nombre_completo');
+        qb.orderBy('usr_sort.nombre_completo', sortDir);
+      } else if (filter?.sort_by === 'estatus') {
+        qb.orderBy('b.estatus_operativo', sortDir);
+      } else if (filter?.sort_by === 'ip') {
+        const getIpExpr = (alias: string) => `(CASE WHEN CHARINDEX('/', ${alias}.dir_ip) > 0 THEN LTRIM(RTRIM(LEFT(${alias}.dir_ip, CHARINDEX('/', ${alias}.dir_ip) - 1))) ELSE LTRIM(RTRIM(${alias}.dir_ip)) END)`;
+
+        if (!needsTI) {
+          qb.leftJoin('Especificaciones_TI', 'ti_sort', 'ti_sort.id_bien = b.id_bien');
+          const ipExpr = getIpExpr('ti_sort');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 4) AS INT)`, 'ip_1');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 3) AS INT)`, 'ip_2');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 2) AS INT)`, 'ip_3');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 1) AS INT)`, 'ip_4');
+          qb.orderBy('ip_1', sortDir).addOrderBy('ip_2', sortDir).addOrderBy('ip_3', sortDir).addOrderBy('ip_4', sortDir);
+        } else {
+          const ipExpr = getIpExpr('ti');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 4) AS INT)`, 'ip_1');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 3) AS INT)`, 'ip_2');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 2) AS INT)`, 'ip_3');
+          qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 1) AS INT)`, 'ip_4');
+          qb.orderBy('ip_1', sortDir).addOrderBy('ip_2', sortDir).addOrderBy('ip_3', sortDir).addOrderBy('ip_4', sortDir);
+        }
+      } else {
+        qb.orderBy('b.fecha_actualizacion', 'DESC');
+      }
+
       const items = await qb.getMany();
 
       const edges = items.map((node, index) => ({

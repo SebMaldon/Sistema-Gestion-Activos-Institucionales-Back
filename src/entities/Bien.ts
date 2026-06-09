@@ -46,7 +46,7 @@ export class Bien {
   @Column({ name: 'cantidad', type: 'decimal', precision: 10, scale: 2, default: 1 })
   cantidad!: number;
 
-  @Column({ name: 'estatus_operativo', type: 'varchar', length: 50, default: 'ACTIVO' })
+  @Column({ name: 'estatus_operativo', type: 'varchar', length: 50, default: 'ALTA' })
   estatus_operativo!: string;
 
   @Column({ name: 'qr_hash', type: 'varchar', length: 255, nullable: true, unique: true })
