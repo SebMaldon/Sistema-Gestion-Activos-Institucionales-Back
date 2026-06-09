@@ -40,6 +40,7 @@
     "jsonwebtoken": "^9.0.3",
     "mssql": "^12.2.1",
     "reflect-metadata": "^0.2.2",
+    "selfsigned": "^5.5.0",
     "typeorm": "^0.3.28",
     "uuid": "^9.0.1",
     "winston": "^3.19.0"
@@ -54,6 +55,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mssql": "^9.1.9",
     "@types/node": "^25.5.0",
+    "@types/selfsigned": "^2.0.4",
     "@types/uuid": "^9.0.8",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
