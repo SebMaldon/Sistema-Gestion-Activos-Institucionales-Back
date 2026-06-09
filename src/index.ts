@@ -2,8 +2,6 @@ import 'reflect-metadata';
 import 'dotenv/config';
 import express from 'express';
 import http from 'http';
-import https from 'https';
-import selfsigned from 'selfsigned';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -30,13 +28,7 @@ async function bootstrap() {
 
   // 2. Crear app Express
   const app = express();
-  
-  const attrs = [{ name: 'commonName', value: 'localhost' }];
-  // @ts-ignore
-  const pems = await selfsigned.generate(attrs, { days: 365 });
-  const credentials = { key: pems.private, cert: pems.cert };
-  
-  const httpServer = https.createServer(credentials, app);
+  const httpServer = http.createServer(app);
 
   // 3. Seguridad
   app.use(
@@ -119,8 +111,8 @@ async function bootstrap() {
   // 7. Iniciar servidor HTTP
   await new Promise<void>((resolve) => httpServer.listen({ port: env.port }, resolve));
 
-  logger.info(`🚀 Server ready at https://localhost:${env.port}/graphql`);
-  logger.info(`🏥 Health check at https://localhost:${env.port}/health`);
+  logger.info(`🚀 Server ready at http://localhost:${env.port}/graphql`);
+  logger.info(`🏥 Health check at http://localhost:${env.port}/health`);
   logger.info(`📊 Environment: ${env.nodeEnv.toUpperCase()}`);
 }
 
