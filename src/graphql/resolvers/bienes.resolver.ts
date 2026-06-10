@@ -640,12 +640,7 @@ export const bienesResolvers = {
         }
       }
 
-      if (args.num_inv && args.num_inv.trim() !== '') {
-        const dupInv = await repo.findOne({ where: { num_inv: args.num_inv.trim() } });
-        if (dupInv) {
-          throw new ValidationError(`El número de inventario "${args.num_inv.trim()}" ya está registrado en otro bien.`);
-        }
-      }
+
 
       const id_bien = uuidv4();
       const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
@@ -683,12 +678,7 @@ export const bienesResolvers = {
             if (existingBien) {
               const { especificacionTI, atributos, id_monitor, serie_monitor_asignado, ...bienData } = b;
 
-              if (bienData.num_inv && bienData.num_inv.trim() !== '') {
-                const dupInv = await repoBien.findOne({ where: { num_inv: bienData.num_inv.trim() } });
-                if (dupInv && dupInv.id_bien !== existingBien.id_bien) {
-                  throw new ValidationError(`Fila ${rowNum}: El número de inventario "${bienData.num_inv.trim()}" ya está registrado.`);
-                }
-              }
+
 
               Object.keys(bienData).forEach(key => {
                 if (bienData[key] === null || bienData[key] === undefined || bienData[key] === '') {
@@ -721,12 +711,7 @@ export const bienesResolvers = {
             }
           }
 
-          if (b.num_inv && b.num_inv.trim() !== '') {
-            const dupInv = await repoBien.findOne({ where: { num_inv: b.num_inv.trim() } });
-            if (dupInv) {
-              throw new ValidationError(`Fila ${rowNum}: El número de inventario "${b.num_inv.trim()}" ya está registrado.`);
-            }
-          }
+
 
           const id_bien = uuidv4();
           const qr_hash = Buffer.from(`IMSS-${id_bien}`).toString('base64');
@@ -813,12 +798,7 @@ export const bienesResolvers = {
         }
       }
 
-      if (updates.num_inv && updates.num_inv.trim() !== '') {
-        const dupInv = await repo.findOne({ where: { num_inv: updates.num_inv.trim() } });
-        if (dupInv && dupInv.id_bien !== id_bien) {
-          throw new ValidationError(`El número de inventario "${updates.num_inv.trim()}" ya pertenece a otro bien.`);
-        }
-      }
+
 
       updates.fecha_actualizacion = new Date();
       repo.merge(bien, updates);
