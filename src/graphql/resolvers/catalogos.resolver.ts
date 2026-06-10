@@ -184,7 +184,7 @@ export const catalogosResolvers = {
 
       if (search) {
         qb.andWhere(
-          '(i.descripcion LIKE :search OR i.clave LIKE :search OR i.ciudad LIKE :search ' +
+          '(i.descripcion LIKE :search OR i.desc_corta LIKE :search OR i.clave LIKE :search OR i.ciudad LIKE :search ' +
           'OR EXISTS (SELECT 1 FROM segmentos s WHERE s.clave = i.clave AND s.Ip LIKE :search) ' +
           'OR EXISTS (SELECT 1 FROM Unidad_A_Cargo uac INNER JOIN Usuarios u ON u.id_usuario = uac.id_usuario WHERE uac.id_unidad_cargo = i.clave AND u.nombre_completo LIKE :search))',
           { search: `%${search}%` }
