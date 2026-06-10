@@ -883,6 +883,14 @@ export const bienesResolvers = {
         } catch (error) {
           console.error("Error al asignar segmento automáticamente:", error);
         }
+      } else {
+        // Si no hay IP, limpiar el segmento
+        const bienRepo = AppDataSource.getRepository(Bien);
+        const bien = await bienRepo.findOne({ where: { id_bien } });
+        if (bien && bien.id_segmento !== null) {
+          bien.id_segmento = null as any;
+          await bienRepo.save(bien);
+        }
       }
 
       const repo = AppDataSource.getRepository(EspecificacionTI);
