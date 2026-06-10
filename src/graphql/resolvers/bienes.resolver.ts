@@ -152,7 +152,7 @@ export async function procesarMonitoresHelper(
         num_serie: mon.num_serie,
         // num_inv: dejado vacío (monitor no tiene número de inventario)
         clave_modelo,
-        estatus_operativo: 'ALTA',
+        estatus_operativo: 'ACTIVO',
         id_segmento: pc.id_segmento,
         id_ubicacion: pc.id_ubicacion,
         clave_unidad_ref: pc.clave_unidad_ref,
