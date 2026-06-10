@@ -518,7 +518,12 @@ export const bienesResolvers = {
         .createQueryBuilder('b')
         .innerJoin('Especificaciones_TI', 'e', 'e.id_bien = b.id_bien')
         .leftJoinAndSelect('b.modelo', 'm')
-        .where('e.dir_ip = :dir_ip', { dir_ip: dir_ip.trim() });
+        .where('(e.dir_ip = :dir_ip OR e.dir_ip LIKE :start OR e.dir_ip LIKE :end OR e.dir_ip LIKE :mid)', { 
+          dir_ip: dir_ip.trim(),
+          start: `${dir_ip.trim()} /%`,
+          end: `%/ ${dir_ip.trim()}`,
+          mid: `%/ ${dir_ip.trim()} /%`
+        });
       if (id_bien_exclude) {
         qb.andWhere('b.id_bien != :id_bien_exclude', { id_bien_exclude });
       }
@@ -614,7 +619,18 @@ export const bienesResolvers = {
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       if (!dir_ip || dir_ip.trim() === '') return false;
       const cleanIp = dir_ip.trim();
-      const qb = AppDataSource.getRepository(EspecificacionTI).createQueryBuilder().update(EspecificacionTI).set({ dir_ip: '' }).where('dir_ip = :cleanIp', { cleanIp });
+      const qb = AppDataSource.getRepository(EspecificacionTI)
+        .createQueryBuilder()
+        .update(EspecificacionTI)
+        .set({ 
+          dir_ip: () => `REPLACE(REPLACE(REPLACE(dir_ip, ' / ${cleanIp}', ''), '${cleanIp} / ', ''), '${cleanIp}', '')` 
+        })
+        .where('(dir_ip = :cleanIp OR dir_ip LIKE :start OR dir_ip LIKE :end OR dir_ip LIKE :mid)', {
+          cleanIp,
+          start: `${cleanIp} /%`,
+          end: `%/ ${cleanIp}`,
+          mid: `%/ ${cleanIp} /%`
+        });
       if (id_bien_exclude) {
         qb.andWhere('id_bien != :id_bien_exclude', { id_bien_exclude });
       }
