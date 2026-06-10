@@ -225,16 +225,13 @@ export const transaccionalesResolvers = {
       if (!descripcion_falla || descripcion_falla.trim() === '') {
         throw new ValidationError('Por favor, ingresa una descripción de la falla para continuar.');
       }
-      if (!id_bien || typeof id_bien !== 'string' || id_bien.trim() === '') {
-        throw new ValidationError('Debe vincular un bien a la incidencia.');
-      }
       if (!id_tipo_incidencia) {
         throw new ValidationError('Debe seleccionar un tipo de incidencia.');
       }
 
       const repo = AppDataSource.getRepository(Incidencia);
       const newIncidencia = repo.create({
-        id_bien,
+        id_bien: id_bien || null,
         id_usuario_genera_reporte: context.user!.id_usuario,
         id_tipo_incidencia,
         descripcion_falla,
