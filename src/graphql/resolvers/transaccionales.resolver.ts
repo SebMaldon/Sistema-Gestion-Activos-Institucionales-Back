@@ -60,7 +60,7 @@ export const transaccionalesResolvers = {
     // ── Incidencias
     incidencias: async (
       _: unknown,
-      { estatus_reparacion, id_bien, id_usuario_genera_reporte, id_tipo_incidencia, id_unidad, search, pagination }: any,
+      { estatus_reparacion, id_bien, id_usuario_genera_reporte, id_tipo_incidencia, id_unidad, search, fecha_creacion_desde, fecha_creacion_hasta, fecha_resolucion_desde, fecha_resolucion_hasta, pagination }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -75,17 +75,23 @@ export const transaccionalesResolvers = {
           s: `%${search}%`,
         });
       }
+      if (fecha_creacion_desde) qb.andWhere('i.fecha_reporte >= :fcd', { fcd: fecha_creacion_desde });
+      if (fecha_creacion_hasta) qb.andWhere('i.fecha_reporte <= :fch', { fch: fecha_creacion_hasta });
+      if (fecha_resolucion_desde) qb.andWhere('i.fecha_resolucion >= :frd', { frd: fecha_resolucion_desde });
+      if (fecha_resolucion_hasta) qb.andWhere('i.fecha_resolucion <= :frh', { frh: fecha_resolucion_hasta });
 
       const totalCount = await qb.getCount();
       const first = pagination?.first ?? 20;
       qb.take(Math.min(first, 100));
 
-      if (pagination?.after) {
+      if (pagination?.page) {
+        qb.skip((pagination.page - 1) * first);
+      } else if (pagination?.after) {
         const cursor = decodeCursor(pagination.after);
-        qb.andWhere('i.id_incidencia > :cursor', { cursor: parseInt(cursor) });
+        qb.andWhere('i.id_incidencia < :cursor', { cursor: parseInt(cursor) });
       }
 
-      qb.orderBy('i.fecha_reporte', 'DESC');
+      qb.orderBy('i.id_incidencia', 'DESC');
       const items = await qb.getMany();
 
       const edges = items.map((node) => ({
@@ -410,7 +416,7 @@ export const transaccionalesResolvers = {
   Incidencia: {
     // Antes: findOne por cada fila → N+1. Ahora: DataLoader agrupa todo en 1 query.
     bien: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
-      context.loaders.bienLoader.load(parent.id_bien),
+      parent.id_bien ? context.loaders.bienLoader.load(parent.id_bien) : null,
 
     usuarioGeneraReporte: (parent: Incidencia, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario_genera_reporte),
