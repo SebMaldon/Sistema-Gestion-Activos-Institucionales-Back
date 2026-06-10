@@ -645,22 +645,64 @@ export const catalogosResolvers = {
     deleteUnidad: async (_: unknown, { clave }: any, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      const repo = AppDataSource.getRepository(Inmueble);
-      const item = await repo.findOne({ where: { clave } });
-      if (!item) throw new NotFoundError('Unidad');
+      
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(Inmueble);
+        const item = await repo.findOne({ where: { clave } });
+        if (!item) throw new NotFoundError('Unidad');
 
-      const bienesCount = await AppDataSource.getRepository(Bien).count({ where: { clave_unidad_ref: clave } });
-      if (bienesCount > 0) {
-        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${bienesCount} activo(s) vinculados.`);
-      }
+        // Desvincular bienes
+        await manager.getRepository(Bien).update({ clave_unidad_ref: clave }, { clave_unidad_ref: null as any });
+        
+        // Eliminar contactos vinculados a la unidad (tienen restricción CHK_Contactos_Exclusividad)
+        await manager.getRepository(Contacto).delete({ id_unidad: clave });
+        
+        // Desvincular usuarios y mesas que tengan esta unidad como clave_unidad
+        const Usuario = require('../../entities/Usuario').Usuario;
+        await manager.getRepository(Usuario).update({ clave_unidad: clave }, { clave_unidad: null as any });
+        try {
+          const MesaCorrespondencia = require('../../entities/MesaCorrespondencia').MesaCorrespondencia;
+          if (MesaCorrespondencia) await manager.getRepository(MesaCorrespondencia).update({ Clave_unidad: clave }, { Clave_unidad: null as any });
+        } catch(e) {}
+        
+        // Desvincular bienes, usuarios y borrar contactos de los segmentos que vamos a eliminar
+        const segmentos = await manager.getRepository(Segmento).find({ where: { clave: clave } });
+        const idsSeg = segmentos.map(s => s.id_segmento);
+        if (idsSeg.length > 0) {
+          await manager.getRepository(Bien).createQueryBuilder().update().set({ id_segmento: null as any }).where('id_segmento IN (:...ids)', { ids: idsSeg }).execute();
+          await manager.getRepository(Usuario).createQueryBuilder().update().set({ id_unidad: null as any }).where('id_unidad IN (:...ids)', { ids: idsSeg }).execute();
+          await manager.getRepository(Contacto).createQueryBuilder().delete().where('id_segmento IN (:...ids)', { ids: idsSeg }).execute();
+        }
+        
+        // Eliminar segmentos vinculados a la unidad
+        await manager.getRepository(Segmento).delete({ clave: clave });
+        
+        // Desvincular bienes y mesas de correspondencia de las ubicaciones que vamos a eliminar
+        const ubicaciones = await manager.getRepository(Ubicacion).find({ where: { id_unidad: clave } });
+        const idsUbi = ubicaciones.map(u => u.id_ubicacion);
+        if (idsUbi.length > 0) {
+          await manager.getRepository(Bien).createQueryBuilder().update().set({ id_ubicacion: null as any }).where('id_ubicacion IN (:...ids)', { ids: idsUbi }).execute();
+          try {
+            const MesaCorrespondencia = require('../../entities/MesaCorrespondencia').MesaCorrespondencia;
+            if (MesaCorrespondencia) await manager.getRepository(MesaCorrespondencia).createQueryBuilder().update().set({ id_ubicacion: null as any }).where('id_ubicacion IN (:...ids)', { ids: idsUbi }).execute();
+          } catch(e) {}
+        }
+        
+        // Eliminar ubicaciones (la BD no permite id_unidad = null)
+        await manager.getRepository(Ubicacion).delete({ id_unidad: clave });
+        
+        // Desvincular incidencias si existiera la relación
+        try {
+          const Incidencia = require('../../entities/Incidencia').Incidencia;
+          if (Incidencia) await manager.getRepository(Incidencia).update({ id_unidad: clave }, { id_unidad: null as any });
+        } catch(e) {}
+        
+        // Eliminar registros intermedios que no pueden existir sin la unidad
+        await manager.getRepository(UnidadACargo).delete({ id_unidad_cargo: clave });
 
-      const ubicacionesCount = await AppDataSource.getRepository(Ubicacion).count({ where: { id_unidad: clave } });
-      if (ubicacionesCount > 0) {
-        throw new ForbiddenError(`No se puede eliminar la unidad porque tiene ${ubicacionesCount} ubicación(es) asociada(s).`);
-      }
-
-      await repo.remove(item);
-      return true;
+        await repo.remove(item);
+        return true;
+      });
     },
   },
 
