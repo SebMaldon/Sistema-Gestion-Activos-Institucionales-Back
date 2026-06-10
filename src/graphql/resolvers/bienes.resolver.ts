@@ -257,8 +257,9 @@ export const bienesResolvers = {
         if (filter.es_capitalizable) {
           qb.andWhere('cat_cap.es_capitalizable = 1');
           qb.andWhere('b.num_inv IS NOT NULL AND b.num_inv != \'\'');
+          qb.andWhere('UPPER(b.num_inv) NOT LIKE \'%COMODATO%\'');
         } else {
-          qb.andWhere('(cat_cap.es_capitalizable = 0 OR b.num_inv IS NULL OR b.num_inv = \'\')');
+          qb.andWhere('(cat_cap.es_capitalizable = 0 OR b.num_inv IS NULL OR b.num_inv = \'\' OR UPPER(b.num_inv) LIKE \'%COMODATO%\')');
         }
       }
       if (filter?.search) {

@@ -64,6 +64,7 @@ export const typeDefs = gql`
     after: String
     last: Int
     before: String
+    page: Int
   }
 
   # ─── CATÁLOGOS ──────────────────────────────────────────
@@ -464,7 +465,7 @@ export const typeDefs = gql`
   # estatus_reparacion: 'Pendiente' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Sin resolver'
   type Incidencia {
     id_incidencia: ID!
-    id_bien: ID!
+    id_bien: ID
     id_usuario_genera_reporte: Int!
     id_tipo_incidencia: Int!
     descripcion_falla: String!
@@ -735,6 +736,10 @@ export const typeDefs = gql`
       id_tipo_incidencia: Int
       id_unidad: String
       search: String
+      fecha_creacion_desde: DateTime
+      fecha_creacion_hasta: DateTime
+      fecha_resolucion_desde: DateTime
+      fecha_resolucion_hasta: DateTime
       pagination: PaginationInput
     ): IncidenciasConnection!
     incidencia(id_incidencia: ID!): Incidencia

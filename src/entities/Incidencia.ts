@@ -11,8 +11,8 @@ export class Incidencia {
   @PrimaryGeneratedColumn({ name: 'id_incidencia' })
   id_incidencia!: number;
 
-  @Column({ name: 'id_bien', type: 'uniqueidentifier' })
-  id_bien!: string;
+  @Column({ name: 'id_bien', type: 'uniqueidentifier', nullable: true })
+  id_bien?: string;
 
   // Administrador/usuario que crea el reporte en el sistema
   @Column({ name: 'id_usuario_genera_reporte', type: 'int' })
