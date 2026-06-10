@@ -1146,7 +1146,7 @@ export const typeDefs = gql`
 
     # ── Incidencias
     createIncidencia(
-      id_bien: ID!
+      id_bien: ID
       id_tipo_incidencia: Int!
       descripcion_falla: String!
       id_unidad: String

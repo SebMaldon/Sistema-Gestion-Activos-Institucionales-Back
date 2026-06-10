@@ -27,6 +27,8 @@ describe('Incidencias Resolver', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     delete: jest.fn(),
+    find: jest.fn().mockResolvedValue([]),
+    remove: jest.fn().mockResolvedValue([]),
     merge: jest.fn().mockImplementation((entity, updates) => Object.assign(entity, updates)),
   };
 
@@ -53,16 +55,24 @@ describe('Incidencias Resolver', () => {
       ).rejects.toThrow('Por favor, ingresa una descripción de la falla para continuar.');
     });
 
-    it('Debe fallar si no hay un bien asociado', async () => {
+    it('Debe crear la incidencia correctamente si no se proporciona id_bien (es opcional)', async () => {
       const args = {
         id_tipo_incidencia: 1,
         descripcion_falla: 'Mi PC no enciende',
         id_bien: '',
       };
 
-      await expect(
-        transaccionalesResolvers.Mutation.createIncidencia(null, args, mockContext as any)
-      ).rejects.toThrow(ValidationError);
+      mockRepo.create.mockReturnValue({ ...args, id_bien: null, id_usuario_genera_reporte: 1, estatus_reparacion: 'Pendiente' });
+      mockRepo.save.mockImplementation(async (data: any) => ({ id_incidencia: 10, ...data }));
+
+      const result = await transaccionalesResolvers.Mutation.createIncidencia(null, args, mockContext as any);
+
+      expect(mockRepo.create).toHaveBeenCalledWith(expect.objectContaining({
+        id_bien: null,
+        descripcion_falla: 'Mi PC no enciende',
+        estatus_reparacion: 'Pendiente'
+      }));
+      expect(result.id_incidencia).toBe(10);
     });
 
     it('Debe crear la incidencia correctamente si todos los datos obligatorios existen', async () => {
@@ -140,13 +150,13 @@ describe('Incidencias Resolver', () => {
 
   describe('deleteIncidencia', () => {
     it('Debe eliminar la incidencia correctamente, incluyendo notas', async () => {
-      mockRepo.delete = jest.fn().mockResolvedValue({ affected: 1 });
+      const mockIncidencia = { id_incidencia: 10 };
+      mockRepo.findOne.mockResolvedValue(mockIncidencia);
       const result = await transaccionalesResolvers.Mutation.deleteIncidencia(null, { id_incidencia: 10 }, mockContext as any);
 
       expect(result).toBe(true);
-      // Se llama a delete dos veces: una para Notas y otra para Incidencias
-      expect(mockRepo.delete).toHaveBeenCalledTimes(2);
-      expect(mockRepo.delete).toHaveBeenCalledWith({ id_incidencia: 10 });
+      expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { id_incidencia: 10 } });
+      expect(mockRepo.remove).toHaveBeenCalledWith(mockIncidencia);
     });
   });
 });
