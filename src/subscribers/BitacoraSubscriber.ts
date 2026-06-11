@@ -133,6 +133,12 @@ export class BitacoraSubscriber implements EntitySubscriberInterface {
     // Obtener el origen desde el async context
     const store = sessionContext.getStore();
     const origen = store?.origen || event.queryRunner?.data?.origen || 'WEB';
+    
+    // Evitar spam en auditoría cuando el agente WIN inserta programas uno por uno
+    if ((tablaAfectada === 'Programas_PC' || tablaAfectada === 'programas_pc') && origen.toUpperCase() === 'WIN') {
+      return;
+    }
+
     bitacora.origen = origen.toUpperCase();
 
     // CRUCIAL: Usamos event.manager para asegurar que la inserción de la bitácora 
