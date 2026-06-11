@@ -72,21 +72,28 @@ export const mesaCorrespondenciaResolver = {
 
       return await AppDataSource.transaction(async (transactionalEntityManager) => {
         // Calcular Folio
-        const lastFolio = await transactionalEntityManager
-          .createQueryBuilder(MesaCorrespondencia, 'mc')
-          .select('MAX(mc.Folio)', 'max')
-          .getRawOne();
+        let newFolio = input.Folio;
         
-        const newFolio = (lastFolio?.max || 0) + 1;
+        if (!newFolio) {
+          const lastFolio = await transactionalEntityManager
+            .createQueryBuilder(MesaCorrespondencia, 'mc')
+            .select('MAX(mc.Folio)', 'max')
+            .getRawOne();
+          
+          newFolio = (lastFolio?.max || 0) + 1;
+        } else {
+          // Verify if requested folio already exists
+          const exists = await transactionalEntityManager.findOne(MesaCorrespondencia, { where: { Folio: newFolio } });
+          if (exists) throw new GraphQLError(`El Folio ${newFolio} ya existe`);
+        }
         
         let newNoOficio = input.NoOficio;
 
-        // Si es 'Enviada' (Tipo = 1), autoincrementar NoOficio
-        if (input.Tipo === 1) {
+        // Si es 'Enviada' (Tipo = 1) y el usuario no introdujo uno, autoincrementar NoOficio
+        if (input.Tipo === 1 && (!input.NoOficio || input.NoOficio.trim() === '')) {
             const lastOficio = await transactionalEntityManager
               .createQueryBuilder(MesaCorrespondencia, 'mc')
               .select('MAX(TRY_CAST(mc.NoOficio AS INT))', 'maxOficio')
-              .where('mc.Tipo = 1')
               .getRawOne();
             
             const nextOficio = (lastOficio?.maxOficio || 0) + 1;
@@ -108,6 +115,38 @@ export const mesaCorrespondenciaResolver = {
             relations: ['unidad', 'ubicacion', 'archivo_ref']
         });
       });
+    },
+    editarMesaCorrespondencia: async (_: any, { Folio, input }: { Folio: number, input: any }, context: GraphQLContext) => {
+      if (!context.user) throw new GraphQLError('No autenticado');
+
+      const repository = AppDataSource.getRepository(MesaCorrespondencia);
+      const mesa = await repository.findOne({ where: { Folio } });
+
+      if (!mesa) throw new GraphQLError('Registro no encontrado');
+
+      const newFolio = input.Folio || Folio;
+
+      if (newFolio !== Folio) {
+        // Verify if requested folio already exists
+        const existe = await repository.findOne({ where: { Folio: newFolio } });
+        if (existe) throw new GraphQLError(`El Folio ${newFolio} ya está en uso`);
+      }
+
+      // Update in DB safely
+      await repository.update({ Folio }, input);
+
+      return await repository.findOne({
+        where: { Folio: newFolio },
+        relations: ['unidad', 'ubicacion', 'archivo_ref']
+      });
+    },
+    eliminarMesaCorrespondencia: async (_: any, { Folio }: { Folio: number }, context: GraphQLContext) => {
+      if (!context.user) throw new GraphQLError('No autenticado');
+
+      const repository = AppDataSource.getRepository(MesaCorrespondencia);
+      const result = await repository.delete({ Folio });
+
+      return result.affected !== 0 && result.affected !== null;
     }
   }
 };

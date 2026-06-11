@@ -600,6 +600,7 @@ export const typeDefs = gql`
   }
 
   input MesaCorrespondenciaInput {
+    Folio: Int
     NoOficio: String
     FechaRecepcion: DateTime
     FechaOficio: DateTime
@@ -1310,6 +1311,8 @@ export const typeDefs = gql`
 
     # ── Mesa Correspondencia ────────────────────────────────
     crearMesaCorrespondencia(input: MesaCorrespondenciaInput!): MesaCorrespondencia!
+    editarMesaCorrespondencia(Folio: Int!, input: MesaCorrespondenciaInput!): MesaCorrespondencia!
+    eliminarMesaCorrespondencia(Folio: Int!): Boolean!
   }
 
   # ─── SOLICITUDES DE CAMBIO (Maker-Checker) ─────────────────
