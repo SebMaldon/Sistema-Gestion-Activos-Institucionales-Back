@@ -454,7 +454,7 @@ export const typeDefs = gql`
     id_garantia: ID!
     id_bien: ID!
     fecha_inicio: Date
-    fecha_fin: Date!
+    fecha_fin: Date
     id_proveedor: Int
     estado_garantia: String!
     bien: Bien
@@ -1127,7 +1127,7 @@ export const typeDefs = gql`
     createGarantia(
       id_bien: ID!
       fecha_inicio: Date
-      fecha_fin: Date!
+      fecha_fin: Date
       id_proveedor: Int
       estado_garantia: String
     ): Garantia!

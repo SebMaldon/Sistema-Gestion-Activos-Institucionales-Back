@@ -13,8 +13,8 @@ export class Garantia {
   @Column({ name: 'fecha_inicio', type: 'date', nullable: true })
   fecha_inicio?: Date;
 
-  @Column({ name: 'fecha_fin', type: 'date' })
-  fecha_fin!: Date;
+  @Column({ name: 'fecha_fin', type: 'date', nullable: true })
+  fecha_fin?: Date;
 
   @Column({ name: 'id_proveedor', type: 'int', nullable: true })
   id_proveedor?: number;
