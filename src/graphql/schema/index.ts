@@ -101,6 +101,7 @@ export const typeDefs = gql`
   type Proveedor {
     id_proveedor: ID!
     nombre_proveedor: String!
+    contactos: [Contacto!]
   }
 
   # Tabla: Cat_CategoriasActivo
@@ -1119,7 +1120,7 @@ export const typeDefs = gql`
 
     # ── Proveedores
     createProveedor(nombre_proveedor: String!, contactos: [ContactoInput!]): Proveedor!
-    updateProveedor(id_proveedor: ID!, nombre_proveedor: String): Proveedor!
+    updateProveedor(id_proveedor: ID!, nombre_proveedor: String, contactos: [ContactoInput!]): Proveedor!
     deleteProveedor(id_proveedor: ID!): Boolean!
 
     # ── Garantías

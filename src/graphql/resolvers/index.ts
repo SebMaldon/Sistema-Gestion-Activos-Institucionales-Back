@@ -90,6 +90,7 @@ export const resolvers = {
   // ── Type-level field resolvers ───────────────────────────
   Unidad: catalogosResolvers.Unidad,
   CatModelo: catalogosResolvers.CatModelo,
+  Proveedor: catalogosResolvers.Proveedor,
   Bien: bienesResolvers.Bien,
   BienMonitor: bienesResolvers.BienMonitor,
   EspecificacionTI: bienesResolvers.EspecificacionTI,

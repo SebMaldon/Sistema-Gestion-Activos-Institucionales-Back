@@ -37,8 +37,12 @@ export async function buildContext({ req }: { req: Request }): Promise<GraphQLCo
     
     // Almacenar el ID del usuario en el contexto asíncrono global
     return { user: payload, loaders, origen };
-  } catch (error) {
-    console.error('[Context] Error verifying token:', error);
+  } catch (error: any) {
+    if (error.name === 'TokenExpiredError') {
+      console.log('[Context] Token de sesión expirado. Se requiere iniciar sesión nuevamente.');
+    } else {
+      console.error('[Context] Error verifying token:', error.message || error);
+    }
     return { loaders, origen };
   }
 }

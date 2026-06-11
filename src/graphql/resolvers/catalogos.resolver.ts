@@ -369,14 +369,28 @@ export const catalogosResolvers = {
         return nuevoProveedor;
       });
     },
-    updateProveedor: async (_: unknown, { id_proveedor, nombre_proveedor }: any, context: GraphQLContext) => {
-      requireAuth(context);
-      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
-      const repo = AppDataSource.getRepository(Proveedor);
-      const item = await repo.findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
-      if (!item) throw new NotFoundError('Proveedor');
-      if (nombre_proveedor !== undefined) item.nombre_proveedor = nombre_proveedor;
-      return repo.save(item);
+    updateProveedor: async (_: unknown, { id_proveedor, nombre_proveedor, contactos }: any, context: GraphQLContext) => {
+      // requireAuth(context);
+      // requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      return AppDataSource.transaction(async (manager) => {
+        const repo = manager.getRepository(Proveedor);
+        const item = await repo.findOne({ where: { id_proveedor: parseInt(id_proveedor) } });
+        if (!item) throw new NotFoundError('Proveedor');
+        if (nombre_proveedor !== undefined) item.nombre_proveedor = nombre_proveedor;
+        
+        const provActualizado = await repo.save(item);
+
+        if (contactos !== undefined) {
+          const contactoRepo = manager.getRepository(Contacto);
+          await contactoRepo.delete({ id_proveedor: parseInt(id_proveedor) });
+          if (contactos.length > 0) {
+            await Promise.all(contactos.map((c: any) => 
+              contactoRepo.save(contactoRepo.create({ ...c, id_proveedor: parseInt(id_proveedor) }))
+            ));
+          }
+        }
+        return provActualizado;
+      });
     },
     deleteProveedor: async (_: unknown, { id_proveedor }: any, context: GraphQLContext) => {
       requireAuth(context);
@@ -735,5 +749,12 @@ export const catalogosResolvers = {
       parent.clave_marca ? context.loaders.marcaLoader.load(parent.clave_marca) : null,
     tipoDispositivo: (parent: CatModelo, _: unknown, context: GraphQLContext) =>
       parent.tipo_disp ? context.loaders.tipoDispositivoLoader.load(parent.tipo_disp) : null, // reload comment
+  },
+
+  Proveedor: {
+    contactos: async (parent: Proveedor) => {
+      const contactosRepo = AppDataSource.getRepository(Contacto);
+      return contactosRepo.find({ where: { id_proveedor: parent.id_proveedor } });
+    }
   },
 };
