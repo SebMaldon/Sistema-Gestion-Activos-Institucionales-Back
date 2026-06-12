@@ -344,6 +344,14 @@ export const transaccionalesResolvers = {
       const repo = AppDataSource.getRepository(Incidencia);
       const item = await repo.findOne({ where: { id_incidencia: parseInt(id_incidencia) } });
       if (!item) throw new NotFoundError('Incidencia');
+
+      // Si se cambia desde Resuelto a otro estatus, borrar detalles de resolución
+      if ((item.estatus_reparacion === 'Resuelto' || item.estatus_reparacion === 'Cerrado') && 
+          (estatus_reparacion !== 'Resuelto' && estatus_reparacion !== 'Cerrado')) {
+        item.resolucion_textual = null as any;
+        item.fecha_resolucion = null as any;
+      }
+
       item.estatus_reparacion = estatus_reparacion;
       return repo.save(item);
     },
