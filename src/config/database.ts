@@ -36,6 +36,8 @@ import { CuentaPC } from '../entities/CuentaPC';
 import { ProgramasPC } from '../entities/ProgramasPC';
 import { Archivo } from '../entities/Archivo';
 import { MesaCorrespondencia } from '../entities/MesaCorrespondencia';
+import { RegistroSalida } from '../entities/RegistroSalida';
+import { RegistroSalidaBien } from '../entities/RegistroSalidaBien';
 import { logger } from '../utils/logger';
 import { BitacoraSubscriber } from '../subscribers/BitacoraSubscriber';
 
@@ -70,6 +72,7 @@ export const AppDataSource = new DataSource({
     BienAtributo, CatAtributoTecnico, AtributoPorTipoDispositivo, Segmento,
     UnidadACargo, Contacto, BienMonitor, SolicitudCambio,
     CuentaPC, ProgramasPC, Archivo, MesaCorrespondencia,
+    RegistroSalida, RegistroSalidaBien,
   ],
   subscribers: [
     BitacoraSubscriber,

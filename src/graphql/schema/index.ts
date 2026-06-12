@@ -803,6 +803,10 @@ export const typeDefs = gql`
     # Busca usuario por matrícula exacta (para autocompletado en formulario de salidas)
     usuarioPorMatricula(matricula: String!): Usuario
 
+    # ── Salidas de Bienes — Registro
+    registroSalidas(filter: RegistroSalidasFilterInput, pagination: PaginationInput): RegistroSalidasConnection!
+    registroSalida(id_salida: Int!): RegistroSalida
+
     # ── Mesa Correspondencia
     getArchivos: [Archivo!]!
     getMesaCorrespondencias(filter: CorrespondenciaFilterInput, pagination: PaginationInput): MesaCorrespondenciaConnection!
@@ -817,9 +821,89 @@ export const typeDefs = gql`
     count: Int
   }
 
+  # ─── REGISTRO SALIDAS ───────────────────────────────────
+  type RegistroSalida {
+    id_salida: Int!
+    folio: String!
+    fecha_salida: Date!
+    fecha_registro: DateTime!
+    id_usuario_solicitante: Int
+    matricula: String
+    solicitante: String!
+    adscripcion: String
+    empresa: String
+    identificacion: String
+    telefono: String
+    motivo: String
+    origen_bienes: String
+    responsable: String
+    sujeto_devolucion: Boolean!
+    fecha_devolucion: Date
+    observaciones: String
+    id_usuario_registra: Int
+    usuarioRegistra: Usuario
+    bienes: [RegistroSalidaBien!]!
+  }
+
+  type RegistroSalidaBien {
+    id_salida_bien: Int!
+    id_salida: Int!
+    id_bien: ID
+    cantidad_o_id: String
+    naturaleza: String
+    descripcion: String
+    bienRef: Bien
+  }
+
+  type RegistroSalidaEdge {
+    node: RegistroSalida!
+    cursor: String!
+  }
+
+  type RegistroSalidasConnection {
+    edges: [RegistroSalidaEdge!]!
+    pageInfo: PageInfo!
+  }
+
+  input RegistroSalidasFilterInput {
+    folio: String
+    solicitante: String
+    responsable: String
+    fecha_desde: Date
+    fecha_hasta: Date
+    search: String
+  }
+
   # ─────────────────────────────────────────────────────────
   # INPUT TYPES
   # ─────────────────────────────────────────────────────────
+
+  input SalidaBienInput {
+    id_bien: ID
+    cantidad_o_id: String
+    naturaleza: String
+    descripcion: String
+  }
+
+  input RegistroSalidaInput {
+    folio: String
+    fecha_salida: Date!
+    id_usuario_solicitante: Int
+    matricula: String
+    solicitante: String!
+    adscripcion: String
+    empresa: String
+    identificacion: String
+    telefono: String
+    motivo: String
+    origen_bienes: String
+    responsable: String
+    sujeto_devolucion: Boolean
+    fecha_devolucion: Date
+    observaciones: String
+    bienes: [SalidaBienInput!]!
+  }
+
   # ─── MONITORES WMI ─────────────────────────────────────
   # Input para un monitor detectado por WMI
   input MonitorWmiInput {
@@ -1320,6 +1404,10 @@ export const typeDefs = gql`
     confirmarFolio: FolioSalidas!
     # Solo Maestro: insertar un folio manualmente en la tabla Folio_Salidas
     setFolioManual(folio: String!): FolioSalidas!
+
+    # ── Salidas de Bienes — Registro ──────────────────────────
+    registrarSalida(input: RegistroSalidaInput!): RegistroSalida!
+    actualizarSalida(id_salida: Int!, input: RegistroSalidaInput!): RegistroSalida!
 
     # ── Mesa Correspondencia ────────────────────────────────
     crearMesaCorrespondencia(input: MesaCorrespondenciaInput!): MesaCorrespondencia!
