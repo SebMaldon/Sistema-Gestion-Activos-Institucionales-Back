@@ -673,6 +673,8 @@ export const typeDefs = gql`
       segmento_velocidad: [String!]
       segmento_proveedor: [String!]
       segmento_monitorear: Int
+      sortBy: String
+      sortOrder: String
       pagination: PaginationInput
     ): UnidadesConnection!
     catUnidades: [Unidad!]!

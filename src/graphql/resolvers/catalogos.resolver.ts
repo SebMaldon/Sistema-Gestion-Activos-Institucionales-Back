@@ -163,6 +163,8 @@ export const catalogosResolvers = {
         segmento_velocidad,
         segmento_proveedor,
         segmento_monitorear,
+        sortBy,
+        sortOrder,
         pagination,
       }: {
         search?: string;
@@ -175,6 +177,8 @@ export const catalogosResolvers = {
         segmento_velocidad?: string[];
         segmento_proveedor?: string[];
         segmento_monitorear?: number;
+        sortBy?: string;
+        sortOrder?: string;
         pagination?: { first?: number; after?: string };
       },
       context: GraphQLContext
@@ -240,16 +244,26 @@ export const catalogosResolvers = {
       const first = Math.min(pagination?.first ?? 10, 100);
       qb.take(first);
 
+      let offset = 0;
       if (pagination?.after) {
-        const cursor = decodeCursor(pagination.after);
-        qb.andWhere('i.clave > :cursor', { cursor });
+        const decoded = decodeCursor(pagination.after);
+        if (/^\d+$/.test(decoded)) {
+          offset = parseInt(decoded) + 1;
+          qb.skip(offset);
+        } else {
+          qb.andWhere('i.clave > :cursor', { cursor: decoded });
+        }
       }
 
-      const items = await qb.orderBy('i.clave', 'ASC').getMany();
+      const validSortCols = ['clave', 'descripcion', 'ciudad', 'encargado', 'tipo_unidad'];
+      const sortCol = sortBy && validSortCols.includes(sortBy) ? sortBy : 'clave';
+      const order = sortOrder === 'desc' ? 'DESC' : 'ASC';
 
-      const edges = items.map((node) => ({
+      const items = await qb.orderBy(`i.${sortCol}`, order).getMany();
+
+      const edges = items.map((node, index) => ({
         node,
-        cursor: Buffer.from(node.clave).toString('base64'),
+        cursor: Buffer.from(String(offset + index)).toString('base64'),
       }));
 
       return {
