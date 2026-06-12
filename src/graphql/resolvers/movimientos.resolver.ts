@@ -165,5 +165,35 @@ export const dashboardResolvers = {
         totalUsuarios,
       };
     },
+
+    dashboardMetrics: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      
+      const metrics = await AppDataSource.getRepository(Bien)
+        .createQueryBuilder('b')
+        .select([
+          "u.clave AS clave_unidad",
+          "COALESCE(u.desc_corta, u.descripcion, 'Sin Unidad') AS jefatura",
+          "td.tipo_disp AS tipo_disp",
+          "td.nombre_tipo AS nombre_tipo",
+          "UPPER(b.estatus_operativo) AS estatus_operativo"
+        ])
+        .addSelect("COUNT(b.id_bien)", "count")
+        .leftJoin("b.unidad", "u")
+        .leftJoin("b.modelo", "m")
+        .leftJoin("m.tipoDispositivo", "td")
+        .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO')")
+        .groupBy("u.clave")
+        .addGroupBy("COALESCE(u.desc_corta, u.descripcion, 'Sin Unidad')")
+        .addGroupBy("td.tipo_disp")
+        .addGroupBy("td.nombre_tipo")
+        .addGroupBy("UPPER(b.estatus_operativo)")
+        .getRawMany();
+
+      return metrics.map(m => ({
+        ...m,
+        count: Number(m.count) || 0
+      }));
+    },
   },
 };

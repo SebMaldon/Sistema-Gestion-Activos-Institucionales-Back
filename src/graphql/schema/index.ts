@@ -781,6 +781,7 @@ export const typeDefs = gql`
 
     # ── Dashboard
     dashboardStats: DashboardStats!
+    dashboardMetrics: [DashboardMetricRow!]!
 
     # ── Atributos Técnicos
     catAtributos(soloActivos: Boolean): [CatAtributoTecnico!]!
@@ -805,6 +806,15 @@ export const typeDefs = gql`
     # ── Mesa Correspondencia
     getArchivos: [Archivo!]!
     getMesaCorrespondencias(filter: CorrespondenciaFilterInput, pagination: PaginationInput): MesaCorrespondenciaConnection!
+  }
+
+  type DashboardMetricRow {
+    clave_unidad: String
+    jefatura: String
+    tipo_disp: Int
+    nombre_tipo: String
+    estatus_operativo: String
+    count: Int
   }
 
   # ─────────────────────────────────────────────────────────
