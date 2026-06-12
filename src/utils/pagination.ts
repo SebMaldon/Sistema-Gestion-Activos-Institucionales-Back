@@ -3,6 +3,7 @@ export interface PaginationArgs {
   after?: string;
   last?: number;
   before?: string;
+  page?: number;
 }
 
 export interface PageInfo {

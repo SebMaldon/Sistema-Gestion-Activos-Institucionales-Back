@@ -25,7 +25,7 @@ export const usuariosResolvers = {
         id_unidad?: number;
         search?: string;
         roles?: number[];
-        pagination?: { first?: number; after?: string };
+        pagination?: { first?: number; after?: string; page?: number };
       },
       context: GraphQLContext
     ) => {
@@ -52,7 +52,9 @@ export const usuariosResolvers = {
       const first = Math.min(pagination?.first ?? 20, 20000);
       qb.take(first);
 
-      if (pagination?.after) {
+      if (pagination?.page && pagination.page > 0) {
+        qb.skip((pagination.page - 1) * first);
+      } else if (pagination?.after) {
         const cursor = decodeCursor(pagination.after);
         qb.andWhere('u.id_usuario > :cursor', { cursor: parseInt(cursor) });
       }

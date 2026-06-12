@@ -60,7 +60,7 @@ export const bitacoraResolvers = {
         origen?: string;
         fechaDesde?: Date;
         fechaHasta?: Date;
-        pagination?: { first?: number; after?: string };
+        pagination?: { first?: number; after?: string; page?: number };
       },
       context: GraphQLContext
     ) => {
@@ -80,7 +80,9 @@ export const bitacoraResolvers = {
       const first = pagination?.first ?? 50;
       qb.take(Math.min(first, 200));
 
-      if (pagination?.after) {
+      if (pagination?.page && pagination.page > 0) {
+        qb.skip((pagination.page - 1) * first);
+      } else if (pagination?.after) {
         const cursor = decodeCursor(pagination.after);
         qb.andWhere('b.id_bitacora < :cursor', { cursor: parseInt(cursor) });
       }

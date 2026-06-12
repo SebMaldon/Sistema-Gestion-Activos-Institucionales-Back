@@ -96,7 +96,7 @@ export const catalogosResolvers = {
       }: {
         estatus?: number;
         search?: string;
-        pagination?: { first?: number; after?: string };
+        pagination?: { first?: number; after?: string; page?: number };
       },
       context: GraphQLContext
     ) => {
@@ -179,7 +179,7 @@ export const catalogosResolvers = {
         segmento_monitorear?: number;
         sortBy?: string;
         sortOrder?: string;
-        pagination?: { first?: number; after?: string };
+        pagination?: { first?: number; after?: string; page?: number };
       },
       context: GraphQLContext
     ) => {
@@ -245,7 +245,10 @@ export const catalogosResolvers = {
       qb.take(first);
 
       let offset = 0;
-      if (pagination?.after) {
+      if (pagination?.page && pagination.page > 0) {
+        offset = (pagination.page - 1) * first;
+        qb.skip(offset);
+      } else if (pagination?.after) {
         const decoded = decodeCursor(pagination.after);
         if (/^\d+$/.test(decoded)) {
           offset = parseInt(decoded) + 1;

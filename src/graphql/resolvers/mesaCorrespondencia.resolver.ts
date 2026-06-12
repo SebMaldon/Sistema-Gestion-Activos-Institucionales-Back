@@ -37,7 +37,9 @@ export const mesaCorrespondenciaResolver = {
       const first = Math.min(pagination?.first ?? 30, 20000);
 
       let skip = 0;
-      if (pagination?.after) {
+      if (pagination?.page && pagination.page > 0) {
+        skip = (pagination.page - 1) * first;
+      } else if (pagination?.after) {
         skip = parseInt(Buffer.from(pagination.after, 'base64').toString('ascii'), 10);
         if (isNaN(skip)) skip = 0;
       }

@@ -386,7 +386,9 @@ export const bienesResolvers = {
       const first = Math.min(pagination?.first ?? 20, 20000);
 
       let skip = 0;
-      if (pagination?.after) {
+      if (pagination?.page && pagination.page > 0) {
+        skip = (pagination.page - 1) * first;
+      } else if (pagination?.after) {
         skip = parseInt(decodeCursor(pagination.after), 10);
         if (isNaN(skip)) skip = 0;
       }
