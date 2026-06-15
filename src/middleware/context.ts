@@ -39,6 +39,11 @@ export async function buildContext({ req }: { req: Request }): Promise<GraphQLCo
   
   const userAgent = req.headers['user-agent'] || 'Desconocido';
 
+  // DEBUG temporal — remover después
+  if (req.method === 'POST' && req.path.includes('graphql')) {
+    console.log('[IP-DEBUG] xff:', req.headers['x-forwarded-for'], '| req.ip:', req.ip, '| socket:', req.socket?.remoteAddress, '| final:', clientIp);
+  }
+
   if (!authHeader?.startsWith('Bearer ')) {
     return { loaders, origen, clientIp, userAgent };
   }
