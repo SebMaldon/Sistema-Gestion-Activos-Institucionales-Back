@@ -459,6 +459,23 @@ export const typeDefs = gql`
     estado_garantia: String!
     bien: Bien
     proveedorObj: Proveedor
+    reportes: [ReporteGarantia!]
+  }
+
+  type ReporteGarantia {
+    id_reporte_garantia: ID!
+    id_garantia: Int!
+    id_bien: ID!
+    num_serie: String
+    estatus: String!
+    descripcion_falla: String!
+    resolucion: String
+    fecha_reporte: DateTime
+    fecha_resolucion: DateTime
+    id_usuario_registra: Int
+    garantiaObj: Garantia
+    bien: Bien
+    usuarioRegistra: Usuario
   }
 
   # ─── INCIDENCIAS ────────────────────────────────────────
@@ -727,6 +744,7 @@ export const typeDefs = gql`
     garantias(id_bien: ID, estado_garantia: String): [Garantia!]!
     garantia(id_garantia: ID!): Garantia
     garantiasPorVencer(diasAlerta: Int): [Garantia!]!
+    reportesPorGarantia(id_garantia: ID!): [ReporteGarantia!]!
 
     # ── Tipos de Incidencia
     tiposIncidencia: [TipoIncidencia!]!
@@ -1236,6 +1254,24 @@ export const typeDefs = gql`
       estado_garantia: String
     ): Garantia!
     deleteGarantia(id_garantia: ID!): Boolean!
+
+    createReporteGarantia(
+      id_garantia: ID!
+      id_bien: ID!
+      num_serie: String
+      estatus: String
+      descripcion_falla: String!
+      resolucion: String
+    ): ReporteGarantia!
+    
+    updateReporteGarantia(
+      id_reporte_garantia: ID!
+      estatus: String
+      descripcion_falla: String
+      resolucion: String
+    ): ReporteGarantia!
+    
+    deleteReporteGarantia(id_reporte_garantia: ID!): Boolean!
 
     # ── Tipos de Incidencia
     createTipoIncidencia(nombre_tipo: String!): TipoIncidencia!

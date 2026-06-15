@@ -38,6 +38,7 @@ import { Archivo } from '../entities/Archivo';
 import { MesaCorrespondencia } from '../entities/MesaCorrespondencia';
 import { RegistroSalida } from '../entities/RegistroSalida';
 import { RegistroSalidaBien } from '../entities/RegistroSalidaBien';
+import { ReporteGarantia } from '../entities/ReporteGarantia';
 import { logger } from '../utils/logger';
 import { BitacoraSubscriber } from '../subscribers/BitacoraSubscriber';
 
@@ -72,7 +73,7 @@ export const AppDataSource = new DataSource({
     BienAtributo, CatAtributoTecnico, AtributoPorTipoDispositivo, Segmento,
     UnidadACargo, Contacto, BienMonitor, SolicitudCambio,
     CuentaPC, ProgramasPC, Archivo, MesaCorrespondencia,
-    RegistroSalida, RegistroSalidaBien,
+    RegistroSalida, RegistroSalidaBien, ReporteGarantia,
   ],
   subscribers: [
     BitacoraSubscriber,

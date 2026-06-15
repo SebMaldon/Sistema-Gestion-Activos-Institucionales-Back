@@ -17,6 +17,7 @@ import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
 import { BienMonitor } from '../../entities/BienMonitor';
 import { CuentaPC } from '../../entities/CuentaPC';
+import { ReporteGarantia } from '../../entities/ReporteGarantia';
 
 function toMap<K, V>(items: V[], keyFn: (item: V) => K): Map<K, V> {
   return new Map<K, V>(items.map((item) => [keyFn(item), item] as [K, V]));
@@ -211,6 +212,23 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k.toLowerCase()) ?? []);
   });
 
+  // ── Reportes agrupados por id_garantia
+  const reportesByGarantiaLoader = new DataLoader<number, ReporteGarantia[]>(async (keys) => {
+    const numericKeys = keys.map(k => Number(k));
+    const items = await AppDataSource.getRepository(ReporteGarantia).find({
+      where: { id_garantia: In(numericKeys) },
+      order: { fecha_reporte: 'DESC' },
+    });
+    const map = new Map<number, ReporteGarantia[]>();
+    items.forEach((r: ReporteGarantia) => {
+      const key = Number(r.id_garantia);
+      const arr = map.get(key) ?? [];
+      arr.push(r);
+      map.set(key, arr);
+    });
+    return keys.map((k) => map.get(Number(k)) ?? []);
+  }, { maxBatchSize: 1000 });
+
   return {
     marcaLoader,
     tipoDispositivoLoader,
@@ -229,6 +247,7 @@ export function createDataLoaders() {
     notasByBienLoader,
     monitoresByBienLoader,
     cuentasPCByBienLoader,
+    reportesByGarantiaLoader,
   };
 }
 
