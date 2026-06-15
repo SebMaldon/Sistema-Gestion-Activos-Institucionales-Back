@@ -28,7 +28,7 @@ async function bootstrap() {
 
   // 2. Crear app Express
   const app = express();
-  app.set('trust proxy', true); // Confiar en X-Forwarded-For de proxies
+  app.set('trust proxy', 1); // Confiar en el primer proxy (ej. Nginx) para evitar la advertencia de express-rate-limit
   const httpServer = http.createServer(app);
 
   // 3. Seguridad
