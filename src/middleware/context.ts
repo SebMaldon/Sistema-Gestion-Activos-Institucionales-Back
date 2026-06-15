@@ -29,9 +29,13 @@ export async function buildContext({ req }: { req: Request }): Promise<GraphQLCo
   const origen = req.headers['x-origen'] as string | undefined;
   
   // Extraer IP real y User-Agent
-  let clientIp = req.headers['x-forwarded-for'] as string || req.socket?.remoteAddress || '';
-  if (clientIp.includes(',')) clientIp = clientIp.split(',')[0].trim();
-  if (clientIp === '::1' || clientIp === '::ffff:127.0.0.1') clientIp = 'localhost';
+  let clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+    || req.ip
+    || req.socket?.remoteAddress
+    || '';
+  // Limpiar IPv4 mapeadas a IPv6 (::ffff:x.x.x.x)
+  if (clientIp.startsWith('::ffff:')) clientIp = clientIp.slice(7);
+  if (clientIp === '::1' || clientIp === '127.0.0.1') clientIp = 'localhost';
   
   const userAgent = req.headers['user-agent'] || 'Desconocido';
 
