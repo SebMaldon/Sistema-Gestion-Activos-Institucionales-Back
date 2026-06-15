@@ -6,6 +6,7 @@ import { TipoIncidencia } from '../../entities/TipoIncidencia';
 import { Nota } from '../../entities/Nota';
 import { Bien } from '../../entities/Bien';
 import { Inmueble } from '../../entities/Inmueble';
+import { ReporteGarantia } from '../../entities/ReporteGarantia';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ValidationError } from '../../utils/errors';
@@ -40,6 +41,15 @@ export const transaccionalesResolvers = {
         .andWhere(`g.fecha_fin >= GETDATE()`)
         .orderBy('g.fecha_fin', 'ASC')
         .getMany();
+    },
+
+    reportesPorGarantia: async (_: unknown, { id_garantia }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(ReporteGarantia).find({
+        where: { id_garantia: parseInt(id_garantia) },
+        relations: ['usuarioRegistra'],
+        order: { fecha_reporte: 'DESC' }
+      });
     },
 
     // ── Tipos de Incidencia
@@ -179,6 +189,69 @@ export const transaccionalesResolvers = {
       requireRole(context, [ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Garantia);
       const item = await repo.findOne({ where: { id_garantia: parseInt(id_garantia) } });
+      if (item) {
+        await repo.remove(item);
+      }
+      return true;
+    },
+
+    // ── Reportes de Garantía
+    createReporteGarantia: async (_: unknown, args: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      if (!args.descripcion_falla || args.descripcion_falla.trim() === '') {
+        throw new ValidationError('Por favor, indica la descripción de la falla.');
+      }
+
+      const repo = AppDataSource.getRepository(ReporteGarantia);
+      const nuevoReporte = repo.create({
+        id_garantia: parseInt(args.id_garantia),
+        id_bien: args.id_bien,
+        num_serie: args.num_serie,
+        estatus: args.estatus,
+        descripcion_falla: args.descripcion_falla,
+        resolucion: args.resolucion,
+        id_usuario_registra: context.user!.id_usuario,
+      } as any);
+
+      // Si el estatus es 'Resuelto / Entregado', marcamos la fecha de resolución actual
+      if (args.estatus === 'Resuelto / Entregado') {
+        (nuevoReporte as any).fecha_resolucion = new Date();
+      }
+
+      return repo.save(nuevoReporte);
+    },
+
+    updateReporteGarantia: async (_: unknown, { id_reporte_garantia, ...updates }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(ReporteGarantia);
+      const item = await repo.findOne({ where: { id_reporte_garantia: parseInt(id_reporte_garantia) } });
+      if (!item) throw new NotFoundError('ReporteGarantia');
+
+      if (updates.descripcion_falla !== undefined && updates.descripcion_falla.trim() === '') {
+        throw new ValidationError('La descripción de la falla no puede estar vacía.');
+      }
+
+      // Si cambia a resuelto y no lo estaba, establecer fecha. Si cambia a otro, borrar fecha
+      if (updates.estatus !== undefined) {
+        if (updates.estatus === 'Resuelto / Entregado' && item.estatus !== 'Resuelto / Entregado') {
+          item.fecha_resolucion = new Date();
+        } else if (updates.estatus !== 'Resuelto / Entregado' && item.estatus === 'Resuelto / Entregado') {
+          item.fecha_resolucion = null as any;
+        }
+      }
+
+      repo.merge(item, updates);
+      return repo.save(item);
+    },
+
+    deleteReporteGarantia: async (_: unknown, { id_reporte_garantia }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.MAESTRO]);
+      const repo = AppDataSource.getRepository(ReporteGarantia);
+      const item = await repo.findOne({ where: { id_reporte_garantia: parseInt(id_reporte_garantia) } });
       if (item) {
         await repo.remove(item);
       }
@@ -416,6 +489,17 @@ export const transaccionalesResolvers = {
       AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
     proveedorObj: async (parent: Garantia) =>
       parent.id_proveedor ? AppDataSource.getRepository(Proveedor).findOne({ where: { id_proveedor: parent.id_proveedor } }) : null,
+    reportes: (parent: Garantia, _: unknown, context: GraphQLContext) =>
+      context.loaders.reportesByGarantiaLoader.load(parent.id_garantia),
+  },
+
+  ReporteGarantia: {
+    garantiaObj: async (parent: ReporteGarantia) =>
+      AppDataSource.getRepository(Garantia).findOne({ where: { id_garantia: parent.id_garantia } }),
+    bien: async (parent: ReporteGarantia) =>
+      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
+    usuarioRegistra: (parent: ReporteGarantia, _: unknown, context: GraphQLContext) =>
+      parent.id_usuario_registra ? context.loaders.usuarioLoader.load(parent.id_usuario_registra) : null,
   },
 
   Incidencia: {

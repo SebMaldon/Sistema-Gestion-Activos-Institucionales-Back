@@ -95,7 +95,10 @@ export const mesaCorrespondenciaResolver = {
         if (input.Tipo === 1 && (!input.NoOficio || input.NoOficio.trim() === '')) {
             const lastOficio = await transactionalEntityManager
               .createQueryBuilder(MesaCorrespondencia, 'mc')
-              .select('MAX(TRY_CAST(mc.NoOficio AS INT))', 'maxOficio')
+              .select('TRY_CAST(mc.NoOficio AS INT)', 'maxOficio')
+              .where('mc.Tipo = :tipo', { tipo: 1 })
+              .andWhere('TRY_CAST(mc.NoOficio AS INT) IS NOT NULL')
+              .orderBy('mc.Folio', 'DESC')
               .getRawOne();
             
             const nextOficio = (lastOficio?.maxOficio || 0) + 1;
