@@ -1214,3 +1214,60 @@ USE [master]
 GO
 ALTER DATABASE [inventario] SET  READ_WRITE 
 GO
+
+-- Qwery nuevo para manejar las garantias
+USE [inventario]
+GO
+
+/****** Objeto: Table [dbo].[Reportes_Garantia] ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[Reportes_Garantia](
+	[id_reporte_garantia] [int] IDENTITY(1,1) NOT NULL,
+	[id_garantia] [int] NOT NULL,
+	[id_bien] [uniqueidentifier] NOT NULL,
+	[num_serie] [varchar](50) NULL,
+	[estatus] [varchar](50) NOT NULL,
+	[descripcion_falla] [nvarchar](max) NOT NULL,
+	[resolucion] [nvarchar](max) NULL,
+	[fecha_reporte] [datetime] NULL,
+	[fecha_resolucion] [datetime] NULL,
+	[id_usuario_registra] [int]  NULL,
+ CONSTRAINT [PK_Reportes_Garantia] PRIMARY KEY CLUSTERED 
+(
+	[id_reporte_garantia] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+
+-- Configurar valores por defecto (Default Constraints)
+ALTER TABLE [dbo].[Reportes_Garantia] ADD DEFAULT ('ENVIADO A PROVEEDOR') FOR [estatus]
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] ADD DEFAULT (CONVERT([datetime],((getutcdate() AT TIME ZONE 'UTC') AT TIME ZONE 'Mountain Standard Time (Mexico)'))) FOR [fecha_reporte]
+GO
+
+-- Crear Llaves Foráneas (Foreign Keys)
+-- 1. Relación con la tabla Garantias
+ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Garantias] FOREIGN KEY([id_garantia])
+REFERENCES [dbo].[Garantias] ([id_garantia])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Garantias]
+GO
+
+-- 2. Relación con la tabla Bienes (usando el uniqueidentifier)
+ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Bienes] FOREIGN KEY([id_bien])
+REFERENCES [dbo].[Bienes] ([id_bien])
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Bienes]
+GO
+
+-- 3. Relación con la tabla Usuarios (para auditoría de quién lo mandó)
+ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Usuarios] FOREIGN KEY([id_usuario_registra])
+REFERENCES [dbo].[Usuarios] ([id_usuario])
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Usuarios]
+GO
