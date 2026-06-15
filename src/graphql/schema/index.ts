@@ -1025,7 +1025,7 @@ export const typeDefs = gql`
   # ─────────────────────────────────────────────────────────
   type Mutation {
     # ── Auth
-    login(matricula: String!, password: String!): AuthPayload!
+    login(matricula: String!, password: String!, equipoInfo: String): AuthPayload!
     changePassword(id_usuario: ID!, currentPassword: String!, newPassword: String!): Boolean!
 
     # ── Catálogos — Marcas

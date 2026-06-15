@@ -21,7 +21,7 @@ export const authResolvers = {
   },
 
   Mutation: {
-    login: async (_: unknown, { matricula, password }: { matricula: string; password: string }) => {
+    login: async (_: unknown, { matricula, password, equipoInfo }: { matricula: string; password: string; equipoInfo?: string }, context: GraphQLContext) => {
       if (!matricula || !password) {
         throw new ValidationError('Matrícula y contraseña son requeridos');
       }
@@ -55,14 +55,24 @@ export const authResolvers = {
 
       logger.info(`Login exitoso: ${matricula} (rol: ${usuario.id_rol})`);
       
-      // Registrar en bitácora
-      await registrarBitacora(
-        usuario.id_usuario,
-        'LOGIN',
-        'Usuarios',
-        String(usuario.id_usuario),
-        { info: `Sesión iniciada correctamente por ${usuario.nombre_completo || usuario.matricula}` }
-      );
+      let infoAdicional = '';
+      if (equipoInfo) {
+        infoAdicional = ` desde el equipo (App Win): ${equipoInfo}`;
+      } else if (context.clientIp) {
+        infoAdicional = ` desde IP: ${context.clientIp} (${context.userAgent || 'Web'})`;
+      }
+
+      // Omitir bitácora para usuario autosync (solo logins, sus ediciones sí se registran)
+      const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
+      if (usuario.matricula !== autoSyncUser) {
+        await registrarBitacora(
+          usuario.id_usuario,
+          'LOGIN',
+          'Usuarios',
+          String(usuario.id_usuario),
+          { info: `Sesión iniciada correctamente por ${usuario.nombre_completo || usuario.matricula}${infoAdicional}` }
+        );
+      }
 
       return {
         token,

@@ -28,6 +28,7 @@ async function bootstrap() {
 
   // 2. Crear app Express
   const app = express();
+  app.set('trust proxy', true); // Confiar en X-Forwarded-For de proxies
   const httpServer = http.createServer(app);
 
   // 3. Seguridad

@@ -103,11 +103,27 @@ export const solicitudesCambioResolvers = {
         throw new ValidationError('No se detectaron cambios para enviar.');
       }
 
-      // Función para comparar objetos sin importar el orden de las llaves
+      const normalizeForCompare = (obj: any): any => {
+        if (Array.isArray(obj)) {
+          const sorted = obj.map(normalizeForCompare);
+          // Ordenar arrays de objetos por num_serie si es posible
+          if (sorted.length > 0 && typeof sorted[0] === 'object' && sorted[0] !== null) {
+            sorted.sort((a: any, b: any) => {
+              const ka = a.num_serie || a.cuenta_windows || a.nombre_programa || JSON.stringify(a);
+              const kb = b.num_serie || b.cuenta_windows || b.nombre_programa || JSON.stringify(b);
+              return String(ka).localeCompare(String(kb));
+            });
+          }
+          return sorted;
+        }
+        if (obj && typeof obj === 'object') {
+          return Object.keys(obj).sort().reduce((acc: any, key) => { acc[key] = normalizeForCompare(obj[key]); return acc; }, {});
+        }
+        return obj;
+      };
+
       const isIdentical = (obj1: any, obj2: any) => {
-        const sorted1 = Object.keys(obj1 || {}).sort().reduce((acc, key) => { acc[key] = obj1[key]; return acc; }, {} as any);
-        const sorted2 = Object.keys(obj2 || {}).sort().reduce((acc, key) => { acc[key] = obj2[key]; return acc; }, {} as any);
-        return JSON.stringify(sorted1) === JSON.stringify(sorted2);
+        return JSON.stringify(normalizeForCompare(obj1)) === JSON.stringify(normalizeForCompare(obj2));
       };
 
       const repo = AppDataSource.getRepository(SolicitudCambio);
