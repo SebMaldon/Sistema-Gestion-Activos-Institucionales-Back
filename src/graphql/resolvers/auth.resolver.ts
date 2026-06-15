@@ -61,15 +61,18 @@ export const authResolvers = {
       } else if (context.clientIp) {
         infoAdicional = ` desde IP: ${context.clientIp} (${context.userAgent || 'Web'})`;
       }
-      
-      // Registrar en bitácora
-      await registrarBitacora(
-        usuario.id_usuario,
-        'LOGIN',
-        'Usuarios',
-        String(usuario.id_usuario),
-        { info: `Sesión iniciada correctamente por ${usuario.nombre_completo || usuario.matricula}${infoAdicional}` }
-      );
+
+      // Omitir bitácora para usuario autosync (solo logins, sus ediciones sí se registran)
+      const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
+      if (usuario.matricula !== autoSyncUser) {
+        await registrarBitacora(
+          usuario.id_usuario,
+          'LOGIN',
+          'Usuarios',
+          String(usuario.id_usuario),
+          { info: `Sesión iniciada correctamente por ${usuario.nombre_completo || usuario.matricula}${infoAdicional}` }
+        );
+      }
 
       return {
         token,
