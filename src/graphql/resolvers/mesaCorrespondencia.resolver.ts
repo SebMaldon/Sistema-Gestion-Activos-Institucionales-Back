@@ -96,6 +96,7 @@ export const mesaCorrespondenciaResolver = {
             const lastOficio = await transactionalEntityManager
               .createQueryBuilder(MesaCorrespondencia, 'mc')
               .select('MAX(TRY_CAST(mc.NoOficio AS INT))', 'maxOficio')
+              .where('mc.Tipo = :tipo', { tipo: 1 })
               .getRawOne();
             
             const nextOficio = (lastOficio?.maxOficio || 0) + 1;
