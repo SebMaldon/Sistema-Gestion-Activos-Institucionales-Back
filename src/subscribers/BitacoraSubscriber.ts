@@ -134,8 +134,21 @@ export class BitacoraSubscriber implements EntitySubscriberInterface {
     const store = sessionContext.getStore();
     const origen = store?.origen || event.queryRunner?.data?.origen || 'WEB';
     
-    // Evitar spam en auditoría cuando el agente WIN inserta programas uno por uno
-    if ((tablaAfectada === 'Programas_PC' || tablaAfectada === 'programas_pc') && origen.toUpperCase() === 'WIN') {
+    // Evitar spam en auditoría para notificaciones y otros que son internos o generan ruido
+    const tablasIgnoradasGlobalmente = [
+      'Notificaciones_Mensajes', 'notificaciones_mensajes',
+      'Notificaciones_Lectura', 'notificaciones_lectura'
+    ];
+
+    if (tablasIgnoradasGlobalmente.includes(tablaAfectada)) {
+      return;
+    }
+
+    // Evitar spam en auditoría cuando el agente WIN inserta masivamente
+    if (
+      (tablaAfectada === 'Programas_PC' || tablaAfectada === 'programas_pc' || tablaAfectada === 'Cuentas_PC' || tablaAfectada === 'cuentas_pc') && 
+      origen.toUpperCase() === 'WIN'
+    ) {
       return;
     }
 

@@ -18,6 +18,7 @@ import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Segmento } from '../../entities/Segmento';
 import { CuentaPC } from '../../entities/CuentaPC';
 import { ProgramasPC } from '../../entities/ProgramasPC';
+import { Bitacora } from '../../entities/Bitacora';
 import { EntityManager } from 'typeorm';
 
 // ── Interface: monitor detectado por WMI ──────────────────────────────────────
@@ -270,7 +271,7 @@ export const bienesResolvers = {
         const isIP = /^[0-9]{1,3}(\.[0-9]{1,3}){1,3}/.test(term);
         
         if (isIP) {
-          // Si es una IP, buscamos que coincida exactamente o en una lista separada por comas,
+          // Si es una IP, buscamos que coincida exactamente o en una lista separada por diagonal,
           // evitando que '11.1.19.20' coincida con '11.1.19.201'
           qb.andWhere(
             '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s ' +
@@ -282,9 +283,9 @@ export const bienesResolvers = {
             { 
               s: `%${term}%`,
               exact: term,
-              start: `${term},%`,
-              end: `%, ${term}`,
-              mid: `%, ${term},%`
+              start: `${term} /%`,
+              end: `%/ ${term}`,
+              mid: `%/ ${term} /%`
             }
           );
         } else {
@@ -401,19 +402,14 @@ export const bienesResolvers = {
       if (filter?.sort_by === 'id_serie') {
         qb.addSelect('COALESCE(b.num_inv, b.num_serie)', 'sort_id_serie');
         qb.orderBy('sort_id_serie', sortDir);
-      } else if (filter?.sort_by === 'modelo_categoria') {
-        if (!filter.tipo_disp?.length && !filter.clave_marca?.length) {
-          qb.leftJoin('Cat_Modelos', 'mod_sort', 'mod_sort.clave_modelo = b.clave_modelo');
-          qb.addSelect('mod_sort.descrip_disp');
-          qb.orderBy('mod_sort.descrip_disp', sortDir);
-        } else {
-          qb.addSelect('mod.descrip_disp');
-          qb.orderBy('mod.descrip_disp', sortDir);
-        }
-      } else if (filter?.sort_by === 'unidad_ubicacion') {
-        qb.leftJoin('Ubicaciones', 'ub_sort', 'ub_sort.id_ubicacion = b.id_ubicacion');
-        qb.addSelect('ub_sort.nombre_ubicacion');
-        qb.orderBy('ub_sort.nombre_ubicacion', sortDir);
+      } else if (filter?.sort_by === 'host') {
+        qb.leftJoin('Especificaciones_TI', 'ti_sort', 'ti_sort.id_bien = b.id_bien');
+        qb.addSelect('ti_sort.nombre_host');
+        qb.orderBy('ti_sort.nombre_host', sortDir);
+      } else if (filter?.sort_by === 'unidad') {
+        qb.leftJoin('unidades', 'uni_sort', 'uni_sort.clave = b.clave_unidad_ref');
+        qb.addSelect('uni_sort.descripcion');
+        qb.orderBy('uni_sort.descripcion', sortDir);
       } else if (filter?.sort_by === 'resguardo') {
         qb.leftJoin('Usuarios', 'usr_sort', 'usr_sort.id_usuario = b.id_usuario_resguardo');
         qb.addSelect('usr_sort.nombre_completo');
@@ -1060,6 +1056,20 @@ export const bienesResolvers = {
           const toSave = cuentas.map(c => repo.create({ id_bien, ...c }));
           await repo.save(toSave);
         }
+        
+        const bitacoraRepo = manager.getRepository(Bitacora);
+        await bitacoraRepo.save(bitacoraRepo.create({
+          id_usuario: context.user!.id_usuario,
+          accion: 'CREACION_MASIVA',
+          tabla_afectada: 'Cuentas_PC',
+          registro_afectado: id_bien,
+          detalles_movimiento: JSON.stringify({ 
+            mensaje: `Se sincronizaron ${cuentas ? cuentas.length : 0} cuentas_pc.`,
+            cuentas: cuentas
+          }),
+          origen: context.origen || 'WIN'
+        }));
+
         return true;
       });
     },
@@ -1160,6 +1170,19 @@ export const bienesResolvers = {
           const toSave = repo.create(uniqueProgramas);
           await repo.save(toSave, { chunk: 100 });
         }
+        
+        const bitacoraRepo = manager.getRepository(Bitacora);
+        await bitacoraRepo.save(bitacoraRepo.create({
+          id_usuario: context.user!.id_usuario,
+          accion: 'CREACION_MASIVA',
+          tabla_afectada: 'Programas_PC',
+          registro_afectado: id_bien,
+          detalles_movimiento: JSON.stringify({ 
+            mensaje: `Se sincronizaron ${programas ? programas.length : 0} programas.` 
+          }),
+          origen: context.origen || 'WIN'
+        }));
+
         return true;
       });
     },
