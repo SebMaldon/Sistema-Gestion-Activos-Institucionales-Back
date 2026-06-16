@@ -59,7 +59,7 @@ export const authResolvers = {
       if (equipoInfo) {
         infoAdicional = ` desde el equipo (App Win): ${equipoInfo}`;
       } else if (context.clientIp) {
-        infoAdicional = ` desde IP: ${context.clientIp} (${context.userAgent || 'Web'})`;
+        infoAdicional = ` desde IP: ${context.clientIp}`;
       }
 
       // Omitir bitácora para usuario autosync (solo logins, sus ediciones sí se registran)
