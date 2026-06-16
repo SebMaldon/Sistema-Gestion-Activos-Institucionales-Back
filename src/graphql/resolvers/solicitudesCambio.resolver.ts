@@ -99,7 +99,21 @@ export const solicitudesCambioResolvers = {
         throw new ValidationError('El campo datosNuevos no es un JSON válido.');
       }
 
+      // Guardado directo de id_usuario_resguardo para actualizaciones
+      let userResguardoDirecto = false;
+      if (!parsed._esCreacion && parsed.id_usuario_resguardo !== undefined) {
+        const bienRepo = AppDataSource.getRepository(Bien);
+        const nuevoResguardo = parsed.id_usuario_resguardo === '' ? null : parsed.id_usuario_resguardo;
+        await bienRepo.update({ id_bien: idBien }, { id_usuario_resguardo: nuevoResguardo });
+        delete parsed.id_usuario_resguardo;
+        userResguardoDirecto = true;
+      }
+
       if (Object.keys(parsed).length === 0) {
+        if (userResguardoDirecto) {
+          // Si solo venía el usuario y ya se guardó, retornamos un dummy
+          return { id: -1, bien_id: idBien, estado: 'APROBADO', datos_nuevos: '{}' };
+        }
         throw new ValidationError('No se detectaron cambios para enviar.');
       }
 

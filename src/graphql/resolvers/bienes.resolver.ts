@@ -823,14 +823,14 @@ export const bienesResolvers = {
         await cuentaRepo.delete({ id_bien });
         await progRepo.delete({ id_bien });
         await specRepo.update({ id_bien }, {
-          dir_ip: null,
-          nombre_host: null,
-          modelo_so: null,
-          version_office: null,
-          windows_serial: null,
-          last_scan: null,
-          puerto_red: null,
-          switch_red: null
+          dir_ip: null as any,
+          nombre_host: null as any,
+          modelo_so: null as any,
+          version_office: null as any,
+          windows_serial: null as any,
+          last_scan: null as any,
+          puerto_red: null as any,
+          switch_red: null as any
         });
       }
 
