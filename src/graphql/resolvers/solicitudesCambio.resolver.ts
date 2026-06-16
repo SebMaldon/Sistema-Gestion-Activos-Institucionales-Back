@@ -292,6 +292,21 @@ export const solicitudesCambioResolvers = {
           // Campos desconocidos se ignoran silenciosamente
         }
 
+        if (bienUpdates.estatus_operativo === 'INACTIVO') {
+          specUpdates.dir_ip = null;
+          specUpdates.nombre_host = null;
+          specUpdates.modelo_so = null;
+          specUpdates.version_office = null;
+          specUpdates.windows_serial = null;
+          specUpdates.last_scan = null;
+          specUpdates.puerto_red = null;
+          specUpdates.switch_red = null;
+          
+          datos.cuentasList = [];
+          datos.programas = [];
+          Object.keys(cuentaUpdates).forEach(k => delete cuentaUpdates[k]);
+        }
+
         // ── Verificar que el bien existe ──
         let bien = null;
         if (solicitud.bien_id) {

@@ -815,6 +815,25 @@ export const bienesResolvers = {
 
 
 
+      if (updates.estatus_operativo === 'INACTIVO') {
+        const cuentaRepo = AppDataSource.getRepository(CuentaPC);
+        const progRepo = AppDataSource.getRepository(ProgramasPC);
+        const specRepo = AppDataSource.getRepository(EspecificacionTI);
+
+        await cuentaRepo.delete({ id_bien });
+        await progRepo.delete({ id_bien });
+        await specRepo.update({ id_bien }, {
+          dir_ip: null,
+          nombre_host: null,
+          modelo_so: null,
+          version_office: null,
+          windows_serial: null,
+          last_scan: null,
+          puerto_red: null,
+          switch_red: null
+        });
+      }
+
       updates.fecha_actualizacion = new Date();
       repo.merge(bien, updates);
       return repo.save(bien);
