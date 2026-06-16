@@ -81,7 +81,7 @@ export const transaccionalesResolvers = {
       if (id_usuario_genera_reporte) qb.andWhere('i.id_usuario_genera_reporte = :ug', { ug: id_usuario_genera_reporte });
       if (id_unidad) qb.andWhere('i.id_unidad = :un', { un: id_unidad });
       if (search) {
-        qb.andWhere('(i.descripcion_falla LIKE :s OR i.resolucion_textual LIKE :s OR i.alias LIKE :s)', {
+        qb.andWhere('(i.descripcion_falla LIKE :s OR i.resolucion_textual LIKE :s OR i.alias LIKE :s OR i.requerimiento LIKE :s)', {
           s: `%${search}%`,
         });
       }

@@ -95,6 +95,7 @@ export const resolvers = {
   BienMonitor: bienesResolvers.BienMonitor,
   EspecificacionTI: bienesResolvers.EspecificacionTI,
   Garantia: transaccionalesResolvers.Garantia,
+  ReporteGarantia: transaccionalesResolvers.ReporteGarantia,
   Incidencia: transaccionalesResolvers.Incidencia,
   Nota: transaccionalesResolvers.Nota,
   MovimientoInventario: movimientosResolvers.MovimientoInventario,
