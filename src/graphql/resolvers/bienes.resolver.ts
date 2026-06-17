@@ -879,6 +879,15 @@ export const bienesResolvers = {
         throw new ValidationError('No hay un bien asociado a las especificaciones. Guarde el bien general primero.');
       }
 
+      // Si el equipo está INACTIVO, no se deben guardar especificaciones TI
+      const bienRepo = AppDataSource.getRepository(Bien);
+      const bienCheck = await bienRepo.findOne({ where: { id_bien } });
+      if (bienCheck?.estatus_operativo === 'INACTIVO') {
+        const specRepo = AppDataSource.getRepository(EspecificacionTI);
+        const existingSpec = await specRepo.findOne({ where: { id_bien } });
+        return existingSpec || null;
+      }
+
       // -- Auto-assign id_segmento based on dir_ip --
       if (specs.dir_ip && specs.dir_ip.trim() !== '') {
         try {

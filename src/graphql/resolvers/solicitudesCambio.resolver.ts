@@ -319,6 +319,12 @@ export const solicitudesCambioResolvers = {
           datos.cuentasList = [];
           datos.programas = [];
           Object.keys(cuentaUpdates).forEach(k => delete cuentaUpdates[k]);
+          
+          // Forzar que se procesen los arrays vacíos para que borre de la BD
+          if (camposAprobados) {
+            if (!camposAprobados.includes('cuentasList')) camposAprobados.push('cuentasList');
+            if (!camposAprobados.includes('programas')) camposAprobados.push('programas');
+          }
         }
 
         // ── Verificar que el bien existe ──
