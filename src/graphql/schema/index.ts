@@ -395,6 +395,8 @@ export const typeDefs = gql`
     garantia_vigente: Boolean
     garantia_fin_desde: Date
     garantia_fin_hasta: Date
+    # Agent filter
+    tiene_agente: Boolean
     # EAV attribute filter
     atributo_id: Int
     atributo_valor: String

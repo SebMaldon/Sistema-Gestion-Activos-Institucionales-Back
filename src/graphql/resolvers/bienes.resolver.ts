@@ -234,6 +234,7 @@ export interface BienesFilter {
   con_notas_recientes?: boolean;
   sin_inventario?: boolean;
   inconvenientes?: boolean;
+  tiene_agente?: boolean;
   // Sorting
   sort_by?: string;
   sort_dir?: string;
@@ -342,7 +343,15 @@ export const bienesResolvers = {
         qb.innerJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
         if (filter.garantia_vigente === true) qb.andWhere("gf.estado_garantia = 'VIGENTE'");
         if (filter.garantia_fin_desde) qb.andWhere('gf.fecha_fin >= :gfd', { gfd: filter.garantia_fin_desde });
-        if (filter.garantia_fin_hasta) qb.andWhere('gf.fecha_fin <= :gfh', { gfh: filter.garantia_fin_hasta });
+      }
+      
+      // ── Agent installed filter ───────────────────────────────
+      if (filter?.tiene_agente !== undefined && filter?.tiene_agente !== null) {
+        if (filter.tiene_agente) {
+          qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+        } else {
+          qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+        }
       }
 
       // ── Quick Filters ────────────────────────────────────────
