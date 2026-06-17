@@ -57,11 +57,11 @@ export async function procesarMonitoresHelper(
   const catRepo = manager.getRepository(CatCategoriaActivo);
   const umRepo = manager.getRepository(CatUnidadMedida);
 
-  const catComputo = await catRepo
+  const catInformatico = await catRepo
     .createQueryBuilder('c')
-    .where("LOWER(c.nombre_categoria) LIKE '%computo%' OR LOWER(c.nombre_categoria) LIKE '%cómputo%'")
+    .where("LOWER(c.nombre_categoria) LIKE '%informatico%' OR LOWER(c.nombre_categoria) LIKE '%informático%'")
     .getOne();
-  const id_categoria = catComputo?.id_categoria ?? 1;
+  const id_categoria = catInformatico?.id_categoria ?? 7;
 
   const umPza = await umRepo
     .createQueryBuilder('u')
