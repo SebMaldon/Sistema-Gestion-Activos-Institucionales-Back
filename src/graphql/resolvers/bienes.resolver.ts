@@ -172,8 +172,7 @@ export async function procesarMonitoresHelper(
       bienMon.clave_modelo = clave_modelo;
       await bienRepo.save(bienMon);
     }
-
-    idsMonitoresNuevos.push(bienMon.id_bien);
+    idsMonitoresNuevos.push(bienMon.id_bien.toLowerCase());
 
     // 3. Desconectar monitor de equipo anterior si existe
     const relVieja = await bmRepo.findOne({ where: { id_monitor: bienMon.id_bien } });
@@ -191,7 +190,7 @@ export async function procesarMonitoresHelper(
   // 5. Desvincular monitores viejos que ya no estén conectados físicamente
   const relsActuales = await bmRepo.find({ where: { id_bien: id_bien_pc } });
   for (const rel of relsActuales) {
-    if (!idsMonitoresNuevos.includes(rel.id_monitor)) {
+    if (!idsMonitoresNuevos.includes(rel.id_monitor.toLowerCase())) {
       await bmRepo.remove(rel);
     }
   }
