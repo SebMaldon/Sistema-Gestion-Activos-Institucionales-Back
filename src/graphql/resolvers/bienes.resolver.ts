@@ -227,6 +227,11 @@ export interface BienesFilter {
   garantia_vigente?: boolean;
   garantia_fin_desde?: string;
   garantia_fin_hasta?: string;
+  // Dates
+  fecha_adquisicion_desde?: string;
+  fecha_adquisicion_hasta?: string;
+  fecha_actualizacion_desde?: string;
+  fecha_actualizacion_hasta?: string;
   // EAV
   atributo_id?: number;
   atributo_valor?: string;
@@ -284,9 +289,9 @@ export const bienesResolvers = {
             { 
               s: `%${term}%`,
               exact: term,
-              start: `${term} /%`,
-              end: `%/ ${term}`,
-              mid: `%/ ${term} /%`
+              start: `${term}/%`,
+              end: `%/${term}`,
+              mid: `%/${term}/%`
             }
           );
         } else {
@@ -391,6 +396,20 @@ export const bienesResolvers = {
         qb.andWhere('ba.valor LIKE :aval', { aval: `%${filter.atributo_valor}%` });
       }
 
+      // ── Dates ──────────────────────────────────────────────
+      if (filter?.fecha_adquisicion_desde) {
+        qb.andWhere('b.fecha_adquisicion >= :fad', { fad: filter.fecha_adquisicion_desde });
+      }
+      if (filter?.fecha_adquisicion_hasta) {
+        qb.andWhere('b.fecha_adquisicion <= :fah', { fah: filter.fecha_adquisicion_hasta });
+      }
+      if (filter?.fecha_actualizacion_desde) {
+        qb.andWhere('b.fecha_actualizacion >= :facd', { facd: filter.fecha_actualizacion_desde });
+      }
+      if (filter?.fecha_actualizacion_hasta) {
+        qb.andWhere('b.fecha_actualizacion <= :fach', { fach: filter.fecha_actualizacion_hasta });
+      }
+
       // ── Count + Pagination ───────────────────────────────────
       const totalCount = await qb.getCount();
       const first = Math.min(pagination?.first ?? 20, 20000);
@@ -444,6 +463,10 @@ export const bienesResolvers = {
           qb.addSelect(`TRY_CAST(PARSENAME(${ipExpr}, 1) AS INT)`, 'ip_4');
           qb.orderBy('ip_1', sortDir).addOrderBy('ip_2', sortDir).addOrderBy('ip_3', sortDir).addOrderBy('ip_4', sortDir);
         }
+      } else if (filter?.sort_by === 'fecha_actualizacion') {
+        qb.orderBy('b.fecha_actualizacion', sortDir);
+      } else if (filter?.sort_by === 'fecha_adquisicion') {
+        qb.orderBy('b.fecha_adquisicion', sortDir);
       } else {
         qb.orderBy('b.fecha_actualizacion', 'DESC');
       }
@@ -500,9 +523,9 @@ export const bienesResolvers = {
         .orWhere('b.num_inv = :termino', { termino })
         .orWhere('(e.dir_ip = :termino OR e.dir_ip LIKE :termino_start OR e.dir_ip LIKE :termino_end OR e.dir_ip LIKE :termino_mid)', { 
            termino: termino, 
-           termino_start: termino + ',%', 
-           termino_end: '% ' + termino, 
-           termino_mid: '%, ' + termino + ',%' 
+           termino_start: termino + '/%', 
+           termino_end: '%/' + termino, 
+           termino_mid: '%/' + termino + '/%' 
         })
         .getMany();
     },
@@ -527,9 +550,9 @@ export const bienesResolvers = {
         .leftJoinAndSelect('b.modelo', 'm')
         .where('(e.dir_ip = :dir_ip OR e.dir_ip LIKE :start OR e.dir_ip LIKE :end OR e.dir_ip LIKE :mid)', { 
           dir_ip: dir_ip.trim(),
-          start: `${dir_ip.trim()} /%`,
-          end: `%/ ${dir_ip.trim()}`,
-          mid: `%/ ${dir_ip.trim()} /%`
+          start: `${dir_ip.trim()}/%`,
+          end: `%/${dir_ip.trim()}`,
+          mid: `%/${dir_ip.trim()}/%`
         });
       if (id_bien_exclude) {
         qb.andWhere('b.id_bien != :id_bien_exclude', { id_bien_exclude });
@@ -630,13 +653,13 @@ export const bienesResolvers = {
         .createQueryBuilder()
         .update(EspecificacionTI)
         .set({ 
-          dir_ip: () => `REPLACE(REPLACE(REPLACE(dir_ip, ' / ${cleanIp}', ''), '${cleanIp} / ', ''), '${cleanIp}', '')` 
+          dir_ip: () => `REPLACE(REPLACE(REPLACE(dir_ip, '/${cleanIp}', ''), '${cleanIp}/', ''), '${cleanIp}', '')` 
         })
         .where('(dir_ip = :cleanIp OR dir_ip LIKE :start OR dir_ip LIKE :end OR dir_ip LIKE :mid)', {
           cleanIp,
-          start: `${cleanIp} /%`,
-          end: `%/ ${cleanIp}`,
-          mid: `%/ ${cleanIp} /%`
+          start: `${cleanIp}/%`,
+          end: `%/${cleanIp}`,
+          mid: `%/${cleanIp}/%`
         });
       if (id_bien_exclude) {
         qb.andWhere('id_bien != :id_bien_exclude', { id_bien_exclude });

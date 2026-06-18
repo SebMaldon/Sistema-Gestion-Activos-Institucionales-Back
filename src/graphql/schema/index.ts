@@ -404,6 +404,11 @@ export const typeDefs = gql`
     con_notas_recientes: Boolean
     inconvenientes: Boolean
     sin_inventario: Boolean
+    # Dates
+    fecha_adquisicion_desde: Date
+    fecha_adquisicion_hasta: Date
+    fecha_actualizacion_desde: DateTime
+    fecha_actualizacion_hasta: DateTime
     # Sorting
     sort_by: String
     sort_dir: String
