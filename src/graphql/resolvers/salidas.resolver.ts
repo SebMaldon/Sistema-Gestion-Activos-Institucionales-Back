@@ -53,6 +53,7 @@ export const salidasResolvers = {
         .leftJoinAndSelect('rs.usuarioRegistra', 'u')
         .leftJoinAndSelect('rs.bienes', 'b')
         .leftJoinAndSelect('b.bienRef', 'bienRef')
+        .leftJoinAndSelect('bienRef.modelo', 'modelo')
         .orderBy('rs.id_salida', 'DESC');
 
       if (filter) {
@@ -75,7 +76,12 @@ export const salidasResolvers = {
           qb.andWhere(new Brackets(b => {
             b.where('rs.folio LIKE :search', { search: `%${filter.search}%` })
              .orWhere('rs.solicitante LIKE :search', { search: `%${filter.search}%` })
-             .orWhere('rs.motivo LIKE :search', { search: `%${filter.search}%` });
+             .orWhere('rs.motivo LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('bienRef.num_serie LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('bienRef.num_inv LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('CAST(bienRef.id_bien AS VARCHAR(36)) LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('modelo.descrip_disp LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('b.cantidad_o_id LIKE :search', { search: `%${filter.search}%` });
           }));
         }
       }
