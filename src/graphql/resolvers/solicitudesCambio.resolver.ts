@@ -103,6 +103,14 @@ export const solicitudesCambioResolvers = {
         throw new ValidationError('No se detectaron cambios para enviar.');
       }
 
+      const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
+      if (context.user?.matricula === autoSyncUser) {
+        delete parsed.cuentasList;
+        delete parsed.cuenta_windows;
+        delete parsed.correo;
+        delete parsed.tipo_user;
+      }
+
       const normalizeForCompare = (obj: any): any => {
         if (Array.isArray(obj)) {
           const sorted = obj.map(normalizeForCompare);

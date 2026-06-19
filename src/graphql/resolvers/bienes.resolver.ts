@@ -1108,6 +1108,12 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
+      
+      const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
+      if (context.user?.matricula === autoSyncUser) {
+        return true;
+      }
+      
       return AppDataSource.transaction(async (manager) => {
         const repo = manager.getRepository(CuentaPC);
         await repo.delete({ id_bien });
