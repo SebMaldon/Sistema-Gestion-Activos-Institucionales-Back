@@ -355,6 +355,7 @@ export const typeDefs = gql`
     equipoAsignado: BienMonitor
     programasPC: [ProgramasPC!]
     inconvenientes: [String!]
+    tiene_cambios_pendientes: Boolean
   }
 
   type BienEdge {

@@ -70,6 +70,35 @@ async function notificarCambioPendiente(user: any, parsed: any, idBien: string) 
   }
 }
 
+/**
+ * Al resolver una solicitud (aprobar o rechazar), eliminar las notificaciones
+ * de 'Solicitud de Cambio Pendiente' relacionadas con ese bien.
+ * Se busca por título + bien_id en el mensaje (ya que no hay FK directa).
+ */
+async function resolverNotificacionesSolicitud(bien_id: string): Promise<void> {
+  try {
+    // Buscar el activo para obtener su identificador (num_serie)
+    const bien = await AppDataSource.getRepository(Bien).findOne({
+      where: { id_bien: bien_id },
+      select: ['id_bien', 'num_serie'],
+    });
+    const identificador = bien?.num_serie || bien_id;
+
+    // Eliminar mensajes de notificación de solicitud pendiente para este activo
+    // El CASCADE en BD elimina también las lecturas asociadas
+    await AppDataSource.query(
+      `DELETE FROM Notificaciones_Mensajes
+       WHERE titulo = 'Solicitud de Cambio Pendiente'
+         AND tipo_audiencia = 'ROL'
+         AND id_audiencia = @0
+         AND (mensaje LIKE @1 OR mensaje LIKE @2)`,
+      [ROLES.MAESTRO, `%${identificador}%`, `%${bien_id}%`]
+    );
+  } catch (err) {
+    console.error('[resolverNotificaciones] Error:', err);
+  }
+}
+
 export const solicitudesCambioResolvers = {
   Query: {
     obtenerSolicitudesPendientes: async (_: unknown, __: unknown, context: GraphQLContext) => {
@@ -458,6 +487,15 @@ export const solicitudesCambioResolvers = {
 
         return true;
       });
+
+      // Resolver notificaciones de solicitud pendiente para este bien
+      const solAprobada = await AppDataSource.getRepository(SolicitudCambio).findOne({ where: { id: solicitudId } });
+      const bienIdAprobado = solAprobada?.bien_id;
+      if (bienIdAprobado) await resolverNotificacionesSolicitud(bienIdAprobado as string);
+
+
+      return true;
+
     },
 
     rechazarCambio: async (
@@ -474,7 +512,11 @@ export const solicitudesCambioResolvers = {
       });
       if (!solicitud) throw new NotFoundError('Solicitud pendiente');
 
+      const bien_id = solicitud.bien_id;
       await repo.remove(solicitud);
+
+      // Resolver notificaciones de solicitud pendiente para este bien
+      if (bien_id) await resolverNotificacionesSolicitud(bien_id);
 
       return true;
     },

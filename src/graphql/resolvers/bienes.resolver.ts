@@ -1389,6 +1389,14 @@ export const bienesResolvers = {
       }
 
       return inc;
+    },
+
+    tiene_cambios_pendientes: async (parent: Bien) => {
+      const { SolicitudCambio } = await import('../../entities/SolicitudCambio');
+      const count = await AppDataSource.getRepository(SolicitudCambio).count({
+        where: { bien_id: parent.id_bien, estado: 'PENDIENTE' }
+      });
+      return count > 0;
     }
   },
 
