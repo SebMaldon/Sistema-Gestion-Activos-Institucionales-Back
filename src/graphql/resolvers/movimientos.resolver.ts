@@ -120,9 +120,6 @@ export const dashboardResolvers = {
       requireAuth(context);
 
       const clave_zona = isEstandar(context) ? context.user?.clave_zona : null;
-      const zonaClause = clave_zona
-        ? `id_bien IN (SELECT b2.id_bien FROM Bienes b2 INNER JOIN unidades uz ON uz.clave = b2.clave_unidad_ref AND uz.clave_zona = '${clave_zona}')`
-        : null;
 
       const bienRepo = AppDataSource.getRepository(Bien);
       const incRepo  = AppDataSource.getRepository(Incidencia);
@@ -211,7 +208,9 @@ export const dashboardResolvers = {
 
     dashboardMetrics: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
-      
+
+      const clave_zona_dm = isEstandar(context) ? context.user?.clave_zona ?? null : null;
+
       const qb = AppDataSource.getRepository(Bien)
         .createQueryBuilder('b')
         .select([
@@ -222,16 +221,19 @@ export const dashboardResolvers = {
           "UPPER(b.estatus_operativo) AS estatus_operativo"
         ])
         .addSelect("COUNT(b.id_bien)", "count")
-        .leftJoin("b.unidad", "u")
         .leftJoin("b.modelo", "m")
         .leftJoin("m.tipoDispositivo", "td")
         .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO')");
 
-      // Filtro por zona para usuarios estándar
-      if (isEstandar(context) && context.user?.clave_zona) {
-        qb.andWhere('u.clave_zona = :_dm_zona', { _dm_zona: context.user.clave_zona });
+      // Para usuarios estándar: INNER JOIN a unidades filtrando por zona
+      // Para admin/maestro: LEFT JOIN para ver también bienes sin unidad
+      if (clave_zona_dm) {
+        qb.innerJoin("unidades", "u", "u.clave = b.clave_unidad_ref AND u.clave_zona = :_dm_zona", { _dm_zona: clave_zona_dm });
       } else if (isEstandar(context)) {
-        qb.andWhere('1 = 0');
+        // Sin zona asignada → sin datos
+        return [];
+      } else {
+        qb.leftJoin("b.unidad", "u");
       }
 
       const metrics = await qb

@@ -2,7 +2,7 @@ import { AppDataSource } from '../../config/database';
 import { Ubicacion } from '../../entities/Ubicacion';
 import { Inmueble } from '../../entities/Inmueble';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, isEstandar } from '../../middleware/auth.middleware';
 import { NotFoundError, ConflictError } from '../../utils/errors';
 
 export const ubicacionesResolvers = {
@@ -11,10 +11,18 @@ export const ubicacionesResolvers = {
     ubicaciones: async (_: unknown, { id_unidad }: { id_unidad?: string }, context: GraphQLContext) => {
       requireAuth(context);
       const repo = AppDataSource.getRepository(Ubicacion);
-      if (id_unidad !== undefined) {
-        return repo.find({ where: { id_unidad }, order: { nombre_ubicacion: 'ASC' } });
+      const qb = repo.createQueryBuilder('ub').orderBy('ub.nombre_ubicacion', 'ASC');
+
+      if (id_unidad !== undefined) qb.andWhere('ub.id_unidad = :id_unidad', { id_unidad });
+
+      // Filtro zona: solo ubicaciones de unidades de su zona
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere(`ub.id_unidad IN (SELECT clave FROM unidades WHERE clave_zona = :_ubz)`, { _ubz: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
       }
-      return repo.find({ order: { nombre_ubicacion: 'ASC' } });
+
+      return qb.getMany();
     },
 
     ubicacion: async (_: unknown, { id_ubicacion }: { id_ubicacion: string }, context: GraphQLContext) => {

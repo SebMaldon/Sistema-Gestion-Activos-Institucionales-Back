@@ -3,6 +3,7 @@ import { AppDataSource } from '../../config/database';
 import { Archivo } from '../../entities/Archivo';
 import { MesaCorrespondencia } from '../../entities/MesaCorrespondencia';
 import { GraphQLError } from 'graphql';
+import { requireAuth, isEstandar } from '../../middleware/auth.middleware';
 
 export const mesaCorrespondenciaResolver = {
   Query: {
@@ -10,13 +11,24 @@ export const mesaCorrespondenciaResolver = {
       const repository = AppDataSource.getRepository(Archivo);
       return await repository.find();
     },
-    getMesaCorrespondencias: async (_: any, { filter, pagination }: { filter: any, pagination: any }) => {
+    getMesaCorrespondencias: async (_: any, { filter, pagination }: { filter: any, pagination: any }, context: GraphQLContext) => {
+      requireAuth(context);
       const qb = AppDataSource.getRepository(MesaCorrespondencia)
         .createQueryBuilder('mc')
         .leftJoinAndSelect('mc.unidad', 'unidad')
         .leftJoinAndSelect('mc.ubicacion', 'ubicacion')
         .leftJoinAndSelect('mc.archivo_ref', 'archivo_ref')
         .orderBy('mc.Folio', 'DESC');
+
+      // Filtro zona: MesaCorrespondencia tiene Clave_unidad → unidades.clave_zona
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere(
+          `mc.Clave_unidad IN (SELECT clave FROM unidades WHERE clave_zona = :_mcz)`,
+          { _mcz: context.user.clave_zona }
+        );
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
 
       if (filter) {
         if (filter.Tipo) {

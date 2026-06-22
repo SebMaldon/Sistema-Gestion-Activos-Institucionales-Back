@@ -8,7 +8,7 @@ import { Bien } from '../../entities/Bien';
 import { Inmueble } from '../../entities/Inmueble';
 import { ReporteGarantia } from '../../entities/ReporteGarantia';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, isEstandar } from '../../middleware/auth.middleware';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 
@@ -20,6 +20,13 @@ export const transaccionalesResolvers = {
       const qb = AppDataSource.getRepository(Garantia).createQueryBuilder('g');
       if (id_bien) qb.andWhere('g.id_bien = :id_bien', { id_bien });
       if (estado_garantia) qb.andWhere('g.estado_garantia = :e', { e: estado_garantia });
+      // Filtro zona: JOIN via bien → unidades
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.innerJoin('Bienes', '_bgz', '_bgz.id_bien = g.id_bien')
+          .innerJoin('unidades', '_ugz', `_ugz.clave = _bgz.clave_unidad_ref AND _ugz.clave_zona = :_gz`, { _gz: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
       return qb.orderBy('g.fecha_fin', 'ASC').getMany();
     },
 
@@ -34,13 +41,18 @@ export const transaccionalesResolvers = {
 
     garantiasPorVencer: async (_: unknown, { diasAlerta = 30 }: { diasAlerta?: number }, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(Garantia)
+      const qb = AppDataSource.getRepository(Garantia)
         .createQueryBuilder('g')
         .where(`g.estado_garantia = 'VIGENTE'`)
         .andWhere(`g.fecha_fin <= DATEADD(day, :dias, GETDATE())`, { dias: diasAlerta })
-        .andWhere(`g.fecha_fin >= GETDATE()`)
-        .orderBy('g.fecha_fin', 'ASC')
-        .getMany();
+        .andWhere(`g.fecha_fin >= GETDATE()`);
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.innerJoin('Bienes', '_bgpv', '_bgpv.id_bien = g.id_bien')
+          .innerJoin('unidades', '_ugpv', `_ugpv.clave = _bgpv.clave_unidad_ref AND _ugpv.clave_zona = :_gpv`, { _gpv: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
+      return qb.orderBy('g.fecha_fin', 'ASC').getMany();
     },
 
     reportesPorGarantia: async (_: unknown, { id_garantia }: any, context: GraphQLContext) => {
@@ -89,6 +101,20 @@ export const transaccionalesResolvers = {
       if (fecha_creacion_hasta) qb.andWhere('i.fecha_reporte <= :fch', { fch: fecha_creacion_hasta });
       if (fecha_resolucion_desde) qb.andWhere('i.fecha_resolucion >= :frd', { frd: fecha_resolucion_desde });
       if (fecha_resolucion_hasta) qb.andWhere('i.fecha_resolucion <= :frh', { frh: fecha_resolucion_hasta });
+
+      // Filtro zona: las incidencias tienen id_unidad (clave varchar) o id_bien
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere(
+          `(i.id_unidad IN (SELECT clave FROM unidades WHERE clave_zona = :_iz)
+           OR (i.id_bien IS NOT NULL AND i.id_bien IN (
+             SELECT b2.id_bien FROM Bienes b2
+             INNER JOIN unidades u2 ON u2.clave = b2.clave_unidad_ref AND u2.clave_zona = :_iz
+           )))`,
+          { _iz: context.user.clave_zona }
+        );
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
 
       const totalCount = await qb.getCount();
       const first = pagination?.first ?? 20;
