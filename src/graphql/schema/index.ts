@@ -1143,6 +1143,7 @@ export const typeDefs = gql`
       fecha_adquisicion: Date
     ): Bien!
     deleteBien(id_bien: ID!): Boolean!
+    updateUsuarioResguardo(id_bien: ID!, id_usuario_resguardo: Int): Bien!
 
     # ── Forzar Sincronización
     setSyncPending(id_bien: ID!): Boolean!

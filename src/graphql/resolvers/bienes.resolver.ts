@@ -273,11 +273,11 @@ export const bienesResolvers = {
       }
       if (filter?.search) {
         qb.leftJoin('Especificaciones_TI', 'ti_search', 'ti_search.id_bien = b.id_bien');
-        
+
         const term = filter.search.trim();
         // Check if it looks like an IP address (at least starting like one)
         const isIP = /^[0-9]{1,3}(\.[0-9]{1,3}){1,3}/.test(term);
-        
+
         if (isIP) {
           // Si es una IP, buscamos que coincida exactamente o en una lista separada por diagonal,
           // evitando que '11.1.19.20' coincida con '11.1.19.201'
@@ -288,7 +288,7 @@ export const bienesResolvers = {
             'OR ti_search.dir_ip LIKE :end ' +
             'OR ti_search.dir_ip LIKE :mid ' +
             'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
-            { 
+            {
               s: `%${term}%`,
               exact: term,
               start: `${term}/%`,
@@ -351,7 +351,7 @@ export const bienesResolvers = {
         if (filter.garantia_vigente === true) qb.andWhere("gf.estado_garantia = 'VIGENTE'");
         if (filter.garantia_fin_desde) qb.andWhere('gf.fecha_fin >= :gfd', { gfd: filter.garantia_fin_desde });
       }
-      
+
       // ── Agent installed filter ───────────────────────────────
       if (filter?.tiene_agente !== undefined && filter?.tiene_agente !== null) {
         if (filter.tiene_agente) {
@@ -371,7 +371,7 @@ export const bienesResolvers = {
       if (filter?.sin_inventario) {
         // Red color means "num_inv is null or empty or N/D"
         qb.andWhere('(b.num_inv IS NULL OR b.num_inv = \'\' OR b.num_inv = \'N/D\')');
-        
+
         // Only applies to PCs and Laptops (tipo_disp 3 and 4)
         qb.leftJoin('Cat_Modelos', 'mod_si', 'mod_si.clave_modelo = b.clave_modelo');
         qb.andWhere('mod_si.tipo_disp IN (3, 4)');
@@ -571,11 +571,11 @@ export const bienesResolvers = {
         .orWhere('b.qr_hash = :termino', { termino })
         .orWhere('b.num_serie = :termino', { termino })
         .orWhere('b.num_inv = :termino', { termino })
-        .orWhere('(e.dir_ip = :termino OR e.dir_ip LIKE :termino_start OR e.dir_ip LIKE :termino_end OR e.dir_ip LIKE :termino_mid)', { 
-           termino: termino, 
-           termino_start: termino + '/%', 
-           termino_end: '%/' + termino, 
-           termino_mid: '%/' + termino + '/%' 
+        .orWhere('(e.dir_ip = :termino OR e.dir_ip LIKE :termino_start OR e.dir_ip LIKE :termino_end OR e.dir_ip LIKE :termino_mid)', {
+          termino: termino,
+          termino_start: termino + '/%',
+          termino_end: '%/' + termino,
+          termino_mid: '%/' + termino + '/%'
         })
         .getMany();
     },
@@ -598,7 +598,7 @@ export const bienesResolvers = {
         .createQueryBuilder('b')
         .innerJoin('Especificaciones_TI', 'e', 'e.id_bien = b.id_bien')
         .leftJoinAndSelect('b.modelo', 'm')
-        .where('(e.dir_ip = :dir_ip OR e.dir_ip LIKE :start OR e.dir_ip LIKE :end OR e.dir_ip LIKE :mid)', { 
+        .where('(e.dir_ip = :dir_ip OR e.dir_ip LIKE :start OR e.dir_ip LIKE :end OR e.dir_ip LIKE :mid)', {
           dir_ip: dir_ip.trim(),
           start: `${dir_ip.trim()}/%`,
           end: `%/${dir_ip.trim()}`,
@@ -702,8 +702,8 @@ export const bienesResolvers = {
       const qb = AppDataSource.getRepository(EspecificacionTI)
         .createQueryBuilder()
         .update(EspecificacionTI)
-        .set({ 
-          dir_ip: () => `REPLACE(REPLACE(REPLACE(dir_ip, '/${cleanIp}', ''), '${cleanIp}/', ''), '${cleanIp}', '')` 
+        .set({
+          dir_ip: () => `REPLACE(REPLACE(REPLACE(dir_ip, '/${cleanIp}', ''), '${cleanIp}/', ''), '${cleanIp}', '')`
         })
         .where('(dir_ip = :cleanIp OR dir_ip LIKE :start OR dir_ip LIKE :end OR dir_ip LIKE :mid)', {
           cleanIp,
@@ -921,6 +921,16 @@ export const bienesResolvers = {
       return repo.save(bien);
     },
 
+    updateUsuarioResguardo: async (_: unknown, { id_bien, id_usuario_resguardo }: any, context: GraphQLContext) => {
+      requireAuth(context);
+      const repo = AppDataSource.getRepository(Bien);
+      const bien = await repo.findOne({ where: { id_bien } });
+      if (!bien) throw new NotFoundError('Bien');
+      bien.id_usuario_resguardo = id_usuario_resguardo || null;
+      bien.fecha_actualizacion = new Date();
+      return repo.save(bien);
+    },
+
     deleteBien: async (_: unknown, { id_bien }: { id_bien: string }, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.MAESTRO]);
@@ -985,7 +995,7 @@ export const bienesResolvers = {
 
               const segRepo = AppDataSource.getRepository(Segmento);
               const segmentos = await segRepo.find();
-              
+
               const match = segmentos.find(s => {
                 if (!s.ip || !s.bits) return false;
                 try {
@@ -1057,11 +1067,11 @@ export const bienesResolvers = {
           const equipoAnterior = await bienRepo.findOne({ where: { id_bien: relOtroEquipo.id_bien } });
           const equipoNombre = equipoAnterior
             ? [
-                equipoAnterior.num_inv ? `INV: ${equipoAnterior.num_inv}` : null,
-                equipoAnterior.num_serie ? `S/N: ${equipoAnterior.num_serie}` : null,
-              ]
-                .filter(Boolean)
-                .join(' / ') || `ID: ${equipoAnterior.id_bien.substring(0, 8)}…`
+              equipoAnterior.num_inv ? `INV: ${equipoAnterior.num_inv}` : null,
+              equipoAnterior.num_serie ? `S/N: ${equipoAnterior.num_serie}` : null,
+            ]
+              .filter(Boolean)
+              .join(' / ') || `ID: ${equipoAnterior.id_bien.substring(0, 8)}…`
             : 'otro equipo';
           // Código de extensión para que el front pueda detectarlo
           const err: any = new ValidationError(
@@ -1159,12 +1169,12 @@ export const bienesResolvers = {
       context: GraphQLContext
     ) => {
       requireAuth(context);
-      
+
       const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
       if (context.user?.matricula === autoSyncUser) {
         return true;
       }
-      
+
       return AppDataSource.transaction(async (manager) => {
         const repo = manager.getRepository(CuentaPC);
         await repo.delete({ id_bien });
@@ -1172,14 +1182,14 @@ export const bienesResolvers = {
           const toSave = cuentas.map(c => repo.create({ id_bien, ...c }));
           await repo.save(toSave);
         }
-        
+
         const bitacoraRepo = manager.getRepository(Bitacora);
         await bitacoraRepo.save(bitacoraRepo.create({
           id_usuario: context.user!.id_usuario,
           accion: 'CREACION_MASIVA',
           tabla_afectada: 'Cuentas_PC',
           registro_afectado: id_bien,
-          detalles_movimiento: JSON.stringify({ 
+          detalles_movimiento: JSON.stringify({
             mensaje: `Se sincronizaron ${cuentas ? cuentas.length : 0} cuentas_pc.`,
             cuentas: cuentas
           }),
@@ -1226,7 +1236,7 @@ export const bienesResolvers = {
             } else {
               let f = p.fecha_instalacion.trim();
               if (/^\d{8}$/.test(f)) {
-                p.fecha_instalacion = `${f.substring(0,4)}-${f.substring(4,6)}-${f.substring(6,8)}`;
+                p.fecha_instalacion = `${f.substring(0, 4)}-${f.substring(4, 6)}-${f.substring(6, 8)}`;
               } else if (f.includes('/')) {
                 const parts = f.split('/');
                 if (parts.length === 3 && parts[2].length === 4) {
@@ -1272,7 +1282,7 @@ export const bienesResolvers = {
               if (v1 !== v2 && v2 !== '') {
                 item.programa = `${item.programa} (v. ${item.version})`;
                 if (item.programa.length > 100) item.programa = item.programa.substring(0, 100);
-                
+
                 let newKey = item.programa.trim().toLowerCase();
                 if (!seenProgramas.has(newKey)) {
                   seenProgramas.set(newKey, item);
@@ -1286,15 +1296,15 @@ export const bienesResolvers = {
           const toSave = repo.create(uniqueProgramas);
           await repo.save(toSave, { chunk: 100 });
         }
-        
+
         const bitacoraRepo = manager.getRepository(Bitacora);
         await bitacoraRepo.save(bitacoraRepo.create({
           id_usuario: context.user!.id_usuario,
           accion: 'CREACION_MASIVA',
           tabla_afectada: 'Programas_PC',
           registro_afectado: id_bien,
-          detalles_movimiento: JSON.stringify({ 
-            mensaje: `Se sincronizaron ${programas ? programas.length : 0} programas.` 
+          detalles_movimiento: JSON.stringify({
+            mensaje: `Se sincronizaron ${programas ? programas.length : 0} programas.`
           }),
           origen: context.origen || 'WIN'
         }));
@@ -1362,11 +1372,11 @@ export const bienesResolvers = {
 
     inconvenientes: async (parent: Bien, _: unknown, context: GraphQLContext) => {
       const inc: string[] = [];
-      
+
       // 1. Condición A: Tipo de bien es PC o Laptop y NO tiene num_inv
       let tipo_disp = parent.modelo?.tipo_disp;
       if (tipo_disp === undefined && parent.clave_modelo) {
-        const mod = await AppDataSource.getRepository(CatModelo).findOne({ where: { clave_modelo: parent.clave_modelo }});
+        const mod = await AppDataSource.getRepository(CatModelo).findOne({ where: { clave_modelo: parent.clave_modelo } });
         tipo_disp = mod?.tipo_disp;
       }
       const isPcOrLaptop = tipo_disp === 3 || tipo_disp === 4;
@@ -1378,7 +1388,7 @@ export const bienesResolvers = {
       // 2. Condición B: IP Duplicada
       let dir_ip = parent.especificacionTI?.dir_ip;
       if (dir_ip === undefined) {
-        const ti = await AppDataSource.getRepository(EspecificacionTI).findOne({ where: { id_bien: parent.id_bien }});
+        const ti = await AppDataSource.getRepository(EspecificacionTI).findOne({ where: { id_bien: parent.id_bien } });
         dir_ip = ti?.dir_ip;
       }
       if (dir_ip && dir_ip.trim() !== '') {
