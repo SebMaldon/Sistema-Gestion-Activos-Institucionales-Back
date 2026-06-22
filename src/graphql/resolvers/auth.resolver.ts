@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../../config/database';
 import { Usuario } from '../../entities/Usuario';
+import { Inmueble } from '../../entities/Inmueble';
 import { env } from '../../config/environment';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth } from '../../middleware/auth.middleware';
@@ -44,11 +45,23 @@ export const authResolvers = {
         throw new AuthenticationError('Credenciales inválidas');
       }
 
+      // Obtener clave_zona de la unidad física del usuario (para filtros por zona)
+      let clave_zona: string | undefined;
+      if (usuario.clave_unidad) {
+        const inmueble = await AppDataSource.getRepository(Inmueble).findOne({
+          where: { clave: usuario.clave_unidad },
+          select: ['clave', 'clave_zona'],
+        });
+        clave_zona = inmueble?.clave_zona ?? undefined;
+      }
+
       const payload = {
         id_usuario: usuario.id_usuario,
         id_rol: usuario.id_rol,
         matricula: usuario.matricula,
         id_unidad: usuario.id_unidad,
+        clave_unidad: usuario.clave_unidad,
+        clave_zona,
       };
 
       const token = jwt.sign(payload, env.jwt.secret, { expiresIn: env.jwt.expiresIn } as jwt.SignOptions);

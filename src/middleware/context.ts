@@ -13,6 +13,8 @@ export interface JwtPayload {
   id_rol: number;
   matricula: string;
   id_unidad?: number;
+  clave_unidad?: string;
+  clave_zona?: string;
 }
 
 export interface GraphQLContext extends BaseContext {

@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { AppDataSource } from '../../config/database';
 import { Usuario } from '../../entities/Usuario';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, applyZonaFilterUsuarios } from '../../middleware/auth.middleware';
 import { NotFoundError, ConflictError, AuthenticationError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 
@@ -47,6 +47,9 @@ export const usuariosResolvers = {
       if (roles && roles.length > 0) {
         qb.andWhere('u.id_rol IN (:...roles)', { roles });
       }
+
+      // Filtro por zona para usuarios estándar
+      applyZonaFilterUsuarios(qb, 'u', context);
 
       const totalCount = await qb.getCount();
       const first = Math.min(pagination?.first ?? 20, 20000);

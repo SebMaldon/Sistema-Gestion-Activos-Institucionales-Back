@@ -5,7 +5,7 @@ import { Garantia } from '../../entities/Garantia';
 import { Incidencia } from '../../entities/Incidencia';
 import { Usuario } from '../../entities/Usuario';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, applyZonaFilter, isEstandar } from '../../middleware/auth.middleware';
 import { NotFoundError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 
@@ -119,6 +119,44 @@ export const dashboardResolvers = {
     dashboardStats: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
 
+      const clave_zona = isEstandar(context) ? context.user?.clave_zona : null;
+      const zonaClause = clave_zona
+        ? `id_bien IN (SELECT b2.id_bien FROM Bienes b2 INNER JOIN unidades uz ON uz.clave = b2.clave_unidad_ref AND uz.clave_zona = '${clave_zona}')`
+        : null;
+
+      const bienRepo = AppDataSource.getRepository(Bien);
+      const incRepo  = AppDataSource.getRepository(Incidencia);
+      const garRepo  = AppDataSource.getRepository(Garantia);
+      const movRepo  = AppDataSource.getRepository(MovimientoInventario);
+
+      const bienQB = (where?: string) => {
+        const q = bienRepo.createQueryBuilder('b');
+        if (clave_zona) q.innerJoin('unidades', '_uz', `_uz.clave = b.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        if (where) q.andWhere(where);
+        return q.getCount();
+      };
+
+      const incQB = (where: string, val: string) => {
+        const q = incRepo.createQueryBuilder('i');
+        if (clave_zona) {
+          q.innerJoin('Bienes', '_bz', '_bz.id_bien = i.id_bien')
+           .innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        }
+        q.andWhere(where, { val });
+        return q.getCount();
+      };
+
+      const garQB = (where: string, extraWhere?: string) => {
+        const q = garRepo.createQueryBuilder('g');
+        if (clave_zona) {
+          q.innerJoin('Bienes', '_bz', '_bz.id_bien = g.id_bien')
+           .innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        }
+        q.andWhere(where);
+        if (extraWhere) q.andWhere(extraWhere);
+        return q.getCount();
+      };
+
       const [
         totalBienes,
         bienesActivos,
@@ -131,25 +169,30 @@ export const dashboardResolvers = {
         movimientosHoy,
         totalUsuarios,
       ] = await Promise.all([
-        AppDataSource.getRepository(Bien).count(),
-        AppDataSource.getRepository(Bien).count({ where: { estatus_operativo: 'ACTIVO' } }),
-        AppDataSource.getRepository(Bien).count({ where: { estatus_operativo: 'INACTIVO' } }),
-        AppDataSource.getRepository(Bien).count({ where: { estatus_operativo: 'EN REPARACIÓN' } }),
-        // Nota: los valores de estatus_reparacion en la DB usan formato "Pendiente", "En proceso"
-        AppDataSource.getRepository(Incidencia).count({ where: { estatus_reparacion: 'Pendiente' } }),
-        AppDataSource.getRepository(Incidencia).count({ where: { estatus_reparacion: 'En proceso' } }),
-        AppDataSource.getRepository(Garantia).count({ where: { estado_garantia: 'VIGENTE' } }),
-        AppDataSource.getRepository(Garantia)
-          .createQueryBuilder('g')
-          .where(`g.estado_garantia = 'VIGENTE'`)
-          .andWhere(`g.fecha_fin <= DATEADD(day, 30, GETDATE())`)
-          .andWhere(`g.fecha_fin >= GETDATE()`)
-          .getCount(),
-        AppDataSource.getRepository(MovimientoInventario)
-          .createQueryBuilder('m')
-          .where(`CAST(m.fecha_movimiento AS DATE) = CAST(GETDATE() AS DATE)`)
-          .getCount(),
-        AppDataSource.getRepository(Usuario).count({ where: { estatus: true } }),
+        bienQB(),
+        bienQB(`b.estatus_operativo = 'ACTIVO'`),
+        bienQB(`b.estatus_operativo = 'INACTIVO'`),
+        bienQB(`b.estatus_operativo = 'EN REPARACIÓN'`),
+        incQB('i.estatus_reparacion = :val', 'Pendiente'),
+        incQB('i.estatus_reparacion = :val', 'En proceso'),
+        garQB(`g.estado_garantia = 'VIGENTE'`),
+        garQB(`g.estado_garantia = 'VIGENTE'`, `g.fecha_fin <= DATEADD(day, 30, GETDATE()) AND g.fecha_fin >= GETDATE()`),
+        (() => {
+          const q = movRepo.createQueryBuilder('m');
+          if (clave_zona) {
+            q.innerJoin('Bienes', '_bz', '_bz.id_bien = m.id_bien')
+             .innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+          }
+          q.andWhere(`CAST(m.fecha_movimiento AS DATE) = CAST(GETDATE() AS DATE)`);
+          return q.getCount();
+        })(),
+        clave_zona
+          ? AppDataSource.getRepository(Usuario)
+              .createQueryBuilder('u')
+              .where('u.estatus = 1')
+              .andWhere(`u.clave_unidad IN (SELECT clave FROM unidades WHERE clave_zona = :_dz)`, { _dz: clave_zona })
+              .getCount()
+          : AppDataSource.getRepository(Usuario).count({ where: { estatus: true } }),
       ]);
 
       return {
@@ -169,7 +212,7 @@ export const dashboardResolvers = {
     dashboardMetrics: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
       
-      const metrics = await AppDataSource.getRepository(Bien)
+      const qb = AppDataSource.getRepository(Bien)
         .createQueryBuilder('b')
         .select([
           "u.clave AS clave_unidad",
@@ -182,7 +225,16 @@ export const dashboardResolvers = {
         .leftJoin("b.unidad", "u")
         .leftJoin("b.modelo", "m")
         .leftJoin("m.tipoDispositivo", "td")
-        .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO')")
+        .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO')");
+
+      // Filtro por zona para usuarios estándar
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere('u.clave_zona = :_dm_zona', { _dm_zona: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
+
+      const metrics = await qb
         .groupBy("u.clave")
         .addGroupBy("COALESCE(u.desc_corta, u.descripcion, 'Sin Unidad')")
         .addGroupBy("td.tipo_disp")

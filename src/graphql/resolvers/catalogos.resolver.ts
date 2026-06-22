@@ -12,7 +12,7 @@ import { UnidadACargo } from '../../entities/UnidadACargo';
 import { Contacto } from '../../entities/Contacto';
 import { Bien } from '../../entities/Bien';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, isEstandar } from '../../middleware/auth.middleware';
 import { NotFoundError, ConflictError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { decodeCursor } from '../../utils/pagination';
 import { Usuario } from '../../entities/Usuario';
@@ -137,7 +137,13 @@ export const catalogosResolvers = {
     },
     catSegmentos: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(Segmento).find({ order: { nombre: 'ASC' } });
+      const qb = AppDataSource.getRepository(Segmento).createQueryBuilder('s').orderBy('s.nombre', 'ASC');
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.innerJoin('unidades', '_uz_seg', `_uz_seg.clave = s.clave AND _uz_seg.clave_zona = :_cz_seg`, { _cz_seg: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
+      return qb.getMany();
     },
     catTipoUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
@@ -185,6 +191,13 @@ export const catalogosResolvers = {
     ) => {
       requireAuth(context);
       const qb = AppDataSource.getRepository(Inmueble).createQueryBuilder('i');
+
+      // Filtro por zona para usuarios estándar
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere('i.clave_zona = :_uz_zona', { _uz_zona: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
 
       if (search) {
         qb.andWhere(
@@ -282,7 +295,13 @@ export const catalogosResolvers = {
     },
     catUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(Inmueble).find({ order: { descripcion: 'ASC' } });
+      const qb = AppDataSource.getRepository(Inmueble).createQueryBuilder('i').orderBy('i.descripcion', 'ASC');
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere('i.clave_zona = :_cz_uni', { _cz_uni: context.user.clave_zona });
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
+      return qb.getMany();
     },
     unidad: async (_: unknown, { clave }: { clave: string }, context: GraphQLContext) => {
       requireAuth(context);
@@ -293,14 +312,29 @@ export const catalogosResolvers = {
       const inmuebleRepo = AppDataSource.getRepository(Inmueble);
       const segmentoRepo = AppDataSource.getRepository(Segmento);
 
+      const clave_zona = isEstandar(context) ? context.user?.clave_zona : null;
+
+      const zonaWhere = clave_zona ? `i.clave_zona IS NOT NULL AND i.clave_zona <> '' AND i.clave_zona = '${clave_zona}'` : `i.clave_zona IS NOT NULL AND i.clave_zona <> ''`;
+      const cityWhere = clave_zona ? `i.ciudad IS NOT NULL AND i.ciudad <> '' AND i.clave_zona = '${clave_zona}'` : `i.ciudad IS NOT NULL AND i.ciudad <> ''`;
+      const munWhere  = clave_zona ? `i.municipio IS NOT NULL AND i.municipio <> '' AND i.clave_zona = '${clave_zona}'` : `i.municipio IS NOT NULL AND i.municipio <> ''`;
+      const nivWhere  = clave_zona ? `i.nivel IS NOT NULL AND i.clave_zona = '${clave_zona}'` : `i.nivel IS NOT NULL`;
+      const regWhere  = clave_zona ? `i.regimen IS NOT NULL AND i.clave_zona = '${clave_zona}'` : `i.regimen IS NOT NULL`;
+      // segmentos: filtrar via join a unidades si hay zona
+      const segVelQB = segmentoRepo.createQueryBuilder('s').select('DISTINCT(s.velocidad)', 'val').where('s.velocidad IS NOT NULL AND s.velocidad <> \'\'');
+      const segProvQB = segmentoRepo.createQueryBuilder('s').select('DISTINCT(s.proveedor)', 'val').where('s.proveedor IS NOT NULL AND s.proveedor <> \'\'');
+      if (clave_zona) {
+        segVelQB.innerJoin('unidades', '_uz_v', `_uz_v.clave = s.clave AND _uz_v.clave_zona = '${clave_zona}'`);
+        segProvQB.innerJoin('unidades', '_uz_p', `_uz_p.clave = s.clave AND _uz_p.clave_zona = '${clave_zona}'`);
+      }
+
       const [zonasRaw, ciudadesRaw, municipiosRaw, nivelesRaw, regimenesRaw, velocidadesRaw, proveedoresRaw] = await Promise.all([
-        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.clave_zona)', 'val').where('i.clave_zona IS NOT NULL AND i.clave_zona <> \'\'').orderBy('val', 'ASC').getRawMany(),
-        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.ciudad)', 'val').where('i.ciudad IS NOT NULL AND i.ciudad <> \'\'').orderBy('val', 'ASC').getRawMany(),
-        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.municipio)', 'val').where('i.municipio IS NOT NULL AND i.municipio <> \'\'').orderBy('val', 'ASC').getRawMany(),
-        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.nivel)', 'val').where('i.nivel IS NOT NULL').orderBy('val', 'ASC').getRawMany(),
-        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.regimen)', 'val').where('i.regimen IS NOT NULL').orderBy('val', 'ASC').getRawMany(),
-        segmentoRepo.createQueryBuilder('s').select('DISTINCT(s.velocidad)', 'val').where('s.velocidad IS NOT NULL AND s.velocidad <> \'\'').orderBy('val', 'ASC').getRawMany(),
-        segmentoRepo.createQueryBuilder('s').select('DISTINCT(s.proveedor)', 'val').where('s.proveedor IS NOT NULL AND s.proveedor <> \'\'').orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.clave_zona)', 'val').where(zonaWhere).orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.ciudad)', 'val').where(cityWhere).orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.municipio)', 'val').where(munWhere).orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.nivel)', 'val').where(nivWhere).orderBy('val', 'ASC').getRawMany(),
+        inmuebleRepo.createQueryBuilder('i').select('DISTINCT(i.regimen)', 'val').where(regWhere).orderBy('val', 'ASC').getRawMany(),
+        segVelQB.orderBy('val', 'ASC').getRawMany(),
+        segProvQB.orderBy('val', 'ASC').getRawMany(),
       ]);
 
       return {

@@ -12,7 +12,7 @@ import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
 import { Marca } from '../../entities/Marca';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, applyZonaFilter, isEstandar } from '../../middleware/auth.middleware';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
 import { PaginationArgs, decodeCursor } from '../../utils/pagination';
 import { Segmento } from '../../entities/Segmento';
@@ -254,6 +254,9 @@ export const bienesResolvers = {
       requireAuth(context);
       const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
 
+      // ── Filtro por zona (usuarios estándar rol=3 ven solo su zona) ────────
+      applyZonaFilter(qb, 'b', context);
+
       // ── Basic filters ────────────────────────────────────────
       if (filter?.estatus_operativo) {
         qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
@@ -493,22 +496,70 @@ export const bienesResolvers = {
       requireAuth(context);
       const b = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien } });
       if (!b) throw new NotFoundError('Bien');
+      // Verificar acceso por zona si es usuario estándar
+      if (isEstandar(context) && context.user?.clave_zona) {
+        if (b.clave_unidad_ref) {
+          const uni = await AppDataSource.query(
+            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+            [b.clave_unidad_ref, context.user.clave_zona]
+          );
+          if (!uni?.length) throw new ForbiddenError('No tienes acceso a este activo.');
+        } else {
+          throw new ForbiddenError('No tienes acceso a este activo.');
+        }
+      }
       return b;
     },
 
     bienByQR: async (_: unknown, { qr_hash }: { qr_hash: string }, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(Bien).findOne({ where: { qr_hash } });
+      const b = await AppDataSource.getRepository(Bien).findOne({ where: { qr_hash } });
+      if (b && isEstandar(context) && context.user?.clave_zona) {
+        if (b.clave_unidad_ref) {
+          const uni = await AppDataSource.query(
+            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+            [b.clave_unidad_ref, context.user.clave_zona]
+          );
+          if (!uni?.length) return null;
+        } else {
+          return null;
+        }
+      }
+      return b;
     },
 
     bienByNumSerie: async (_: unknown, { num_serie }: { num_serie: string }, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(Bien).findOne({ where: { num_serie } });
+      const b = await AppDataSource.getRepository(Bien).findOne({ where: { num_serie } });
+      if (b && isEstandar(context) && context.user?.clave_zona) {
+        if (b.clave_unidad_ref) {
+          const uni = await AppDataSource.query(
+            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+            [b.clave_unidad_ref, context.user.clave_zona]
+          );
+          if (!uni?.length) return null;
+        } else {
+          return null;
+        }
+      }
+      return b;
     },
 
     bienByNumInv: async (_: unknown, { num_inv }: { num_inv: string }, context: GraphQLContext) => {
       requireAuth(context);
-      return AppDataSource.getRepository(Bien).findOne({ where: { num_inv } });
+      const b = await AppDataSource.getRepository(Bien).findOne({ where: { num_inv } });
+      if (b && isEstandar(context) && context.user?.clave_zona) {
+        if (b.clave_unidad_ref) {
+          const uni = await AppDataSource.query(
+            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+            [b.clave_unidad_ref, context.user.clave_zona]
+          );
+          if (!uni?.length) return null;
+        } else {
+          return null;
+        }
+      }
+      return b;
     },
 
     bienByTermino: async (_: unknown, { termino }: { termino: string }, context: GraphQLContext) => {

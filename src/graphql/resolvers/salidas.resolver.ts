@@ -1,6 +1,6 @@
 import { AppDataSource } from '../../config/database';
 import { GraphQLContext } from '../../middleware/context';
-import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
+import { requireAuth, requireRole, ROLES, isEstandar } from '../../middleware/auth.middleware';
 import { Usuario } from '../../entities/Usuario';
 import { RegistroSalida } from '../../entities/RegistroSalida';
 import { RegistroSalidaBien } from '../../entities/RegistroSalidaBien';
@@ -55,6 +55,22 @@ export const salidasResolvers = {
         .leftJoinAndSelect('b.bienRef', 'bienRef')
         .leftJoinAndSelect('bienRef.modelo', 'modelo')
         .orderBy('rs.id_salida', 'DESC');
+
+      // Filtro por zona para usuarios estándar
+      if (isEstandar(context) && context.user?.clave_zona) {
+        qb.andWhere(
+          `rs.id_salida IN (
+            SELECT DISTINCT rsb2.id_salida
+            FROM Registro_Salida_Bienes rsb2
+            INNER JOIN Bienes bz ON bz.id_bien = rsb2.id_bien
+            INNER JOIN unidades uz ON uz.clave = bz.clave_unidad_ref
+            WHERE uz.clave_zona = :_sal_zona
+          )`,
+          { _sal_zona: context.user.clave_zona }
+        );
+      } else if (isEstandar(context)) {
+        qb.andWhere('1 = 0');
+      }
 
       if (filter) {
         if (filter.folio) {
