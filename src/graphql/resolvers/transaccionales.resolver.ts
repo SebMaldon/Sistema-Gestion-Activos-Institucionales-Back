@@ -499,7 +499,7 @@ export const transaccionalesResolvers = {
 
     deleteNota: async (_: unknown, { id_nota }: any, context: GraphQLContext) => {
       requireAuth(context);
-      requireRole(context, [ROLES.MAESTRO]);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       const repo = AppDataSource.getRepository(Nota);
       const nota = await repo.findOne({ where: { id_nota: parseInt(id_nota) } });
       if (nota) {
@@ -511,10 +511,10 @@ export const transaccionalesResolvers = {
 
   // ── Field resolvers ──────────────────────────────────────
   Garantia: {
-    bien: async (parent: Garantia) =>
-      AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
-    proveedorObj: async (parent: Garantia) =>
-      parent.id_proveedor ? AppDataSource.getRepository(Proveedor).findOne({ where: { id_proveedor: parent.id_proveedor } }) : null,
+    bien: (parent: Garantia, _: unknown, context: GraphQLContext) =>
+      parent.id_bien ? context.loaders.bienLoader.load(parent.id_bien) : null,
+    proveedorObj: (parent: Garantia, _: unknown, context: GraphQLContext) =>
+      parent.id_proveedor ? context.loaders.proveedorLoader.load(parent.id_proveedor) : null,
     reportes: (parent: Garantia, _: unknown, context: GraphQLContext) =>
       context.loaders.reportesByGarantiaLoader.load(parent.id_garantia),
   },

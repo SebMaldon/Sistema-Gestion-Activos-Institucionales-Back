@@ -18,6 +18,7 @@ import { Nota } from '../../entities/Nota';
 import { BienMonitor } from '../../entities/BienMonitor';
 import { CuentaPC } from '../../entities/CuentaPC';
 import { ReporteGarantia } from '../../entities/ReporteGarantia';
+import { Proveedor } from '../../entities/Proveedor';
 
 function toMap<K, V>(items: V[], keyFn: (item: V) => K): Map<K, V> {
   return new Map<K, V>(items.map((item) => [keyFn(item), item] as [K, V]));
@@ -112,6 +113,15 @@ export function createDataLoaders() {
     return keys.map((k) => map.get(k));
   });
 
+  // ── Proveedores (id_proveedor: int)
+  const proveedorLoader = new DataLoader<number, Proveedor | undefined>(async (keys) => {
+    const items = await AppDataSource.getRepository(Proveedor).find({
+      where: { id_proveedor: In(keys as number[]) },
+    });
+    const map = toMap<number, Proveedor>(items, (p) => p.id_proveedor);
+    return keys.map((k) => map.get(k));
+  }, { maxBatchSize: 1000 });
+
   // ── Cat_UnidadesMedida (id_unidad_medida: int)
   const unidadMedidaLoader = new DataLoader<number, CatUnidadMedida | undefined>(async (keys) => {
     const items = await AppDataSource.getRepository(CatUnidadMedida).find({
@@ -137,7 +147,7 @@ export function createDataLoaders() {
     });
     const map = toMap<string, Bien>(items, (b) => b.id_bien.toLowerCase());
     return keys.map((k) => map.get(k.toLowerCase()));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── TiposIncidencia (id_tipo_incidencia: int)
   const tipoIncidenciaLoader = new DataLoader<number, TipoIncidencia | undefined>(async (keys) => {
@@ -248,6 +258,7 @@ export function createDataLoaders() {
     monitoresByBienLoader,
     cuentasPCByBienLoader,
     reportesByGarantiaLoader,
+    proveedorLoader,
   };
 }
 
