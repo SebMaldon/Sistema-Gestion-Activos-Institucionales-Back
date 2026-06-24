@@ -62,17 +62,18 @@ export function applyZonaFilter<T extends ObjectLiteral>(
   const clave_zona = context.user?.clave_zona;
 
   if (!clave_zona) {
-    // Sin zona asignada → sin acceso a ningún dato
-    qb.andWhere('1 = 0');
+    // Sin zona asignada → solo ve U003 y T003
+    qb.andWhere(`${alias}.num_serie IN ('U003', 'T003')`);
     return;
   }
 
-  qb.innerJoin(
+  qb.leftJoin(
     'unidades',
     '_zona_uni',
-    `_zona_uni.clave = ${alias}.clave_unidad_ref AND _zona_uni.clave_zona = :_zona`,
-    { _zona: clave_zona }
+    `_zona_uni.clave = ${alias}.clave_unidad_ref`
   );
+  
+  qb.andWhere(`(_zona_uni.clave_zona = :_zona OR ${alias}.num_serie IN ('U003', 'T003'))`, { _zona: clave_zona });
 }
 
 /**

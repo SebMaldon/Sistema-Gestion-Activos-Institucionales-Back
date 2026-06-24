@@ -497,13 +497,17 @@ export const bienesResolvers = {
       const b = await AppDataSource.getRepository(Bien).findOne({ where: { id_bien } });
       if (!b) throw new NotFoundError('Bien');
       // Verificar acceso por zona si es usuario estándar
-      if (isEstandar(context) && context.user?.clave_zona) {
-        if (b.clave_unidad_ref) {
-          const uni = await AppDataSource.query(
-            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
-            [b.clave_unidad_ref, context.user.clave_zona]
-          );
-          if (!uni?.length) throw new ForbiddenError('No tienes acceso a este activo.');
+      if (isEstandar(context) && !['U003', 'T003'].includes(b.num_serie || '')) {
+        if (context.user?.clave_zona) {
+          if (b.clave_unidad_ref) {
+            const uni = await AppDataSource.query(
+              `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+              [b.clave_unidad_ref, context.user.clave_zona]
+            );
+            if (!uni?.length) throw new ForbiddenError('No tienes acceso a este activo.');
+          } else {
+            throw new ForbiddenError('No tienes acceso a este activo.');
+          }
         } else {
           throw new ForbiddenError('No tienes acceso a este activo.');
         }
@@ -514,13 +518,17 @@ export const bienesResolvers = {
     bienByQR: async (_: unknown, { qr_hash }: { qr_hash: string }, context: GraphQLContext) => {
       requireAuth(context);
       const b = await AppDataSource.getRepository(Bien).findOne({ where: { qr_hash } });
-      if (b && isEstandar(context) && context.user?.clave_zona) {
-        if (b.clave_unidad_ref) {
-          const uni = await AppDataSource.query(
-            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
-            [b.clave_unidad_ref, context.user.clave_zona]
-          );
-          if (!uni?.length) return null;
+      if (b && isEstandar(context) && !['U003', 'T003'].includes(b.num_serie || '')) {
+        if (context.user?.clave_zona) {
+          if (b.clave_unidad_ref) {
+            const uni = await AppDataSource.query(
+              `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+              [b.clave_unidad_ref, context.user.clave_zona]
+            );
+            if (!uni?.length) return null;
+          } else {
+            return null;
+          }
         } else {
           return null;
         }
@@ -531,13 +539,17 @@ export const bienesResolvers = {
     bienByNumSerie: async (_: unknown, { num_serie }: { num_serie: string }, context: GraphQLContext) => {
       requireAuth(context);
       const b = await AppDataSource.getRepository(Bien).findOne({ where: { num_serie } });
-      if (b && isEstandar(context) && context.user?.clave_zona) {
-        if (b.clave_unidad_ref) {
-          const uni = await AppDataSource.query(
-            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
-            [b.clave_unidad_ref, context.user.clave_zona]
-          );
-          if (!uni?.length) return null;
+      if (b && isEstandar(context) && !['U003', 'T003'].includes(b.num_serie || '')) {
+        if (context.user?.clave_zona) {
+          if (b.clave_unidad_ref) {
+            const uni = await AppDataSource.query(
+              `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+              [b.clave_unidad_ref, context.user.clave_zona]
+            );
+            if (!uni?.length) return null;
+          } else {
+            return null;
+          }
         } else {
           return null;
         }
@@ -548,13 +560,17 @@ export const bienesResolvers = {
     bienByNumInv: async (_: unknown, { num_inv }: { num_inv: string }, context: GraphQLContext) => {
       requireAuth(context);
       const b = await AppDataSource.getRepository(Bien).findOne({ where: { num_inv } });
-      if (b && isEstandar(context) && context.user?.clave_zona) {
-        if (b.clave_unidad_ref) {
-          const uni = await AppDataSource.query(
-            `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
-            [b.clave_unidad_ref, context.user.clave_zona]
-          );
-          if (!uni?.length) return null;
+      if (b && isEstandar(context) && !['U003', 'T003'].includes(b.num_serie || '')) {
+        if (context.user?.clave_zona) {
+          if (b.clave_unidad_ref) {
+            const uni = await AppDataSource.query(
+              `SELECT 1 AS ok FROM unidades WHERE clave = @0 AND clave_zona = @1`,
+              [b.clave_unidad_ref, context.user.clave_zona]
+            );
+            if (!uni?.length) return null;
+          } else {
+            return null;
+          }
         } else {
           return null;
         }

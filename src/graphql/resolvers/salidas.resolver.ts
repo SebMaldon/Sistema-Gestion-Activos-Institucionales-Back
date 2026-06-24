@@ -59,17 +59,25 @@ export const salidasResolvers = {
       // Filtro por zona para usuarios estándar
       if (isEstandar(context) && context.user?.clave_zona) {
         qb.andWhere(
-          `rs.id_salida IN (
+          `(rs.id_salida IN (
             SELECT DISTINCT rsb2.id_salida
             FROM Registro_Salida_Bienes rsb2
             INNER JOIN Bienes bz ON bz.id_bien = rsb2.id_bien
-            INNER JOIN unidades uz ON uz.clave = bz.clave_unidad_ref
-            WHERE uz.clave_zona = :_sal_zona
-          )`,
-          { _sal_zona: context.user.clave_zona }
+            LEFT JOIN unidades uz ON uz.clave = bz.clave_unidad_ref
+            WHERE uz.clave_zona = :_sal_zona OR bz.num_serie IN ('U003', 'T003')
+          ) OR rs.id_usuario_registra = :_userId)`,
+          { _sal_zona: context.user.clave_zona, _userId: context.user.id_usuario }
         );
       } else if (isEstandar(context)) {
-        qb.andWhere('1 = 0');
+        qb.andWhere(
+          `(rs.id_usuario_registra = :_userId OR rs.id_salida IN (
+            SELECT DISTINCT rsb3.id_salida
+            FROM Registro_Salida_Bienes rsb3
+            INNER JOIN Bienes bz3 ON bz3.id_bien = rsb3.id_bien
+            WHERE bz3.num_serie IN ('U003', 'T003')
+          ))`,
+          { _userId: context.user?.id_usuario }
+        );
       }
 
       if (filter) {
