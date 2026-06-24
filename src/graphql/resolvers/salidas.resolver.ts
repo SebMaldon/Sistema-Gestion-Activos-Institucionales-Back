@@ -65,7 +65,14 @@ export const salidasResolvers = {
             INNER JOIN Bienes bz ON bz.id_bien = rsb2.id_bien
             LEFT JOIN unidades uz ON uz.clave = bz.clave_unidad_ref
             WHERE uz.clave_zona = :_sal_zona OR bz.num_serie IN ('U003', 'T003')
-          ) OR rs.id_usuario_registra = :_userId)`,
+          ) 
+          OR rs.id_usuario_registra = :_userId
+          OR rs.id_usuario_registra IN (
+            SELECT usr.id_usuario
+            FROM Usuarios usr
+            INNER JOIN unidades u_usr ON u_usr.clave = usr.clave_unidad
+            WHERE u_usr.clave_zona = :_sal_zona
+          ))`,
           { _sal_zona: context.user.clave_zona, _userId: context.user.id_usuario }
         );
       } else if (isEstandar(context)) {
