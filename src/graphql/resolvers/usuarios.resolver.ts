@@ -19,12 +19,14 @@ export const usuariosResolvers = {
         id_unidad,
         search,
         roles,
+        claves_unidades,
         pagination,
       }: {
         estatus?: boolean;
         id_unidad?: number;
         search?: string;
         roles?: number[];
+        claves_unidades?: string[];
         pagination?: { first?: number; after?: string; page?: number };
       },
       context: GraphQLContext
@@ -46,6 +48,9 @@ export const usuariosResolvers = {
       }
       if (roles && roles.length > 0) {
         qb.andWhere('u.id_rol IN (:...roles)', { roles });
+      }
+      if (claves_unidades && claves_unidades.length > 0) {
+        qb.andWhere('u.clave_unidad IN (:...claves_unidades)', { claves_unidades });
       }
 
       // Filtro por zona para usuarios estándar

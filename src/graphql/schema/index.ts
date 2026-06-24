@@ -719,6 +719,7 @@ export const typeDefs = gql`
     usuarios(
       estatus: Boolean
       id_unidad: Int
+      claves_unidades: [String]
       search: String
       roles: [Int]
       pagination: PaginationInput
