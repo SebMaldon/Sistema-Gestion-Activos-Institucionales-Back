@@ -244,8 +244,337 @@ export interface BienesFilter {
   sort_dir?: string;
 }
 
+export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: boolean } {
+  if (filter?.estatus_operativo) {
+    qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
+  }
+  if (filter?.es_capitalizable !== undefined && filter.es_capitalizable !== null) {
+    qb.innerJoin('Cat_CategoriasActivo', 'cat_cap', 'cat_cap.id_categoria = b.id_categoria');
+    if (filter.es_capitalizable) {
+      qb.andWhere('cat_cap.es_capitalizable = 1');
+      qb.andWhere('b.num_inv IS NOT NULL AND b.num_inv != \'\'');
+      qb.andWhere('UPPER(b.num_inv) NOT LIKE \'%COMODATO%\'');
+    } else {
+      qb.andWhere('(cat_cap.es_capitalizable = 0 OR b.num_inv IS NULL OR b.num_inv = \'\' OR UPPER(b.num_inv) LIKE \'%COMODATO%\')');
+    }
+  }
+  if (filter?.search) {
+    qb.leftJoin('Especificaciones_TI', 'ti_search', 'ti_search.id_bien = b.id_bien');
+
+    const term = filter.search.trim();
+    const isIP = /^[0-9]{1,3}(\.[0-9]{1,3}){1,3}/.test(term);
+
+    if (isIP) {
+      qb.andWhere(
+        '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s ' +
+        'OR ti_search.dir_ip = :exact ' +
+        'OR ti_search.dir_ip LIKE :start ' +
+        'OR ti_search.dir_ip LIKE :end ' +
+        'OR ti_search.dir_ip LIKE :mid ' +
+        'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
+        {
+          s: `%${term}%`,
+          exact: term,
+          start: `${term}/%`,
+          end: `%/${term}`,
+          mid: `%/${term}/%`
+        }
+      );
+    } else {
+      qb.andWhere(
+        '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s ' +
+        'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
+        { s: `%${term}%` }
+      );
+    }
+  }
+
+  if (filter?.id_categoria?.length) qb.andWhere('b.id_categoria IN (:...ic)', { ic: filter.id_categoria });
+  if (filter?.id_segmento?.length) qb.andWhere('b.id_segmento IN (:...iseg)', { iseg: filter.id_segmento });
+  if (filter?.id_ubicacion?.length) qb.andWhere('b.id_ubicacion IN (:...iub)', { iub: filter.id_ubicacion });
+  if (filter?.id_unidad_medida?.length) qb.andWhere('b.id_unidad_medida IN (:...ium)', { ium: filter.id_unidad_medida });
+  if (filter?.id_usuario_resguardo?.length) qb.andWhere('b.id_usuario_resguardo IN (:...ur)', { ur: filter.id_usuario_resguardo });
+  if (filter?.clave_unidad_ref?.length) qb.andWhere('b.clave_unidad_ref IN (:...cur)', { cur: filter.clave_unidad_ref });
+  if (filter?.clave_modelo?.length) qb.andWhere('b.clave_modelo IN (:...cm)', { cm: filter.clave_modelo });
+
+  if (filter?.tipo_disp?.length || filter?.clave_marca?.length) {
+    qb.innerJoin('Cat_Modelos', 'mod', 'mod.clave_modelo = b.clave_modelo');
+    if (filter.tipo_disp?.length) qb.andWhere('mod.tipo_disp IN (:...td)', { td: filter.tipo_disp });
+    if (filter.clave_marca?.length) qb.andWhere('mod.clave_marca IN (:...mk)', { mk: filter.clave_marca });
+  }
+
+  const needsTI = (
+    filter?.ram_min != null || filter?.ram_max != null ||
+    filter?.almacenamiento_min != null || filter?.almacenamiento_max != null ||
+    filter?.modelo_so || filter?.cpu_info || filter?.dir_ip
+  );
+  if (needsTI) {
+    qb.innerJoin('Especificaciones_TI', 'ti', 'ti.id_bien = b.id_bien');
+    if (filter!.ram_min != null) qb.andWhere('ti.ram_gb >= :rmin', { rmin: filter!.ram_min });
+    if (filter!.ram_max != null) qb.andWhere('ti.ram_gb <= :rmax', { rmax: filter!.ram_max });
+    if (filter!.almacenamiento_min != null) qb.andWhere('ti.almacenamiento_gb >= :amin', { amin: filter!.almacenamiento_min });
+    if (filter!.almacenamiento_max != null) qb.andWhere('ti.almacenamiento_gb <= :amax', { amax: filter!.almacenamiento_max });
+    if (filter!.modelo_so) qb.andWhere('ti.modelo_so LIKE :so', { so: `%${filter!.modelo_so}%` });
+    if (filter!.cpu_info) qb.andWhere('ti.cpu_info LIKE :cpu', { cpu: `%${filter!.cpu_info}%` });
+    if (filter!.dir_ip) qb.andWhere('ti.dir_ip LIKE :ip', { ip: `%${filter!.dir_ip}%` });
+  }
+
+  if (filter?.tiene_garantia === false) {
+    qb.leftJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
+    qb.andWhere('gf.id_garantia IS NULL');
+  } else if (
+    filter?.tiene_garantia === true ||
+    filter?.garantia_vigente != null ||
+    filter?.garantia_fin_desde || filter?.garantia_fin_hasta
+  ) {
+    qb.innerJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
+    if (filter.garantia_vigente === true) qb.andWhere("gf.estado_garantia = 'VIGENTE'");
+    if (filter.garantia_fin_desde) qb.andWhere('gf.fecha_fin >= :gfd', { gfd: filter.garantia_fin_desde });
+  }
+
+  if (filter?.tiene_agente !== undefined && filter?.tiene_agente !== null) {
+    if (filter.tiene_agente) {
+      qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+    } else {
+      qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+    }
+  }
+
+  if (filter?.con_notas_recientes) {
+    qb.innerJoin('Notas', 'n', 'n.id_bien = b.id_bien');
+    qb.andWhere('n.fecha_creacion >= DATEADD(day, -30, GETDATE())');
+  }
+
+  if (filter?.sin_inventario) {
+    qb.andWhere('(b.num_inv IS NULL OR b.num_inv = \'\' OR b.num_inv = \'N/D\')');
+    qb.leftJoin('Cat_Modelos', 'mod_si', 'mod_si.clave_modelo = b.clave_modelo');
+    qb.andWhere('mod_si.tipo_disp IN (3, 4)');
+  }
+
+  if (filter?.inconvenientes) {
+    qb.leftJoin('Cat_Modelos', 'mod_inc', 'mod_inc.clave_modelo = b.clave_modelo');
+    qb.leftJoin('Especificaciones_TI', 'ti_inc', 'ti_inc.id_bien = b.id_bien');
+    qb.andWhere(`(
+      (mod_inc.tipo_disp IN (3, 4) AND (b.num_inv IS NULL OR b.num_inv = '' OR b.num_inv = 'N/D'))
+      OR
+      (ti_inc.dir_ip IS NOT NULL AND ti_inc.dir_ip != '' AND ti_inc.dir_ip IN (
+        SELECT dir_ip FROM Especificaciones_TI
+        WHERE dir_ip IS NOT NULL AND dir_ip != ''
+        GROUP BY dir_ip HAVING COUNT(*) > 1
+      ))
+    )`);
+  }
+
+  if (filter?.atributo_id != null && filter?.atributo_valor) {
+    qb.innerJoin('Bien_Atributos', 'ba', 'ba.id_bien = b.id_bien');
+    qb.andWhere('ba.id_atributo = :aid', { aid: filter.atributo_id });
+    qb.andWhere('ba.valor LIKE :aval', { aval: `%${filter.atributo_valor}%` });
+  }
+
+  if (filter?.fecha_adquisicion_desde) {
+    qb.andWhere('b.fecha_adquisicion >= :fad', { fad: filter.fecha_adquisicion_desde });
+  }
+  if (filter?.fecha_adquisicion_hasta) {
+    qb.andWhere('b.fecha_adquisicion <= :fah', { fah: filter.fecha_adquisicion_hasta });
+  }
+  if (filter?.fecha_actualizacion_desde) {
+    qb.andWhere('b.fecha_actualizacion >= :facd', { facd: filter.fecha_actualizacion_desde });
+  }
+  if (filter?.fecha_actualizacion_hasta) {
+    qb.andWhere('b.fecha_actualizacion <= :fach', { fach: filter.fecha_actualizacion_hasta });
+  }
+  return { needsTI: !!needsTI };
+}
+
 export const bienesResolvers = {
   Query: {
+    reportePorUnidades: async (
+      _: unknown,
+      { filter }: { filter?: BienesFilter },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      const { Garantia } = await import('../../entities/Garantia');
+      const qb = AppDataSource.getRepository(Bien).createQueryBuilder('b');
+      applyZonaFilter(qb, 'b', context);
+      applyBienesFilters(qb, filter);
+
+      qb.leftJoin('unidades', 'rep_u', 'rep_u.clave = b.clave_unidad_ref')
+        .leftJoin('Ubicaciones', 'rep_ub', 'rep_ub.id_ubicacion = b.id_ubicacion')
+        .leftJoin('Cat_Modelos', 'rep_cm', 'rep_cm.clave_modelo = b.clave_modelo')
+        .leftJoin('tipo_dispositivos', 'rep_td', 'rep_td.tipo_disp = rep_cm.tipo_disp')
+        .leftJoin('Especificaciones_TI', 'rep_ti', 'rep_ti.id_bien = b.id_bien')
+        .select([
+          'b.id_bien AS id_bien',
+          'b.estatus_operativo AS estatus_operativo',
+          'b.num_inv AS num_inv',
+          'b.clave_unidad_ref AS clave_unidad_ref',
+          'rep_u.clave AS u_clave',
+          'rep_u.desc_corta AS u_desc_corta',
+          'rep_u.descripcion AS u_descripcion',
+          'rep_ub.nombre_ubicacion AS nombre_ubicacion',
+          'rep_td.nombre_tipo AS nombre_tipo',
+          'rep_cm.tipo_disp AS tipo_disp',
+          'rep_ti.dir_ip AS dir_ip'
+        ]);
+
+      const [rows, garantiasRaw, notasRaw, dupIpsRaw] = await Promise.all([
+        qb.getRawMany(),
+        AppDataSource.getRepository(Garantia)
+          .createQueryBuilder('g')
+          .select(['g.id_bien AS id_bien', 'g.fecha_fin AS fecha_fin'])
+          .getRawMany(),
+        AppDataSource.getRepository(Nota)
+          .createQueryBuilder('n')
+          .select('n.id_bien AS id_bien')
+          .where('n.fecha_creacion >= DATEADD(day, -30, GETDATE())')
+          .getRawMany(),
+        AppDataSource.getRepository(EspecificacionTI)
+          .createQueryBuilder('t')
+          .select('t.dir_ip AS dir_ip')
+          .where("t.dir_ip IS NOT NULL AND t.dir_ip != ''")
+          .groupBy('t.dir_ip')
+          .having('COUNT(*) > 1')
+          .getRawMany()
+      ]);
+
+      const garantiasMap = new Map<string, Date[]>();
+      garantiasRaw.forEach((g: any) => {
+        const id = (g.id_bien || '').toLowerCase();
+        if (!garantiasMap.has(id)) garantiasMap.set(id, []);
+        if (g.fecha_fin) garantiasMap.get(id)!.push(new Date(g.fecha_fin));
+      });
+
+      const notasRecientesSet = new Set(notasRaw.map((n: any) => (n.id_bien || '').toLowerCase()));
+      const dupIpsSet = new Set(dupIpsRaw.map((t: any) => (t.dir_ip || '').trim()));
+
+      const map = new Map<string, any>();
+      const now = new Date();
+
+      const isNotBien = (tipo?: string) => {
+        if (!tipo) return false;
+        const t = tipo.toLowerCase();
+        return t.includes('monitor') || t.includes('mouse') || t.includes('ratón') || t.includes('raton') || t.includes('teclado');
+      };
+
+      const categorizeDevice = (tipo?: string) => {
+        const t = (tipo || '').toLowerCase();
+        if (t.includes('pc') || t.includes('escritorio') || t.includes('desktop') || t.includes('cómputo') || t.includes('computo')) return 'pcs';
+        if (t.includes('laptop') || t.includes('notebook') || t.includes('portátil') || t.includes('portatil')) return 'laptops';
+        if (t.includes('impresora') || t.includes('multifuncional')) return 'impresoras';
+        if (t.includes('switch')) return 'switches';
+        if (t.includes('teléfono') || t.includes('telefono')) {
+          if (t.includes('ip')) return 'telefonosIP';
+          return 'telefonosNormal';
+        }
+        return 'otros';
+      };
+
+      rows.forEach((r: any) => {
+        if (isNotBien(r.nombre_tipo)) return;
+
+        const clave = r.u_clave || r.clave_unidad_ref || 'SIN_UNIDAD';
+        const descCorta = r.u_desc_corta || 'Sin Unidad Asignada';
+        const descripcion = r.u_descripcion || 'Sin Unidad Asignada';
+
+        if (!map.has(clave)) {
+          map.set(clave, {
+            clave,
+            descCorta,
+            descripcion,
+            total: 0,
+            inconvenientes: 0,
+            pcs: 0, laptops: 0, impresoras: 0, switches: 0, telefonosIP: 0, telefonosNormal: 0, otros: 0,
+            ubicacionesStats: {},
+            detailStats: {
+              total: 0,
+              byEstatus: {},
+              byTipoDetalle: {},
+              garantiaVigente: 0,
+              garantiaVencida: 0,
+              sinGarantia: 0,
+              conAdv: 0
+            }
+          });
+        }
+
+        const g = map.get(clave)!;
+        g.total++;
+
+        const isPcOrLaptop = r.tipo_disp === 3 || r.tipo_disp === 4;
+        const noInv = !r.num_inv || r.num_inv === '' || r.num_inv === 'N/D';
+        const hasCondA = isPcOrLaptop && noInv;
+        const hasCondB = r.dir_ip && typeof r.dir_ip === 'string' && dupIpsSet.has(r.dir_ip.trim());
+        if (hasCondA || hasCondB) {
+          g.inconvenientes++;
+        }
+
+        const cat = categorizeDevice(r.nombre_tipo);
+        g[cat]++;
+
+        const ubicacionNombre = r.nombre_ubicacion || 'Sin Ubicación';
+        if (!g.ubicacionesStats[ubicacionNombre]) {
+          g.ubicacionesStats[ubicacionNombre] = { total: 0, tipos: {} };
+        }
+        g.ubicacionesStats[ubicacionNombre].total++;
+
+        let uTipo = r.nombre_tipo || 'Desconocido';
+        const uTipoLower = uTipo.toLowerCase();
+        if (uTipoLower.includes('teléfono') || uTipoLower.includes('telefono')) {
+          uTipo = uTipoLower.includes('ip') ? 'Teléfono IP' : 'Teléfono Analógico/Otros';
+        }
+        g.ubicacionesStats[ubicacionNombre].tipos[uTipo] = (g.ubicacionesStats[ubicacionNombre].tipos[uTipo] || 0) + 1;
+
+        const ds = g.detailStats;
+        ds.total++;
+
+        const st = r.estatus_operativo || 'DESCONOCIDO';
+        ds.byEstatus[st] = (ds.byEstatus[st] || 0) + 1;
+
+        if (!ds.byTipoDetalle[uTipo]) {
+          ds.byTipoDetalle[uTipo] = { total: 0, estatus: {} };
+        }
+        ds.byTipoDetalle[uTipo].total++;
+        ds.byTipoDetalle[uTipo].estatus[st] = (ds.byTipoDetalle[uTipo].estatus[st] || 0) + 1;
+
+        const idLower = (r.id_bien || '').toLowerCase();
+        const gDates = garantiasMap.get(idLower);
+        if (gDates && gDates.length > 0) {
+          if (gDates.some(d => d > now)) {
+            ds.garantiaVigente++;
+          } else {
+            ds.garantiaVencida++;
+          }
+        } else {
+          ds.sinGarantia++;
+        }
+
+        if (notasRecientesSet.has(idLower)) {
+          ds.conAdv++;
+        }
+      });
+
+      const arr = Array.from(map.values()).map(g => ({
+        clave: g.clave,
+        descCorta: g.descCorta,
+        descripcion: g.descripcion,
+        pcs: g.pcs,
+        laptops: g.laptops,
+        impresoras: g.impresoras,
+        switches: g.switches,
+        telefonosIP: g.telefonosIP,
+        telefonosNormal: g.telefonosNormal,
+        otros: g.otros,
+        total: g.total,
+        inconvenientes: g.inconvenientes,
+        ubicacionesStatsJson: JSON.stringify(g.ubicacionesStats),
+        detailStatsJson: JSON.stringify(g.detailStats)
+      }));
+
+      arr.sort((a, b) => b.total - a.total);
+      return arr;
+    },
+
     bienes: async (
       _: unknown,
       { filter, pagination }: { filter?: BienesFilter; pagination?: PaginationArgs },
@@ -256,161 +585,7 @@ export const bienesResolvers = {
 
       // ── Filtro por zona (usuarios estándar rol=3 ven solo su zona) ────────
       applyZonaFilter(qb, 'b', context);
-
-      // ── Basic filters ────────────────────────────────────────
-      if (filter?.estatus_operativo) {
-        qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
-      }
-      if (filter?.es_capitalizable !== undefined && filter.es_capitalizable !== null) {
-        qb.innerJoin('Cat_CategoriasActivo', 'cat_cap', 'cat_cap.id_categoria = b.id_categoria');
-        if (filter.es_capitalizable) {
-          qb.andWhere('cat_cap.es_capitalizable = 1');
-          qb.andWhere('b.num_inv IS NOT NULL AND b.num_inv != \'\'');
-          qb.andWhere('UPPER(b.num_inv) NOT LIKE \'%COMODATO%\'');
-        } else {
-          qb.andWhere('(cat_cap.es_capitalizable = 0 OR b.num_inv IS NULL OR b.num_inv = \'\' OR UPPER(b.num_inv) LIKE \'%COMODATO%\')');
-        }
-      }
-      if (filter?.search) {
-        qb.leftJoin('Especificaciones_TI', 'ti_search', 'ti_search.id_bien = b.id_bien');
-
-        const term = filter.search.trim();
-        // Check if it looks like an IP address (at least starting like one)
-        const isIP = /^[0-9]{1,3}(\.[0-9]{1,3}){1,3}/.test(term);
-
-        if (isIP) {
-          // Si es una IP, buscamos que coincida exactamente o en una lista separada por diagonal,
-          // evitando que '11.1.19.20' coincida con '11.1.19.201'
-          qb.andWhere(
-            '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s ' +
-            'OR ti_search.dir_ip = :exact ' +
-            'OR ti_search.dir_ip LIKE :start ' +
-            'OR ti_search.dir_ip LIKE :end ' +
-            'OR ti_search.dir_ip LIKE :mid ' +
-            'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
-            {
-              s: `%${term}%`,
-              exact: term,
-              start: `${term}/%`,
-              end: `%/${term}`,
-              mid: `%/${term}/%`
-            }
-          );
-        } else {
-          qb.andWhere(
-            '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s ' +
-            'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
-            { s: `%${term}%` }
-          );
-        }
-      }
-
-      // ── Multi-select IN filters ──────────────────────────────
-      if (filter?.id_categoria?.length) qb.andWhere('b.id_categoria IN (:...ic)', { ic: filter.id_categoria });
-      if (filter?.id_segmento?.length) qb.andWhere('b.id_segmento IN (:...iseg)', { iseg: filter.id_segmento });
-      if (filter?.id_ubicacion?.length) qb.andWhere('b.id_ubicacion IN (:...iub)', { iub: filter.id_ubicacion });
-      if (filter?.id_unidad_medida?.length) qb.andWhere('b.id_unidad_medida IN (:...ium)', { ium: filter.id_unidad_medida });
-      if (filter?.id_usuario_resguardo?.length) qb.andWhere('b.id_usuario_resguardo IN (:...ur)', { ur: filter.id_usuario_resguardo });
-      if (filter?.clave_unidad_ref?.length) qb.andWhere('b.clave_unidad_ref IN (:...cur)', { cur: filter.clave_unidad_ref });
-      if (filter?.clave_modelo?.length) qb.andWhere('b.clave_modelo IN (:...cm)', { cm: filter.clave_modelo });
-
-      // ── Device type / Brand (via Cat_Modelos) ────────────────
-      if (filter?.tipo_disp?.length || filter?.clave_marca?.length) {
-        qb.innerJoin('Cat_Modelos', 'mod', 'mod.clave_modelo = b.clave_modelo');
-        if (filter.tipo_disp?.length) qb.andWhere('mod.tipo_disp IN (:...td)', { td: filter.tipo_disp });
-        if (filter.clave_marca?.length) qb.andWhere('mod.clave_marca IN (:...mk)', { mk: filter.clave_marca });
-      }
-
-      // ── IT Specs (via Especificaciones_TI) ───────────────────
-      const needsTI = (
-        filter?.ram_min != null || filter?.ram_max != null ||
-        filter?.almacenamiento_min != null || filter?.almacenamiento_max != null ||
-        filter?.modelo_so || filter?.cpu_info || filter?.dir_ip
-      );
-      if (needsTI) {
-        qb.innerJoin('Especificaciones_TI', 'ti', 'ti.id_bien = b.id_bien');
-        if (filter!.ram_min != null) qb.andWhere('ti.ram_gb >= :rmin', { rmin: filter!.ram_min });
-        if (filter!.ram_max != null) qb.andWhere('ti.ram_gb <= :rmax', { rmax: filter!.ram_max });
-        if (filter!.almacenamiento_min != null) qb.andWhere('ti.almacenamiento_gb >= :amin', { amin: filter!.almacenamiento_min });
-        if (filter!.almacenamiento_max != null) qb.andWhere('ti.almacenamiento_gb <= :amax', { amax: filter!.almacenamiento_max });
-        if (filter!.modelo_so) qb.andWhere('ti.modelo_so LIKE :so', { so: `%${filter!.modelo_so}%` });
-        if (filter!.cpu_info) qb.andWhere('ti.cpu_info LIKE :cpu', { cpu: `%${filter!.cpu_info}%` });
-        if (filter!.dir_ip) qb.andWhere('ti.dir_ip LIKE :ip', { ip: `%${filter!.dir_ip}%` });
-      }
-
-      // ── Warranty filters (via Garantias) ─────────────────────
-      if (filter?.tiene_garantia === false) {
-        qb.leftJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
-        qb.andWhere('gf.id_garantia IS NULL');
-      } else if (
-        filter?.tiene_garantia === true ||
-        filter?.garantia_vigente != null ||
-        filter?.garantia_fin_desde || filter?.garantia_fin_hasta
-      ) {
-        qb.innerJoin('Garantias', 'gf', 'gf.id_bien = b.id_bien');
-        if (filter.garantia_vigente === true) qb.andWhere("gf.estado_garantia = 'VIGENTE'");
-        if (filter.garantia_fin_desde) qb.andWhere('gf.fecha_fin >= :gfd', { gfd: filter.garantia_fin_desde });
-      }
-
-      // ── Agent installed filter ───────────────────────────────
-      if (filter?.tiene_agente !== undefined && filter?.tiene_agente !== null) {
-        if (filter.tiene_agente) {
-          qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
-        } else {
-          qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
-        }
-      }
-
-      // ── Quick Filters ────────────────────────────────────────
-      if (filter?.con_notas_recientes) {
-        qb.innerJoin('Notas', 'n', 'n.id_bien = b.id_bien');
-        // Filter notes created within the last 30 days
-        qb.andWhere('n.fecha_creacion >= DATEADD(day, -30, GETDATE())');
-      }
-
-      if (filter?.sin_inventario) {
-        // Red color means "num_inv is null or empty or N/D"
-        qb.andWhere('(b.num_inv IS NULL OR b.num_inv = \'\' OR b.num_inv = \'N/D\')');
-
-        // Only applies to PCs and Laptops (tipo_disp 3 and 4)
-        qb.leftJoin('Cat_Modelos', 'mod_si', 'mod_si.clave_modelo = b.clave_modelo');
-        qb.andWhere('mod_si.tipo_disp IN (3, 4)');
-      }
-
-      if (filter?.inconvenientes) {
-        qb.leftJoin('Cat_Modelos', 'mod_inc', 'mod_inc.clave_modelo = b.clave_modelo');
-        qb.leftJoin('Especificaciones_TI', 'ti_inc', 'ti_inc.id_bien = b.id_bien');
-        qb.andWhere(`(
-          (mod_inc.tipo_disp IN (3, 4) AND (b.num_inv IS NULL OR b.num_inv = '' OR b.num_inv = 'N/D'))
-          OR
-          (ti_inc.dir_ip IS NOT NULL AND ti_inc.dir_ip != '' AND ti_inc.dir_ip IN (
-            SELECT dir_ip FROM Especificaciones_TI
-            WHERE dir_ip IS NOT NULL AND dir_ip != ''
-            GROUP BY dir_ip HAVING COUNT(*) > 1
-          ))
-        )`);
-      }
-
-      // ── EAV Attribute filter ─────────────────────────────────
-      if (filter?.atributo_id != null && filter?.atributo_valor) {
-        qb.innerJoin('Bien_Atributos', 'ba', 'ba.id_bien = b.id_bien');
-        qb.andWhere('ba.id_atributo = :aid', { aid: filter.atributo_id });
-        qb.andWhere('ba.valor LIKE :aval', { aval: `%${filter.atributo_valor}%` });
-      }
-
-      // ── Dates ──────────────────────────────────────────────
-      if (filter?.fecha_adquisicion_desde) {
-        qb.andWhere('b.fecha_adquisicion >= :fad', { fad: filter.fecha_adquisicion_desde });
-      }
-      if (filter?.fecha_adquisicion_hasta) {
-        qb.andWhere('b.fecha_adquisicion <= :fah', { fah: filter.fecha_adquisicion_hasta });
-      }
-      if (filter?.fecha_actualizacion_desde) {
-        qb.andWhere('b.fecha_actualizacion >= :facd', { facd: filter.fecha_actualizacion_desde });
-      }
-      if (filter?.fecha_actualizacion_hasta) {
-        qb.andWhere('b.fecha_actualizacion <= :fach', { fach: filter.fecha_actualizacion_hasta });
-      }
+      const { needsTI } = applyBienesFilters(qb, filter);
 
       // ── Count + Pagination ───────────────────────────────────
       const totalCount = await qb.getCount();

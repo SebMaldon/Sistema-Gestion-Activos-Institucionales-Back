@@ -644,6 +644,23 @@ export const typeDefs = gql`
     PalabraClave: String
   }
 
+  type ReporteUnidadItem {
+    clave: String!
+    descCorta: String!
+    descripcion: String!
+    pcs: Int!
+    laptops: Int!
+    impresoras: Int!
+    switches: Int!
+    telefonosIP: Int!
+    telefonosNormal: Int!
+    otros: Int!
+    total: Int!
+    inconvenientes: Int!
+    ubicacionesStatsJson: String!
+    detailStatsJson: String!
+  }
+
   # ─────────────────────────────────────────────────────────
   # QUERIES
   # ─────────────────────────────────────────────────────────
@@ -728,6 +745,7 @@ export const typeDefs = gql`
 
     # ── Bienes
     bienes(filter: BienesFilterInput, pagination: PaginationInput): BienesConnection!
+    reportePorUnidades(filter: BienesFilterInput): [ReporteUnidadItem!]!
     bien(id_bien: ID!): Bien
     bienByQR(qr_hash: String!): Bien
     bienByNumSerie(num_serie: String!): Bien
