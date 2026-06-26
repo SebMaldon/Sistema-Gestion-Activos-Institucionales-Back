@@ -43,6 +43,9 @@ export class Inmueble {
   @Column({ type: 'varchar', length: 50, nullable: true })
   ppal?: string;
 
+  @Column({ name: 'Ubicación_coordenada', type: 'varchar', length: 'max', nullable: true })
+  ubicacion_coordenada?: string;
+
   @Column({ type: 'varchar', length: 5, nullable: false })
   clave_zona!: string;
 

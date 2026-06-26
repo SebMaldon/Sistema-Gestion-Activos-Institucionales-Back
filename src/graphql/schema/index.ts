@@ -199,6 +199,7 @@ export const typeDefs = gql`
     no_inmueble: Int
     regimen: Int
     tipo_unidad: Int
+    ubicacion_coordenada: String
     tipoUnidadInfo: TipoUnidadCatalog
     unidadesACargo: [UnidadACargo!]
     contactos: [Contacto!]
@@ -1268,6 +1269,7 @@ export const typeDefs = gql`
       no_inmueble: Int
       regimen: Int
       tipo_unidad: Int
+      ubicacion_coordenada: String
       unidadesACargo: [UnidadACargoInput!]
       contactos: [ContactoInput!]
       segmentos: [SegmentoInput!]
@@ -1293,6 +1295,7 @@ export const typeDefs = gql`
       no_inmueble: Int
       regimen: Int
       tipo_unidad: Int
+      ubicacion_coordenada: String
       unidadesACargo: [UnidadACargoInput!]
       contactos: [ContactoInput!]
       segmentos: [SegmentoInput!]
