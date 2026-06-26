@@ -21,7 +21,9 @@ describe('Garantías Resolver', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+    find: jest.fn().mockResolvedValue([]),
     delete: jest.fn(),
+    remove: jest.fn().mockResolvedValue(true),
     merge: jest.fn().mockImplementation((entity, updates) => Object.assign(entity, updates)),
   };
 
@@ -102,10 +104,11 @@ describe('Garantías Resolver', () => {
 
   describe('deleteGarantia', () => {
     it('Debe eliminar la garantía correctamente', async () => {
-      mockRepo.delete = jest.fn().mockResolvedValue({ affected: 1 });
+      mockRepo.findOne.mockResolvedValue({ id_garantia: 1 });
+      mockRepo.remove = jest.fn().mockResolvedValue(true);
       const result = await transaccionalesResolvers.Mutation.deleteGarantia(null, { id_garantia: 1 }, mockContext as any);
       expect(result).toBe(true);
-      expect(mockRepo.delete).toHaveBeenCalledWith({ id_garantia: 1 });
+      expect(mockRepo.remove).toHaveBeenCalledWith({ id_garantia: 1 });
     });
   });
 });

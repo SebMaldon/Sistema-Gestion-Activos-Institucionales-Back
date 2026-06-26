@@ -25,8 +25,10 @@ describe('Bienes Resolver', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+    find: jest.fn().mockResolvedValue([]),
     count: jest.fn(),
     delete: jest.fn(),
+    remove: jest.fn().mockResolvedValue(true),
     merge: jest.fn().mockImplementation((entity, updates) => Object.assign(entity, updates)),
   };
 
@@ -156,14 +158,14 @@ describe('Bienes Resolver', () => {
         // Segunda llamada (Movimientos): 0
         .mockResolvedValueOnce(0);
         
-      mockRepo.delete = jest.fn().mockResolvedValue({ affected: 1 });
+      mockRepo.find = jest.fn().mockResolvedValue([]);
+      mockRepo.findOne = jest.fn().mockResolvedValue({ id_bien: 'valid-uuid' });
+      mockRepo.remove = jest.fn().mockResolvedValue(true);
 
       const result = await bienesResolvers.Mutation.deleteBien(null, { id_bien: 'valid-uuid' }, mockContext as any);
       
       expect(result).toBe(true);
-      // Se llama a delete para Notas y Bienes
-      expect(mockRepo.delete).toHaveBeenCalledTimes(2);
-      expect(mockRepo.delete).toHaveBeenCalledWith({ id_bien: 'valid-uuid' });
+      expect(mockRepo.remove).toHaveBeenCalledWith({ id_bien: 'valid-uuid' });
     });
   });
 });
