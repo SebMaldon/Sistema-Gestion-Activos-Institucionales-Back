@@ -28,10 +28,12 @@ export const prestamosResolvers = {
       _: unknown,
       {
         id_bien,
+        fecha_inicio_prestamo,
         fecha_a_terminar_prestamo,
         descripcion_prestamo_inicio,
       }: {
         id_bien: string;
+        fecha_inicio_prestamo?: Date | string;
         fecha_a_terminar_prestamo?: Date | string;
         descripcion_prestamo_inicio?: string;
       },
@@ -51,7 +53,7 @@ export const prestamosResolvers = {
         const nuevoPrestamo = prestamoRepo.create({
           id_bien,
           id_usuario_registra_prestamo: context.user!.id_usuario,
-          fecha_inicio_prestamo: new Date(),
+          fecha_inicio_prestamo: fecha_inicio_prestamo ? new Date(fecha_inicio_prestamo) : new Date(),
           fecha_a_terminar_prestamo: fecha_a_terminar_prestamo
             ? new Date(fecha_a_terminar_prestamo)
             : undefined,
@@ -73,10 +75,12 @@ export const prestamosResolvers = {
       _: unknown,
       {
         id_registro_prestamo,
+        fecha_inicio_prestamo,
         fecha_a_terminar_prestamo,
         descripcion_prestamo_inicio,
       }: {
         id_registro_prestamo: number;
+        fecha_inicio_prestamo?: Date | string;
         fecha_a_terminar_prestamo: Date | string;
         descripcion_prestamo_inicio: string;
       },
@@ -89,6 +93,9 @@ export const prestamosResolvers = {
       const prestamo = await prestamoRepo.findOne({ where: { id_registro_prestamo } });
       if (!prestamo) throw new NotFoundError('Registro de préstamo');
 
+      if (fecha_inicio_prestamo) {
+        prestamo.fecha_inicio_prestamo = new Date(fecha_inicio_prestamo);
+      }
       prestamo.fecha_a_terminar_prestamo = new Date(fecha_a_terminar_prestamo);
       prestamo.descripcion_prestamo_inicio = descripcion_prestamo_inicio;
 

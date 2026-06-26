@@ -1189,11 +1189,13 @@ export const typeDefs = gql`
     # ── Préstamos
     crearPrestamoBien(
       id_bien: ID!
+      fecha_inicio_prestamo: DateTime
       fecha_a_terminar_prestamo: DateTime
       descripcion_prestamo_inicio: String
     ): PrestamoBien!
     actualizarPrestamoBien(
       id_registro_prestamo: Int!
+      fecha_inicio_prestamo: DateTime
       fecha_a_terminar_prestamo: DateTime!
       descripcion_prestamo_inicio: String!
     ): PrestamoBien!
