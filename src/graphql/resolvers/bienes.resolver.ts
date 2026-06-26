@@ -19,6 +19,7 @@ import { Segmento } from '../../entities/Segmento';
 import { CuentaPC } from '../../entities/CuentaPC';
 import { ProgramasPC } from '../../entities/ProgramasPC';
 import { Bitacora } from '../../entities/Bitacora';
+import { PrestamoBien } from '../../entities/PrestamoBien';
 import { EntityManager } from 'typeorm';
 
 // ── Interface: monitor detectado por WMI ──────────────────────────────────────
@@ -362,6 +363,14 @@ export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: b
         WHERE dir_ip IS NOT NULL AND dir_ip != ''
         GROUP BY dir_ip HAVING COUNT(*) > 1
       ))
+      OR
+      EXISTS (
+        SELECT 1 FROM Prestamos_Bienes pb_inc
+        WHERE pb_inc.id_bien = b.id_bien
+          AND pb_inc.fecha_entrega IS NULL
+          AND pb_inc.fecha_a_terminar_prestamo IS NOT NULL
+          AND pb_inc.fecha_a_terminar_prestamo < GETDATE()
+      )
     )`);
   }
 
@@ -418,7 +427,7 @@ export const bienesResolvers = {
           'rep_ti.dir_ip AS dir_ip'
         ]);
 
-      const [rows, garantiasRaw, notasRaw, dupIpsRaw] = await Promise.all([
+      const [rows, garantiasRaw, notasRaw, dupIpsRaw, overdueRaw] = await Promise.all([
         qb.getRawMany(),
         AppDataSource.getRepository(Garantia)
           .createQueryBuilder('g')
@@ -435,6 +444,13 @@ export const bienesResolvers = {
           .where("t.dir_ip IS NOT NULL AND t.dir_ip != ''")
           .groupBy('t.dir_ip')
           .having('COUNT(*) > 1')
+          .getRawMany(),
+        AppDataSource.getRepository(PrestamoBien)
+          .createQueryBuilder('pb')
+          .select('pb.id_bien AS id_bien')
+          .where('pb.fecha_entrega IS NULL')
+          .andWhere('pb.fecha_a_terminar_prestamo IS NOT NULL')
+          .andWhere('pb.fecha_a_terminar_prestamo < GETDATE()')
           .getRawMany()
       ]);
 
@@ -447,6 +463,7 @@ export const bienesResolvers = {
 
       const notasRecientesSet = new Set(notasRaw.map((n: any) => (n.id_bien || '').toLowerCase()));
       const dupIpsSet = new Set(dupIpsRaw.map((t: any) => (t.dir_ip || '').trim()));
+      const overdueSet = new Set(overdueRaw.map((p: any) => (p.id_bien || '').toLowerCase()));
 
       const map = new Map<string, any>();
       const now = new Date();
@@ -505,7 +522,8 @@ export const bienesResolvers = {
         const noInv = !r.num_inv || r.num_inv === '' || r.num_inv === 'N/D';
         const hasCondA = isPcOrLaptop && noInv;
         const hasCondB = r.dir_ip && typeof r.dir_ip === 'string' && dupIpsSet.has(r.dir_ip.trim());
-        if (hasCondA || hasCondB) {
+        const hasCondC = overdueSet.has((r.id_bien || '').toLowerCase());
+        if (hasCondA || hasCondB || hasCondC) {
           g.inconvenientes++;
         }
 
@@ -1587,6 +1605,18 @@ export const bienesResolvers = {
         if (count > 1) {
           inc.push('IP Repetida: ' + dir_ip.trim());
         }
+      }
+
+      // 3. Condición C: Préstamo Vencido
+      const overdueCount = await AppDataSource.getRepository(PrestamoBien)
+        .createQueryBuilder('pb')
+        .where('pb.id_bien = :id', { id: parent.id_bien })
+        .andWhere('pb.fecha_entrega IS NULL')
+        .andWhere('pb.fecha_a_terminar_prestamo IS NOT NULL')
+        .andWhere('pb.fecha_a_terminar_prestamo < GETDATE()')
+        .getCount();
+      if (overdueCount > 0) {
+        inc.push('Préstamo Vencido / Caducado');
       }
 
       return inc;

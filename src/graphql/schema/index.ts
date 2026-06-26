@@ -354,6 +354,8 @@ export const typeDefs = gql`
     monitores: [BienMonitor!]
     equipoAsignado: BienMonitor
     programasPC: [ProgramasPC!]
+    prestamos: [PrestamoBien!]
+    prestamoActivo: PrestamoBien
     inconvenientes: [String!]
     tiene_cambios_pendientes: Boolean
   }
@@ -530,6 +532,22 @@ export const typeDefs = gql`
     contenido_nota: String!
     fecha_creacion: DateTime!
     usuarioAutor: Usuario
+  }
+
+  # ─── PRÉSTAMOS ──────────────────────────────────────────
+  type PrestamoBien {
+    id_registro_prestamo: Int!
+    id_bien: ID!
+    id_usuario_registra_prestamo: Int!
+    id_usuario_registra_entrega: Int
+    fecha_inicio_prestamo: DateTime!
+    fecha_a_terminar_prestamo: DateTime
+    fecha_entrega: DateTime
+    descripcion_prestamo_inicio: String
+    descripcion_prestamo_finalizacion: String
+    bien: Bien
+    usuarioRegistraPrestamo: Usuario
+    usuarioRegistraEntrega: Usuario
   }
 
   # ─── MOVIMIENTOS ────────────────────────────────────────
@@ -796,6 +814,9 @@ export const typeDefs = gql`
     # ── Notas
     notasBien(id_bien: ID!): [Nota!]!
     notasIncidencia(id_incidencia: Int!): [Nota!]!
+
+    # ── Préstamos
+    prestamosPorBien(id_bien: ID!): [PrestamoBien!]!
 
     # ── Movimientos
     movimientos(
@@ -1163,6 +1184,24 @@ export const typeDefs = gql`
     ): Bien!
     deleteBien(id_bien: ID!): Boolean!
     updateUsuarioResguardo(id_bien: ID!, id_usuario_resguardo: Int): Bien!
+
+    # ── Préstamos
+    crearPrestamoBien(
+      id_bien: ID!
+      fecha_a_terminar_prestamo: DateTime
+      descripcion_prestamo_inicio: String
+    ): PrestamoBien!
+    actualizarPrestamoBien(
+      id_registro_prestamo: Int!
+      fecha_a_terminar_prestamo: DateTime!
+      descripcion_prestamo_inicio: String!
+    ): PrestamoBien!
+    finalizarPrestamoBien(
+      id_bien: ID!
+      estatus_operativo_nuevo: String!
+      fecha_entrega: DateTime
+      descripcion_prestamo_finalizacion: String
+    ): PrestamoBien!
 
     # ── Forzar Sincronización
     setSyncPending(id_bien: ID!): Boolean!

@@ -18,6 +18,7 @@ import { BienAtributo } from './BienAtributo';
 import { BienMonitor } from './BienMonitor';
 import { CuentaPC } from './CuentaPC';
 import { ProgramasPC } from './ProgramasPC';
+import { PrestamoBien } from './PrestamoBien';
 
 @Entity('Bienes')
 export class Bien {
@@ -136,4 +137,8 @@ export class Bien {
   // Programas instalados (1:N)
   @OneToMany(() => ProgramasPC, (p) => p.bien)
   programasPC?: ProgramasPC[];
+
+  // Historial de préstamos (1:N)
+  @OneToMany(() => PrestamoBien, (p) => p.bien)
+  prestamos?: PrestamoBien[];
 }

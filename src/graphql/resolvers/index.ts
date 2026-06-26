@@ -12,6 +12,7 @@ import { atributosResolvers } from './atributos.resolver';
 import { solicitudesCambioResolvers } from './solicitudesCambio.resolver';
 import { salidasResolvers } from './salidas.resolver';
 import { mesaCorrespondenciaResolver } from './mesaCorrespondencia.resolver';
+import { prestamosResolvers } from './prestamos.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -70,6 +71,7 @@ export const resolvers = {
     ...solicitudesCambioResolvers.Query,
     ...salidasResolvers.Query,
     ...mesaCorrespondenciaResolver.Query,
+    ...prestamosResolvers.Query,
   },
 
   Mutation: {
@@ -85,6 +87,7 @@ export const resolvers = {
     ...solicitudesCambioResolvers.Mutation,
     ...salidasResolvers.Mutation,
     ...mesaCorrespondenciaResolver.Mutation,
+    ...prestamosResolvers.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────
@@ -107,4 +110,12 @@ export const resolvers = {
   AtributoTipoDispositivo: atributosResolvers.AtributoTipoDispositivo,
   CatAtributoTecnico: atributosResolvers.CatAtributoTecnico,
   SolicitudCambio: solicitudesCambioResolvers.SolicitudCambio,
+  PrestamoBien: prestamosResolvers.PrestamoBien,
+  // Extendemos Bien con resolvers de prestamos
+  ...prestamosResolvers.Bien ? {
+    Bien: {
+      ...bienesResolvers.Bien,
+      ...prestamosResolvers.Bien,
+    }
+  } : {},
 };
