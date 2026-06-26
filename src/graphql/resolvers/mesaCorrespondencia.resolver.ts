@@ -43,6 +43,16 @@ export const mesaCorrespondenciaResolver = {
         if (filter.PalabraClave) {
           qb.andWhere('(mc.Descripcion LIKE :keyword OR mc.Remitente LIKE :keyword)', { keyword: `%${filter.PalabraClave}%` });
         }
+        if (filter.DateFilterType && filter.DateFilterType !== 'NONE' && (filter.StartDate || filter.EndDate)) {
+          const colName = filter.DateFilterType === 'RECEPCION' ? 'mc.FechaRecepcion' : 'mc.FechaOficio';
+          if (filter.StartDate && filter.EndDate) {
+            qb.andWhere(`CAST(${colName} AS DATE) BETWEEN :start AND :end`, { start: filter.StartDate, end: filter.EndDate });
+          } else if (filter.StartDate) {
+            qb.andWhere(`CAST(${colName} AS DATE) >= :start`, { start: filter.StartDate });
+          } else if (filter.EndDate) {
+            qb.andWhere(`CAST(${colName} AS DATE) <= :end`, { end: filter.EndDate });
+          }
+        }
       }
 
       const totalCount = await qb.getCount();

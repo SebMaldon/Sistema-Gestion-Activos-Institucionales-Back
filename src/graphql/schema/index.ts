@@ -661,6 +661,9 @@ export const typeDefs = gql`
     NoOficio: String
     Folio: Int
     PalabraClave: String
+    DateFilterType: String
+    StartDate: String
+    EndDate: String
   }
 
   type ReporteUnidadItem {
