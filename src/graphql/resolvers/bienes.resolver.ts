@@ -261,13 +261,15 @@ export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: b
   }
   if (filter?.search) {
     qb.leftJoin('Especificaciones_TI', 'ti_search', 'ti_search.id_bien = b.id_bien');
+    qb.leftJoin('Cat_Modelos', 'mod_search', 'mod_search.clave_modelo = b.clave_modelo');
 
     const term = filter.search.trim();
     const isIP = /^[0-9]{1,3}(\.[0-9]{1,3}){1,3}/.test(term);
 
     if (isIP) {
       qb.andWhere(
-        '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s ' +
+        '(LTRIM(RTRIM(b.num_serie)) LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s ' +
+        'OR mod_search.descrip_disp LIKE :s ' +
         'OR ti_search.dir_ip = :exact ' +
         'OR ti_search.dir_ip LIKE :start ' +
         'OR ti_search.dir_ip LIKE :end ' +
@@ -283,7 +285,8 @@ export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: b
       );
     } else {
       qb.andWhere(
-        '(b.num_serie LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s ' +
+        '(LTRIM(RTRIM(b.num_serie)) LIKE :s OR b.num_inv LIKE :s OR b.clave_presupuestal LIKE :s OR TRY_CAST(b.id_bien AS NVARCHAR(36)) LIKE :s OR ti_search.dir_ip LIKE :s ' +
+        'OR mod_search.descrip_disp LIKE :s ' +
         'OR EXISTS (SELECT 1 FROM Cuentas_PC cpc WHERE cpc.id_bien = b.id_bien AND (cpc.cuenta_windows LIKE :s OR cpc.correo LIKE :s)))',
         { s: `%${term}%` }
       );
