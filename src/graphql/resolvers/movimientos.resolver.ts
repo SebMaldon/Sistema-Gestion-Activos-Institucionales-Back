@@ -168,7 +168,7 @@ export const dashboardResolvers = {
       ] = await Promise.all([
         bienQB(),
         bienQB(`b.estatus_operativo = 'ACTIVO'`),
-        bienQB(`b.estatus_operativo = 'INACTIVO'`),
+        bienQB(`b.estatus_operativo IN ('INACTIVO', 'BAJA', 'P_BAJA')`),
         bienQB(`b.estatus_operativo = 'EN REPARACIÓN'`),
         incQB('i.estatus_reparacion = :val', 'Pendiente'),
         incQB('i.estatus_reparacion = :val', 'En proceso'),
@@ -223,7 +223,7 @@ export const dashboardResolvers = {
         .addSelect("COUNT(b.id_bien)", "count")
         .leftJoin("b.modelo", "m")
         .leftJoin("m.tipoDispositivo", "td")
-        .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO')");
+        .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO', 'BAJA', 'P_BAJA')");
 
       // Para usuarios estándar: INNER JOIN a unidades filtrando por zona
       // Para admin/maestro: LEFT JOIN para ver también bienes sin unidad

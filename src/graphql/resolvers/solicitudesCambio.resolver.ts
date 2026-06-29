@@ -329,7 +329,7 @@ export const solicitudesCambioResolvers = {
           // Campos desconocidos se ignoran silenciosamente
         }
 
-        if (bienUpdates.estatus_operativo === 'INACTIVO') {
+        if (['INACTIVO', 'BAJA', 'P_BAJA'].includes(bienUpdates.estatus_operativo || '')) {
           specUpdates.dir_ip = null;
           specUpdates.nombre_host = null;
           specUpdates.modelo_so = null;

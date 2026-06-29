@@ -73,9 +73,10 @@ export const catalogosResolvers = {
         .select('DISTINCT(b.estatus_operativo)', 'estatus')
         .where('b.estatus_operativo IS NOT NULL')
         .andWhere("b.estatus_operativo != ''")
-        .orderBy('b.estatus_operativo', 'ASC')
         .getRawMany();
-      return result.map(r => r.estatus);
+      const dbStatuses = result.map(r => r.estatus);
+      const fixedStatuses = ['ACTIVO', 'INACTIVO', 'DAÑADO', 'DEVOLUCIÓN', 'OTRO', 'BAJA', 'P_BAJA', 'PRESTAMO', 'SINIESTRADO', 'SUSTITUIDO', 'TRASPASO OOAD', 'TRASPASO_FORANEO'];
+      return Array.from(new Set([...fixedStatuses, ...dbStatuses])).sort((a, b) => a.localeCompare(b));
     },
 
     // ── Cat_UnidadesMedida

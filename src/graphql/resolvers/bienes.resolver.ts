@@ -1109,7 +1109,7 @@ export const bienesResolvers = {
 
 
 
-      if (updates.estatus_operativo === 'INACTIVO') {
+      if (['INACTIVO', 'BAJA', 'P_BAJA'].includes(updates.estatus_operativo || '')) {
         const cuentaRepo = AppDataSource.getRepository(CuentaPC);
         const progRepo = AppDataSource.getRepository(ProgramasPC);
         const specRepo = AppDataSource.getRepository(EspecificacionTI);
@@ -1186,7 +1186,7 @@ export const bienesResolvers = {
       // Si el equipo está INACTIVO, no se deben guardar especificaciones TI
       const bienRepo = AppDataSource.getRepository(Bien);
       const bienCheck = await bienRepo.findOne({ where: { id_bien } });
-      if (bienCheck?.estatus_operativo === 'INACTIVO') {
+      if (['INACTIVO', 'BAJA', 'P_BAJA'].includes(bienCheck?.estatus_operativo || '')) {
         const specRepo = AppDataSource.getRepository(EspecificacionTI);
         const existingSpec = await specRepo.findOne({ where: { id_bien } });
         return existingSpec || null;
