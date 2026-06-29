@@ -200,7 +200,7 @@ export async function procesarMonitoresHelper(
 }
 
 export interface BienesFilter {
-  estatus_operativo?: string;
+  estatus_operativo?: string | string[];
   es_capitalizable?: boolean;
   search?: string;
   // Multi-select arrays
@@ -247,7 +247,13 @@ export interface BienesFilter {
 
 export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: boolean } {
   if (filter?.estatus_operativo) {
-    qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
+    if (Array.isArray(filter.estatus_operativo)) {
+      if (filter.estatus_operativo.length > 0) {
+        qb.andWhere('b.estatus_operativo IN (:...e)', { e: filter.estatus_operativo });
+      }
+    } else if (filter.estatus_operativo.trim() !== '') {
+      qb.andWhere('b.estatus_operativo = :e', { e: filter.estatus_operativo });
+    }
   }
   if (filter?.es_capitalizable !== undefined && filter.es_capitalizable !== null) {
     qb.innerJoin('Cat_CategoriasActivo', 'cat_cap', 'cat_cap.id_categoria = b.id_categoria');

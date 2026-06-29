@@ -372,7 +372,7 @@ export const typeDefs = gql`
   }
 
   input BienesFilterInput {
-    estatus_operativo: String
+    estatus_operativo: [String!]
     es_capitalizable: Boolean
     search: String
     # Multi-select arrays
