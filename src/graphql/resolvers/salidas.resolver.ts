@@ -112,7 +112,9 @@ export const salidasResolvers = {
              .orWhere('bienRef.num_inv LIKE :search', { search: `%${filter.search}%` })
              .orWhere('CAST(bienRef.id_bien AS VARCHAR(36)) LIKE :search', { search: `%${filter.search}%` })
              .orWhere('modelo.descrip_disp LIKE :search', { search: `%${filter.search}%` })
-             .orWhere('b.cantidad_o_id LIKE :search', { search: `%${filter.search}%` });
+             .orWhere('b.cantidad_o_id LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('b.descripcion LIKE :search', { search: `%${filter.search}%` })
+             .orWhere('b.naturaleza LIKE :search', { search: `%${filter.search}%` });
           }));
         }
       }
