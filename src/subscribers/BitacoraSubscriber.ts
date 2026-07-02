@@ -154,6 +154,11 @@ export class BitacoraSubscriber implements EntitySubscriberInterface {
 
     bitacora.origen = origen.toUpperCase();
 
+    if (bitacora.origen === 'WIN') {
+      bitacora.accion = 'AUTOSYNC ACTUALIZÓ UN EQUIPO';
+      bitacora.detalles_movimiento = 'AUTOSYNC ACTUALIZÓ UN EQUIPO';
+    }
+
     // CRUCIAL: Usamos event.manager para asegurar que la inserción de la bitácora 
     // ocurra dentro de la misma transacción de la consulta original.
     await event.manager.save(Bitacora, bitacora);

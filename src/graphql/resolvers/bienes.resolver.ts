@@ -344,9 +344,9 @@ export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: b
 
   if (filter?.tiene_agente !== undefined && filter?.tiene_agente !== null) {
     if (filter.tiene_agente) {
-      qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+      qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE '%SGHI%')");
     } else {
-      qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+      qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE '%SGHI%')");
     }
   }
 
@@ -1404,13 +1404,10 @@ export const bienesResolvers = {
         const bitacoraRepo = manager.getRepository(Bitacora);
         await bitacoraRepo.save(bitacoraRepo.create({
           id_usuario: context.user!.id_usuario,
-          accion: 'CREACION_MASIVA',
+          accion: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
           tabla_afectada: 'Cuentas_PC',
           registro_afectado: id_bien,
-          detalles_movimiento: JSON.stringify({
-            mensaje: `Se sincronizaron ${cuentas ? cuentas.length : 0} cuentas_pc.`,
-            cuentas: cuentas
-          }),
+          detalles_movimiento: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
           origen: context.origen || 'WIN'
         }));
 
@@ -1518,12 +1515,10 @@ export const bienesResolvers = {
         const bitacoraRepo = manager.getRepository(Bitacora);
         await bitacoraRepo.save(bitacoraRepo.create({
           id_usuario: context.user!.id_usuario,
-          accion: 'CREACION_MASIVA',
+          accion: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
           tabla_afectada: 'Programas_PC',
           registro_afectado: id_bien,
-          detalles_movimiento: JSON.stringify({
-            mensaje: `Se sincronizaron ${programas ? programas.length : 0} programas.`
-          }),
+          detalles_movimiento: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
           origen: context.origen || 'WIN'
         }));
 
