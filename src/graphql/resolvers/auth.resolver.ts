@@ -75,9 +75,9 @@ export const authResolvers = {
         infoAdicional = ` desde IP: ${context.clientIp}`;
       }
 
-      // Omitir bitácora para usuario autosync (solo logins, sus ediciones sí se registran)
+      // Omitir bitácora para usuario autosync o aplicación WIN
       const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
-      if (usuario.matricula !== autoSyncUser) {
+      if (usuario.matricula !== autoSyncUser && context.origen !== 'WIN' && !equipoInfo) {
         await registrarBitacora(
           usuario.id_usuario,
           'LOGIN',
