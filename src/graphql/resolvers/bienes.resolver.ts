@@ -344,9 +344,9 @@ export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: b
 
   if (filter?.tiene_agente !== undefined && filter?.tiene_agente !== null) {
     if (filter.tiene_agente) {
-      qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+      qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE '%SGHI%')");
     } else {
-      qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE 'Gestor Activos HW%')");
+      qb.andWhere("b.id_bien NOT IN (SELECT id_bien FROM Programas_PC WHERE programa LIKE '%SGHI%')");
     }
   }
 
