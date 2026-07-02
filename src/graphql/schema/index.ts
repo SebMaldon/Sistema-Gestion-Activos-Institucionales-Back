@@ -877,6 +877,10 @@ export const typeDefs = gql`
     registroSalidas(filter: RegistroSalidasFilterInput, pagination: PaginationInput): RegistroSalidasConnection!
     registroSalida(id_salida: Int!): RegistroSalida
 
+    # ── Salidas Antiguas — Registro Histórico
+    salidasAntiguas(filter: SalidasAntiguoFilterInput, pagination: PaginationInput): SalidasAntiguoConnection!
+    salidaAntigua(id: Int!): SalidaAntiguo
+
     # ── Mesa Correspondencia
     getArchivos: [Archivo!]!
     getMesaCorrespondencias(filter: CorrespondenciaFilterInput, pagination: PaginationInput): MesaCorrespondenciaConnection!
@@ -937,6 +941,55 @@ export const typeDefs = gql`
 
   input RegistroSalidasFilterInput {
     folio: String
+    solicitante: String
+    responsable: String
+    fecha_desde: Date
+    fecha_hasta: Date
+    search: String
+  }
+
+  type ArticuloSalidaAntiguo {
+    id: Int!
+    id_articulo: Int!
+    naturaleza: String
+    descripcion: String
+    cantidad: Int
+  }
+
+  type SalidaAntiguo {
+    id: Int!
+    responsable: String
+    m_responsable: String
+    p_responsable: String
+    solicitante: String
+    m_solicitante: String
+    p_solicitante: String
+    fecha: DateTime
+    identificacion: String
+    telefono: String
+    devolucion: String
+    para_su: String
+    estado_fisico: String
+    fecha_devolucion: String
+    procedencia: String
+    adscripcion: String
+    unidad_bien: String
+    area: Int
+    articulos: [ArticuloSalidaAntiguo!]!
+  }
+
+  type SalidaAntiguoEdge {
+    node: SalidaAntiguo!
+    cursor: String!
+  }
+
+  type SalidasAntiguoConnection {
+    edges: [SalidaAntiguoEdge!]!
+    pageInfo: PageInfo!
+  }
+
+  input SalidasAntiguoFilterInput {
+    id: Int
     solicitante: String
     responsable: String
     fecha_desde: Date

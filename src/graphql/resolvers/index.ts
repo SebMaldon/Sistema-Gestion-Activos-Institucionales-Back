@@ -11,6 +11,7 @@ import { notificacionesResolvers } from './notificaciones.resolver';
 import { atributosResolvers } from './atributos.resolver';
 import { solicitudesCambioResolvers } from './solicitudesCambio.resolver';
 import { salidasResolvers } from './salidas.resolver';
+import { salidasAntiguasResolvers } from './salidasAntiguas.resolver';
 import { mesaCorrespondenciaResolver } from './mesaCorrespondencia.resolver';
 import { prestamosResolvers } from './prestamos.resolver';
 
@@ -70,6 +71,7 @@ export const resolvers = {
     ...atributosResolvers.Query,
     ...solicitudesCambioResolvers.Query,
     ...salidasResolvers.Query,
+    ...salidasAntiguasResolvers.Query,
     ...mesaCorrespondenciaResolver.Query,
     ...prestamosResolvers.Query,
   },
