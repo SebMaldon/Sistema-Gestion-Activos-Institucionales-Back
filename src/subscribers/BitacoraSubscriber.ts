@@ -154,7 +154,8 @@ export class BitacoraSubscriber implements EntitySubscriberInterface {
 
     bitacora.origen = origen.toUpperCase();
 
-    if (bitacora.origen === 'WIN') {
+    const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
+    if (store?.matricula === autoSyncUser) {
       bitacora.accion = 'AUTOSYNC ACTUALIZÓ UN EQUIPO';
       bitacora.detalles_movimiento = 'AUTOSYNC ACTUALIZÓ UN EQUIPO';
     }

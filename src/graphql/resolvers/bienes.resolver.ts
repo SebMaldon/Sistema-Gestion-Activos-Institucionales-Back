@@ -1404,10 +1404,10 @@ export const bienesResolvers = {
         const bitacoraRepo = manager.getRepository(Bitacora);
         await bitacoraRepo.save(bitacoraRepo.create({
           id_usuario: context.user!.id_usuario,
-          accion: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
+          accion: context.user?.matricula === autoSyncUser ? 'AUTOSYNC ACTUALIZÓ UN EQUIPO' : 'SINCRONIZACIÓN DE CUENTAS PC',
           tabla_afectada: 'Cuentas_PC',
           registro_afectado: id_bien,
-          detalles_movimiento: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
+          detalles_movimiento: context.user?.matricula === autoSyncUser ? 'AUTOSYNC ACTUALIZÓ UN EQUIPO' : 'SE ACTUALIZARON LAS CUENTAS DE LA PC',
           origen: context.origen || 'WIN'
         }));
 
@@ -1512,13 +1512,14 @@ export const bienesResolvers = {
           await repo.save(toSave, { chunk: 100 });
         }
 
+        const autoSyncUser = process.env.AUTOSYNC_USER || 'ti_autosync';
         const bitacoraRepo = manager.getRepository(Bitacora);
         await bitacoraRepo.save(bitacoraRepo.create({
           id_usuario: context.user!.id_usuario,
-          accion: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
+          accion: context.user?.matricula === autoSyncUser ? 'AUTOSYNC ACTUALIZÓ UN EQUIPO' : 'SINCRONIZACIÓN DE PROGRAMAS PC',
           tabla_afectada: 'Programas_PC',
           registro_afectado: id_bien,
-          detalles_movimiento: 'AUTOSYNC ACTUALIZÓ UN EQUIPO',
+          detalles_movimiento: context.user?.matricula === autoSyncUser ? 'AUTOSYNC ACTUALIZÓ UN EQUIPO' : 'SE ACTUALIZARON LOS PROGRAMAS DE LA PC',
           origen: context.origen || 'WIN'
         }));
 

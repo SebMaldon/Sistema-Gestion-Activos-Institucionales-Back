@@ -8,10 +8,11 @@ export const asyncContextPlugin: ApolloServerPlugin<GraphQLContext> = {
       async executionDidStart({ contextValue }) {
         // Obtenemos el usuario y el origen de contextValue (generado por buildContext)
         const usuarioId = contextValue.user?.id_usuario;
+        const matricula = contextValue.user?.matricula;
         const origen = contextValue.origen;
         
         // Entrar a la zona asíncrona (Aplica a toda la ejecución de los resolvers)
-        sessionContext.enterWith({ usuarioId, origen });
+        sessionContext.enterWith({ usuarioId, matricula, origen });
       },
     };
   },
