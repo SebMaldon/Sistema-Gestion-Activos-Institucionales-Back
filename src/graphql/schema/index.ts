@@ -484,9 +484,16 @@ export const typeDefs = gql`
     fecha_reporte: DateTime
     fecha_resolucion: DateTime
     id_usuario_registra: Int
+    numero_reporte: String
+    tipo_dispositivo: Int
+    usuario_reporta: Int
+    serie_pieza_nueva: String
+    fecha_atencion: DateTime
     garantiaObj: Garantia
     bien: Bien
     usuarioRegistra: Usuario
+    usuarioReportaObj: Usuario
+    tipoDispositivoObj: TipoDispositivo
   }
 
   # ─── INCIDENCIAS ────────────────────────────────────────
@@ -1390,6 +1397,12 @@ export const typeDefs = gql`
       estatus: String
       descripcion_falla: String!
       resolucion: String
+      numero_reporte: String
+      tipo_dispositivo: Int
+      usuario_reporta: Int
+      serie_pieza_nueva: String
+      fecha_atencion: DateTime
+      fecha_resolucion: DateTime
     ): ReporteGarantia!
     
     updateReporteGarantia(
@@ -1397,6 +1410,12 @@ export const typeDefs = gql`
       estatus: String
       descripcion_falla: String
       resolucion: String
+      numero_reporte: String
+      tipo_dispositivo: Int
+      usuario_reporta: Int
+      serie_pieza_nueva: String
+      fecha_atencion: DateTime
+      fecha_resolucion: DateTime
     ): ReporteGarantia!
     
     deleteReporteGarantia(id_reporte_garantia: ID!): Boolean!

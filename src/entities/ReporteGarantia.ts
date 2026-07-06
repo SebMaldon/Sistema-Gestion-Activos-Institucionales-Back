@@ -35,6 +35,21 @@ export class ReporteGarantia {
   @Column({ name: 'id_usuario_registra', type: 'int', nullable: true })
   id_usuario_registra?: number;
 
+  @Column({ name: 'numero_reporte', type: 'varchar', length: 100, nullable: true })
+  numero_reporte?: string;
+
+  @Column({ name: 'tipo_dispositivo', type: 'int', nullable: true })
+  tipo_dispositivo?: number;
+
+  @Column({ name: 'usuario_reporta', type: 'int', nullable: true })
+  usuario_reporta?: number;
+
+  @Column({ name: 'serie_pieza_nueva', type: 'varchar', length: 200, nullable: true })
+  serie_pieza_nueva?: string;
+
+  @Column({ name: 'fecha_atencion', type: 'datetime', nullable: true })
+  fecha_atencion?: Date;
+
   @ManyToOne(() => Garantia)
   @JoinColumn({ name: 'id_garantia' })
   garantiaObj?: Garantia;
@@ -46,4 +61,8 @@ export class ReporteGarantia {
   @ManyToOne(() => Usuario)
   @JoinColumn({ name: 'id_usuario_registra' })
   usuarioRegistra?: Usuario;
+
+  @ManyToOne(() => Usuario)
+  @JoinColumn({ name: 'usuario_reporta' })
+  usuarioReportaObj?: Usuario;
 }

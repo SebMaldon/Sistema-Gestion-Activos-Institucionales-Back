@@ -239,11 +239,18 @@ export const transaccionalesResolvers = {
         descripcion_falla: args.descripcion_falla,
         resolucion: args.resolucion,
         id_usuario_registra: context.user!.id_usuario,
+        numero_reporte: args.numero_reporte,
+        tipo_dispositivo: args.tipo_dispositivo !== undefined && args.tipo_dispositivo !== null && args.tipo_dispositivo !== '' ? parseInt(args.tipo_dispositivo) : null,
+        usuario_reporta: args.usuario_reporta !== undefined && args.usuario_reporta !== null ? parseInt(args.usuario_reporta) : null,
+        serie_pieza_nueva: args.serie_pieza_nueva,
+        fecha_atencion: args.fecha_atencion ? new Date(args.fecha_atencion) : null,
       } as any);
 
-      // Si el estatus es 'Resuelto / Entregado', marcamos la fecha de resolución actual
+      // Si el estatus es 'Resuelto / Entregado', marcamos la fecha de resolución actual o la especificada
       if (args.estatus === 'Resuelto / Entregado') {
-        (nuevoReporte as any).fecha_resolucion = new Date();
+        (nuevoReporte as any).fecha_resolucion = args.fecha_resolucion ? new Date(args.fecha_resolucion) : new Date();
+      } else if (args.fecha_resolucion) {
+        (nuevoReporte as any).fecha_resolucion = new Date(args.fecha_resolucion);
       }
 
       return repo.save(nuevoReporte);
@@ -260,13 +267,27 @@ export const transaccionalesResolvers = {
         throw new ValidationError('La descripción de la falla no puede estar vacía.');
       }
 
-      // Si cambia a resuelto y no lo estaba, establecer fecha. Si cambia a otro, borrar fecha
-      if (updates.estatus !== undefined) {
-        if (updates.estatus === 'Resuelto / Entregado' && item.estatus !== 'Resuelto / Entregado') {
-          item.fecha_resolucion = new Date();
-        } else if (updates.estatus !== 'Resuelto / Entregado' && item.estatus === 'Resuelto / Entregado') {
-          item.fecha_resolucion = null as any;
+      if (updates.fecha_resolucion !== undefined) {
+        updates.fecha_resolucion = updates.fecha_resolucion ? new Date(updates.fecha_resolucion) : null;
+      }
+      const finalEstatus = updates.estatus !== undefined ? updates.estatus : item.estatus;
+      if (finalEstatus === 'Resuelto / Entregado') {
+        const finalFecha = updates.fecha_resolucion !== undefined ? updates.fecha_resolucion : item.fecha_resolucion;
+        if (!finalFecha) {
+          updates.fecha_resolucion = new Date();
         }
+      } else if (updates.estatus !== undefined && updates.estatus !== 'Resuelto / Entregado') {
+        updates.fecha_resolucion = null;
+      }
+
+      if (updates.usuario_reporta !== undefined) {
+        updates.usuario_reporta = updates.usuario_reporta !== null && updates.usuario_reporta !== '' ? parseInt(updates.usuario_reporta) : null;
+      }
+      if (updates.tipo_dispositivo !== undefined) {
+        updates.tipo_dispositivo = updates.tipo_dispositivo !== null && updates.tipo_dispositivo !== '' ? parseInt(updates.tipo_dispositivo) : null;
+      }
+      if (updates.fecha_atencion !== undefined) {
+        updates.fecha_atencion = updates.fecha_atencion ? new Date(updates.fecha_atencion) : null;
       }
 
       repo.merge(item, updates);
@@ -526,6 +547,10 @@ export const transaccionalesResolvers = {
       AppDataSource.getRepository(Bien).findOne({ where: { id_bien: parent.id_bien } }),
     usuarioRegistra: (parent: ReporteGarantia, _: unknown, context: GraphQLContext) =>
       parent.id_usuario_registra ? context.loaders.usuarioLoader.load(parent.id_usuario_registra) : null,
+    usuarioReportaObj: (parent: ReporteGarantia, _: unknown, context: GraphQLContext) =>
+      parent.usuario_reporta ? context.loaders.usuarioLoader.load(parent.usuario_reporta) : null,
+    tipoDispositivoObj: (parent: ReporteGarantia, _: unknown, context: GraphQLContext) =>
+      parent.tipo_dispositivo ? context.loaders.tipoDispositivoLoader.load(parent.tipo_dispositivo) : null,
   },
 
   Incidencia: {
