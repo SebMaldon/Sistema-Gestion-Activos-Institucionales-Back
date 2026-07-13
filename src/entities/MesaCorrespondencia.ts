@@ -8,6 +8,9 @@ export class MesaCorrespondencia {
   @PrimaryColumn({ type: 'int' })
   Folio!: number;
 
+  @PrimaryColumn({ type: 'int' })
+  Anio!: number;
+
   @Column({ type: 'varchar', length: 25, nullable: true })
   NoOficio?: string;
 

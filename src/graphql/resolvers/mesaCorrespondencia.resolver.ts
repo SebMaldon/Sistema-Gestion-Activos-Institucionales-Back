@@ -18,7 +18,8 @@ export const mesaCorrespondenciaResolver = {
         .leftJoinAndSelect('mc.unidad', 'unidad')
         .leftJoinAndSelect('mc.ubicacion', 'ubicacion')
         .leftJoinAndSelect('mc.archivo_ref', 'archivo_ref')
-        .orderBy('mc.Folio', 'DESC');
+        .orderBy('mc.Anio', 'DESC')
+        .addOrderBy('mc.Folio', 'DESC');
 
       // Filtro zona: MesaCorrespondencia tiene Clave_unidad → unidades.clave_zona
       if (isEstandar(context) && context.user?.clave_zona) {
@@ -31,6 +32,9 @@ export const mesaCorrespondenciaResolver = {
       }
 
       if (filter) {
+        if (filter.Anio) {
+          qb.andWhere('mc.Anio = :anio', { anio: filter.Anio });
+        }
         if (filter.Tipo) {
           qb.andWhere('mc.Tipo = :tipo', { tipo: filter.Tipo });
         }
@@ -95,6 +99,8 @@ export const mesaCorrespondenciaResolver = {
       }
 
       return await AppDataSource.transaction(async (transactionalEntityManager) => {
+        const targetAnio = input.Anio ? parseInt(input.Anio, 10) : new Date().getFullYear();
+
         // Calcular Folio
         let newFolio = input.Folio;
         
@@ -102,25 +108,25 @@ export const mesaCorrespondenciaResolver = {
           const lastFolio = await transactionalEntityManager
             .createQueryBuilder(MesaCorrespondencia, 'mc')
             .select('MAX(mc.Folio)', 'max')
+            .where('mc.Anio = :anio', { anio: targetAnio })
             .getRawOne();
           
           newFolio = (lastFolio?.max || 0) + 1;
         } else {
-          // Verify if requested folio already exists
-          const exists = await transactionalEntityManager.findOne(MesaCorrespondencia, { where: { Folio: newFolio } });
-          if (exists) throw new GraphQLError(`El Folio ${newFolio} ya existe`);
+          // Verify if requested folio already exists in that specific year
+          const exists = await transactionalEntityManager.findOne(MesaCorrespondencia, { where: { Folio: newFolio, Anio: targetAnio } });
+          if (exists) throw new GraphQLError(`El Folio ${newFolio} ya existe para el año ${targetAnio}`);
         }
         
         let newNoOficio = input.NoOficio;
 
-        // Si es 'Enviada' (Tipo = 1) y el usuario no introdujo uno, autoincrementar NoOficio
+        // Si es 'Enviada' (Tipo = 1) y el usuario no introdujo uno, autoincrementar NoOficio solo en ese año
         if (input.Tipo === 1 && (!input.NoOficio || input.NoOficio.trim() === '')) {
             const lastOficio = await transactionalEntityManager
               .createQueryBuilder(MesaCorrespondencia, 'mc')
-              .select('TRY_CAST(mc.NoOficio AS INT)', 'maxOficio')
-              .where('mc.Tipo = :tipo', { tipo: 1 })
+              .select('MAX(TRY_CAST(mc.NoOficio AS INT))', 'maxOficio')
+              .where('mc.Tipo = :tipo AND mc.Anio = :anio', { tipo: 1, anio: targetAnio })
               .andWhere('TRY_CAST(mc.NoOficio AS INT) IS NOT NULL')
-              .orderBy('mc.Folio', 'DESC')
               .getRawOne();
             
             const nextOficio = (lastOficio?.maxOficio || 0) + 1;
@@ -129,49 +135,57 @@ export const mesaCorrespondenciaResolver = {
 
         const nuevaMesa = transactionalEntityManager.create(MesaCorrespondencia, {
           ...input,
+          Anio: targetAnio,
           Folio: newFolio,
           NoOficio: newNoOficio,
-          FechaRecepcion: new Date(),
+          FechaRecepcion: input.FechaRecepcion ? new Date(input.FechaRecepcion) : new Date(),
         });
 
         await transactionalEntityManager.save(nuevaMesa);
 
         // Retornar entidad con relaciones
         return await transactionalEntityManager.findOne(MesaCorrespondencia, {
-            where: { Folio: newFolio },
+            where: { Folio: newFolio, Anio: targetAnio },
             relations: ['unidad', 'ubicacion', 'archivo_ref']
         });
       });
     },
-    editarMesaCorrespondencia: async (_: any, { Folio, input }: { Folio: number, input: any }, context: GraphQLContext) => {
+    editarMesaCorrespondencia: async (_: any, { Folio, Anio, input }: { Folio: number, Anio?: number, input: any }, context: GraphQLContext) => {
       if (!context.user) throw new GraphQLError('No autenticado');
 
       const repository = AppDataSource.getRepository(MesaCorrespondencia);
-      const mesa = await repository.findOne({ where: { Folio } });
+      const findCriteria: any = { Folio };
+      if (Anio) findCriteria.Anio = Anio;
+
+      const mesa = await repository.findOne({ where: findCriteria });
 
       if (!mesa) throw new GraphQLError('Registro no encontrado');
 
-      const newFolio = input.Folio || Folio;
+      const newFolio = input.Folio !== undefined ? input.Folio : Folio;
+      const targetAnio = input.Anio !== undefined ? input.Anio : mesa.Anio;
 
-      if (newFolio !== Folio) {
-        // Verify if requested folio already exists
-        const existe = await repository.findOne({ where: { Folio: newFolio } });
-        if (existe) throw new GraphQLError(`El Folio ${newFolio} ya está en uso`);
+      if (newFolio !== Folio || targetAnio !== mesa.Anio) {
+        // Verify if requested (Folio, Anio) already exists
+        const existe = await repository.findOne({ where: { Folio: newFolio, Anio: targetAnio } });
+        if (existe) throw new GraphQLError(`El Folio ${newFolio} ya está en uso en el año ${targetAnio}`);
       }
 
       // Update in DB safely
-      await repository.update({ Folio }, input);
+      await repository.update({ Folio: mesa.Folio, Anio: mesa.Anio }, { ...input, Folio: newFolio, Anio: targetAnio });
 
       return await repository.findOne({
-        where: { Folio: newFolio },
+        where: { Folio: newFolio, Anio: targetAnio },
         relations: ['unidad', 'ubicacion', 'archivo_ref']
       });
     },
-    eliminarMesaCorrespondencia: async (_: any, { Folio }: { Folio: number }, context: GraphQLContext) => {
+    eliminarMesaCorrespondencia: async (_: any, { Folio, Anio }: { Folio: number, Anio?: number }, context: GraphQLContext) => {
       if (!context.user) throw new GraphQLError('No autenticado');
 
       const repository = AppDataSource.getRepository(MesaCorrespondencia);
-      const result = await repository.delete({ Folio });
+      const deleteCriteria: any = { Folio };
+      if (Anio) deleteCriteria.Anio = Anio;
+
+      const result = await repository.delete(deleteCriteria);
 
       return result.affected !== 0 && result.affected !== null;
     }

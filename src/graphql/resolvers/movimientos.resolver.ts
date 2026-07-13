@@ -128,27 +128,47 @@ export const dashboardResolvers = {
 
       const bienQB = (where?: string) => {
         const q = bienRepo.createQueryBuilder('b');
-        if (clave_zona) q.innerJoin('unidades', '_uz', `_uz.clave = b.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        if (clave_zona) {
+          q.innerJoin('unidades', '_uz', `_uz.clave = b.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        } else {
+          q.innerJoin('unidades', '_uz', `_uz.clave = b.clave_unidad_ref`);
+        }
+        q.leftJoin('Ubicaciones', '_ub', `_ub.id_ubicacion = b.id_ubicacion`);
+        q.andWhere(`b.clave_unidad_ref LIKE '19%'`);
+        q.andWhere(`(LOWER(_ub.nombre_ubicacion) NOT LIKE '%bodega%' OR _ub.nombre_ubicacion IS NULL)`);
+        q.andWhere(`b.num_inv LIKE '%[0-9]%' AND b.num_inv NOT LIKE '%[^0-9]%'`);
         if (where) q.andWhere(where);
         return q.getCount();
       };
 
       const incQB = (where: string, val: string) => {
         const q = incRepo.createQueryBuilder('i');
+        q.innerJoin('Bienes', '_bz', '_bz.id_bien = i.id_bien');
         if (clave_zona) {
-          q.innerJoin('Bienes', '_bz', '_bz.id_bien = i.id_bien')
-           .innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+          q.innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        } else {
+          q.innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref`);
         }
+        q.leftJoin('Ubicaciones', '_ub', `_ub.id_ubicacion = _bz.id_ubicacion`);
+        q.andWhere(`_bz.clave_unidad_ref LIKE '19%'`);
+        q.andWhere(`(LOWER(_ub.nombre_ubicacion) NOT LIKE '%bodega%' OR _ub.nombre_ubicacion IS NULL)`);
+        q.andWhere(`_bz.num_inv LIKE '%[0-9]%' AND _bz.num_inv NOT LIKE '%[^0-9]%'`);
         q.andWhere(where, { val });
         return q.getCount();
       };
 
       const garQB = (where: string, extraWhere?: string) => {
         const q = garRepo.createQueryBuilder('g');
+        q.innerJoin('Bienes', '_bz', '_bz.id_bien = g.id_bien');
         if (clave_zona) {
-          q.innerJoin('Bienes', '_bz', '_bz.id_bien = g.id_bien')
-           .innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+          q.innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref AND _uz.clave_zona = :_dz`, { _dz: clave_zona });
+        } else {
+          q.innerJoin('unidades', '_uz', `_uz.clave = _bz.clave_unidad_ref`);
         }
+        q.leftJoin('Ubicaciones', '_ub', `_ub.id_ubicacion = _bz.id_ubicacion`);
+        q.andWhere(`_bz.clave_unidad_ref LIKE '19%'`);
+        q.andWhere(`(LOWER(_ub.nombre_ubicacion) NOT LIKE '%bodega%' OR _ub.nombre_ubicacion IS NULL)`);
+        q.andWhere(`_bz.num_inv LIKE '%[0-9]%' AND _bz.num_inv NOT LIKE '%[^0-9]%'`);
         q.andWhere(where);
         if (extraWhere) q.andWhere(extraWhere);
         return q.getCount();
@@ -167,9 +187,9 @@ export const dashboardResolvers = {
         totalUsuarios,
       ] = await Promise.all([
         bienQB(),
-        bienQB(`b.estatus_operativo = 'ACTIVO'`),
-        bienQB(`b.estatus_operativo IN ('INACTIVO', 'BAJA', 'P_BAJA')`),
-        bienQB(`b.estatus_operativo = 'EN REPARACIÓN'`),
+        bienQB(`UPPER(b.estatus_operativo) = 'ACTIVO'`),
+        bienQB(`UPPER(b.estatus_operativo) = 'INACTIVO'`),
+        bienQB(`UPPER(b.estatus_operativo) = 'EN REPARACIÓN'`),
         incQB('i.estatus_reparacion = :val', 'Pendiente'),
         incQB('i.estatus_reparacion = :val', 'En proceso'),
         garQB(`g.estado_garantia = 'VIGENTE'`),
@@ -223,7 +243,7 @@ export const dashboardResolvers = {
         .addSelect("COUNT(b.id_bien)", "count")
         .leftJoin("b.modelo", "m")
         .leftJoin("m.tipoDispositivo", "td")
-        .where("b.estatus_operativo IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO', 'BAJA', 'P_BAJA')");
+        .where("UPPER(b.estatus_operativo) IN ('ACTIVO', 'PRESTAMO', 'PRÉSTAMO', 'INACTIVO')");
 
       // Para usuarios estándar: INNER JOIN a unidades filtrando por zona
       // Para admin/maestro: LEFT JOIN para ver también bienes sin unidad
@@ -233,8 +253,13 @@ export const dashboardResolvers = {
         // Sin zona asignada → sin datos
         return [];
       } else {
-        qb.leftJoin("b.unidad", "u");
+        qb.innerJoin("unidades", "u", "u.clave = b.clave_unidad_ref");
       }
+
+      qb.leftJoin("Ubicaciones", "ub", "b.id_ubicacion = ub.id_ubicacion")
+        .andWhere("b.clave_unidad_ref LIKE '19%'")
+        .andWhere("(LOWER(ub.nombre_ubicacion) NOT LIKE '%bodega%' OR ub.nombre_ubicacion IS NULL)")
+        .andWhere("b.num_inv LIKE '%[0-9]%' AND b.num_inv NOT LIKE '%[^0-9]%'");
 
       const metrics = await qb
         .groupBy("u.clave")

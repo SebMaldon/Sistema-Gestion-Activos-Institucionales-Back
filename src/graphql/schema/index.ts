@@ -628,6 +628,7 @@ export const typeDefs = gql`
 
   type MesaCorrespondencia {
     Folio: Int!
+    Anio: Int!
     NoOficio: String
     FechaRecepcion: DateTime
     FechaOficio: DateTime
@@ -654,6 +655,7 @@ export const typeDefs = gql`
 
   input MesaCorrespondenciaInput {
     Folio: Int
+    Anio: Int
     NoOficio: String
     FechaRecepcion: DateTime
     FechaOficio: DateTime
@@ -669,6 +671,7 @@ export const typeDefs = gql`
     Tipo: Int
     NoOficio: String
     Folio: Int
+    Anio: Int
     PalabraClave: String
     DateFilterType: String
     StartDate: String
@@ -1598,8 +1601,8 @@ export const typeDefs = gql`
 
     # ── Mesa Correspondencia ────────────────────────────────
     crearMesaCorrespondencia(input: MesaCorrespondenciaInput!): MesaCorrespondencia!
-    editarMesaCorrespondencia(Folio: Int!, input: MesaCorrespondenciaInput!): MesaCorrespondencia!
-    eliminarMesaCorrespondencia(Folio: Int!): Boolean!
+    editarMesaCorrespondencia(Folio: Int!, Anio: Int, input: MesaCorrespondenciaInput!): MesaCorrespondencia!
+    eliminarMesaCorrespondencia(Folio: Int!, Anio: Int): Boolean!
   }
 
   # ─── SOLICITUDES DE CAMBIO (Maker-Checker) ─────────────────
