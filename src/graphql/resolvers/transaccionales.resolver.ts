@@ -118,7 +118,7 @@ export const transaccionalesResolvers = {
 
       const totalCount = await qb.getCount();
       const first = pagination?.first ?? 20;
-      qb.take(Math.min(first, 100));
+      qb.take(Math.min(first, 99999));
 
       if (pagination?.page) {
         qb.skip((pagination.page - 1) * first);
@@ -337,7 +337,7 @@ export const transaccionalesResolvers = {
     // ── Incidencias
     createIncidencia: async (
       _: unknown,
-      { id_bien, id_tipo_incidencia, descripcion_falla, id_unidad, alias, requerimiento }: any,
+      { id_bien, id_tipo_incidencia, descripcion_falla, id_unidad, alias, requerimiento, numero_incidencia }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -358,6 +358,7 @@ export const transaccionalesResolvers = {
         id_unidad,
         alias,
         requerimiento,
+        numero_incidencia: numero_incidencia || null,
         estatus_reparacion: 'Pendiente',
       });
       return repo.save(newIncidencia);
@@ -365,7 +366,7 @@ export const transaccionalesResolvers = {
 
     updateIncidencia: async (
       _: unknown,
-      { id_incidencia, id_tipo_incidencia, descripcion_falla, id_unidad, alias, requerimiento }: any,
+      { id_incidencia, id_tipo_incidencia, descripcion_falla, id_unidad, alias, requerimiento, numero_incidencia }: any,
       context: GraphQLContext
     ) => {
       requireAuth(context);
@@ -384,6 +385,7 @@ export const transaccionalesResolvers = {
       if (id_unidad !== undefined) item.id_unidad = id_unidad;
       if (alias !== undefined) item.alias = alias;
       if (requerimiento !== undefined) item.requerimiento = requerimiento;
+      if (numero_incidencia !== undefined) item.numero_incidencia = numero_incidencia || null as any;
 
       return repo.save(item);
     },

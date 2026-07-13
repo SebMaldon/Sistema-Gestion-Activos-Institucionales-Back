@@ -42,6 +42,10 @@ export class Incidencia {
   @Column({ name: 'requerimiento', type: 'nvarchar', length: 'max', nullable: true })
   requerimiento?: string;
 
+  // Número de incidencia del sistema externo, ej: 'INC-1231'
+  @Column({ name: 'numero_incidencia', type: 'varchar', length: 50, nullable: true })
+  numero_incidencia?: string;
+
   // FK a unidades(clave) — varchar(50)
   @Column({ name: 'id_unidad', type: 'varchar', length: 50, nullable: true })
   id_unidad?: string;

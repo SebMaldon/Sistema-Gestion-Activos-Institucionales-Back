@@ -32,7 +32,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, Marca>(items, (m) => m.clave_marca);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Tipos de Dispositivo (tipo_disp: int)
   const tipoDispositivoLoader = new DataLoader<number, TipoDispositivo | undefined>(async (keys) => {
@@ -41,7 +41,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, TipoDispositivo>(items, (t) => t.tipo_disp);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Modelos (clave_modelo: string)
   const catModeloLoader = new DataLoader<string, CatModelo | undefined>(async (keys) => {
@@ -50,7 +50,7 @@ export function createDataLoaders() {
     });
     const map = toMap<string, CatModelo>(items, (m) => m.clave_modelo);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Usuarios (id_usuario: int)
   const usuarioLoader = new DataLoader<number, Usuario | undefined>(async (keys) => {
@@ -59,7 +59,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, Usuario>(items, (u) => u.id_usuario);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Unidades por clave varchar(50) — tabla: unidades (entidad TypeORM: Inmueble)
   // Usado por: Bien.unidad, Incidencia.unidad, Ubicacion.unidad
@@ -69,7 +69,7 @@ export function createDataLoaders() {
     });
     const map = toMap<string, Inmueble>(items, (i) => i.clave);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Segmentos (id_segmento: int) — tabla: segmentos (antes "unidades" de red)
   // Usado por: Bien.segmento, Usuario.segmento
@@ -79,7 +79,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, Segmento>(items, (s) => s.id_segmento);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Especificaciones TI (id_bien: string/UUID)
   const especificacionTILoader = new DataLoader<string, EspecificacionTI | undefined>(async (keys) => {
@@ -88,7 +88,7 @@ export function createDataLoaders() {
     });
     const map = toMap<string, EspecificacionTI>(items, (s) => s.id_bien.toLowerCase());
     return keys.map((k) => map.get(k.toLowerCase()));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Garantías agrupadas por id_bien
   const garantiasByBienLoader = new DataLoader<string, Garantia[]>(async (keys) => {
@@ -102,7 +102,7 @@ export function createDataLoaders() {
       map.set(g.id_bien.toLowerCase(), arr);
     });
     return keys.map((k) => map.get(k.toLowerCase()) ?? []);
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Categorías Activo (id_categoria: int)
   const categoriaLoader = new DataLoader<number, CatCategoriaActivo | undefined>(async (keys) => {
@@ -111,7 +111,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, CatCategoriaActivo>(items, (c) => c.id_categoria);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Proveedores (id_proveedor: int)
   const proveedorLoader = new DataLoader<number, Proveedor | undefined>(async (keys) => {
@@ -129,7 +129,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, CatUnidadMedida>(items, (u) => u.id_unidad_medida);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Roles (id_rol: int)
   const rolLoader = new DataLoader<number, Rol | undefined>(async (keys) => {
@@ -138,7 +138,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, Rol>(items, (r) => r.id_rol);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Bienes por id_bien (string UUID)
   const bienLoader = new DataLoader<string, Bien | undefined>(async (keys) => {
@@ -156,7 +156,7 @@ export function createDataLoaders() {
     });
     const map = toMap<number, TipoIncidencia>(items, (t) => t.id_tipo_incidencia);
     return keys.map((k) => map.get(k));
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Notas agrupadas por id_incidencia
   const notasByIncidenciaLoader = new DataLoader<number, Nota[]>(async (keys) => {
@@ -172,7 +172,7 @@ export function createDataLoaders() {
       map.set(n.id_incidencia, arr);
     });
     return keys.map((k) => map.get(k) ?? []);
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Notas agrupadas por id_bien
   const notasByBienLoader = new DataLoader<string, Nota[]>(async (keys) => {
@@ -189,7 +189,7 @@ export function createDataLoaders() {
       map.set(key, arr);
     });
     return keys.map((k) => map.get(k.toLowerCase()) ?? []);
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Monitores agrupados por id_bien (el equipo)
   const monitoresByBienLoader = new DataLoader<string, BienMonitor[]>(async (keys) => {
@@ -204,7 +204,7 @@ export function createDataLoaders() {
       map.set(key, arr);
     });
     return keys.map((k) => map.get(k.toLowerCase()) ?? []);
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── CuentasPC agrupadas por id_bien
   const cuentasPCByBienLoader = new DataLoader<string, CuentaPC[]>(async (keys) => {
@@ -220,7 +220,7 @@ export function createDataLoaders() {
       map.set(key, arr);
     });
     return keys.map((k) => map.get(k.toLowerCase()) ?? []);
-  });
+  }, { maxBatchSize: 1000 });
 
   // ── Reportes agrupados por id_garantia
   const reportesByGarantiaLoader = new DataLoader<number, ReporteGarantia[]>(async (keys) => {

@@ -511,6 +511,8 @@ export const typeDefs = gql`
     fecha_resolucion: DateTime
     alias: String
     requerimiento: String
+    # Número de incidencia del sistema externo, ej: 'INC-1231'
+    numero_incidencia: String
     # id_unidad es varchar(50) FK a unidades(clave)
     id_unidad: String
     bien: Bien
@@ -1433,6 +1435,7 @@ export const typeDefs = gql`
       id_unidad: String
       alias: String
       requerimiento: String
+      numero_incidencia: String
     ): Incidencia!
     updateIncidencia(
       id_incidencia: ID!
@@ -1441,6 +1444,7 @@ export const typeDefs = gql`
       id_unidad: String
       alias: String
       requerimiento: String
+      numero_incidencia: String
     ): Incidencia!
     pasarAEnProceso(
       id_incidencia: ID!
