@@ -272,7 +272,7 @@ export const typeDefs = gql`
     titulo: String!
     mensaje: String!
     tipo_audiencia: String!
-    id_audiencia: Int
+    id_audiencia: String
     fecha_creacion: DateTime!
   }
 
@@ -859,7 +859,7 @@ export const typeDefs = gql`
     # ── Notificaciones
     misNotificaciones(mostrarOcultas: Boolean): [MiNotificacion!]!
     notificacionesNoLeidas: Int!
-    todasNotificaciones: [NotificacionMensaje!]!
+    todasNotificaciones(limit: Int, offset: Int): [NotificacionMensaje!]!
 
     # ── Dashboard
     dashboardStats: DashboardStats!
@@ -1502,7 +1502,7 @@ export const typeDefs = gql`
       titulo: String!
       mensaje: String!
       tipo_audiencia: String!
-      id_audiencia: Int
+      id_audiencia: String
     ): NotificacionMensaje!
     marcarLeida(id_notificacion: Int!): Boolean!
     marcarTodasLeidas: Boolean!

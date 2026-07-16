@@ -59,11 +59,11 @@ async function notificarCambioPendiente(user: any, parsed: any, idBien: string) 
           titulo,
           mensaje,
           tipo_audiencia: 'ROL',
-          id_audiencia: ROLES.MAESTRO,
+          id_audiencia: String(ROLES.MAESTRO),
         })
       );
 
-      await crearLecturaParaDestinatarios(nuevaNotif.id_notificacion, 'ROL', ROLES.MAESTRO);
+      await crearLecturaParaDestinatarios(nuevaNotif.id_notificacion, 'ROL', String(ROLES.MAESTRO));
     } catch (err) {
       console.error('Error al crear notificación para solicitud de cambio:', err);
     }
@@ -92,7 +92,7 @@ async function resolverNotificacionesSolicitud(bien_id: string): Promise<void> {
          AND tipo_audiencia = 'ROL'
          AND id_audiencia = @0
          AND (mensaje LIKE @1 OR mensaje LIKE @2)`,
-      [ROLES.MAESTRO, `%${identificador}%`, `%${bien_id}%`]
+      [String(ROLES.MAESTRO), `%${identificador}%`, `%${bien_id}%`]
     );
   } catch (err) {
     console.error('[resolverNotificaciones] Error:', err);

@@ -10,6 +10,8 @@ interface UsuarioPayload {
   id_usuario: number;
   id_rol: number;
   id_unidad?: number;
+  clave_unidad?: string;
+  matricula?: string;
 }
 
 /**
@@ -22,9 +24,9 @@ interface UsuarioPayload {
 function mensajeAplicaAUsuario(msg: NotificacionMensaje, user: UsuarioPayload): boolean {
   switch (msg.tipo_audiencia) {
     case 'GLOBAL':   return true;
-    case 'ROL':      return msg.id_audiencia === user.id_rol;
-    case 'UNIDAD':   return msg.id_audiencia === user.id_unidad;
-    case 'PERSONAL': return msg.id_audiencia === user.id_usuario;
+    case 'ROL':      return msg.id_audiencia === String(user.id_rol);
+    case 'UNIDAD':   return msg.id_audiencia === user.clave_unidad;
+    case 'PERSONAL': return msg.id_audiencia === String(user.matricula);
     default:         return false;
   }
 }
@@ -36,7 +38,7 @@ function mensajeAplicaAUsuario(msg: NotificacionMensaje, user: UsuarioPayload): 
 export async function crearLecturaParaDestinatarios(
   id_notificacion: number,
   tipo_audiencia: string,
-  id_audiencia: number | undefined
+  id_audiencia: string | undefined
 ): Promise<void> {
   let sqlUsuarios: string;
   const params: unknown[] = [id_notificacion];
@@ -50,11 +52,11 @@ export async function crearLecturaParaDestinatarios(
       params.push(id_audiencia);
       break;
     case 'UNIDAD':
-      sqlUsuarios = `SELECT id_usuario FROM Usuarios WHERE estatus = 1 AND id_unidad = @1`;
+      sqlUsuarios = `SELECT id_usuario FROM Usuarios WHERE estatus = 1 AND clave_unidad = @1`;
       params.push(id_audiencia);
       break;
     case 'PERSONAL':
-      sqlUsuarios = `SELECT @1 AS id_usuario`;
+      sqlUsuarios = `SELECT id_usuario FROM Usuarios WHERE estatus = 1 AND matricula = @1`;
       params.push(id_audiencia);
       break;
     default:
@@ -99,6 +101,8 @@ export const notificacionesResolvers = {
           id_usuario: user.id_usuario,
           id_rol: user.id_rol,
           id_unidad: user.id_unidad,
+          clave_unidad: user.clave_unidad,
+          matricula: user.matricula,
         })
       );
 
@@ -154,24 +158,26 @@ export const notificacionesResolvers = {
            ON nm.id_notificacion = nl.id_notificacion AND nl.id_usuario = @0
          WHERE (
            nm.tipo_audiencia = 'GLOBAL'
-           OR (nm.tipo_audiencia = 'ROL'      AND nm.id_audiencia = @1)
+           OR (nm.tipo_audiencia = 'ROL'      AND nm.id_audiencia = CAST(@1 AS VARCHAR))
            OR (nm.tipo_audiencia = 'UNIDAD'   AND nm.id_audiencia = @2)
-           OR (nm.tipo_audiencia = 'PERSONAL' AND nm.id_audiencia = @0)
+           OR (nm.tipo_audiencia = 'PERSONAL' AND nm.id_audiencia = CAST(@3 AS VARCHAR))
          )
          AND ISNULL(nl.leida, 0) = 0
          AND ISNULL(nl.oculta, 0) = 0`,
-        [user.id_usuario, user.id_rol, user.id_unidad ?? -1]
+        [user.id_usuario, user.id_rol, user.clave_unidad ?? '', user.matricula]
       ) as { cnt: number }[];
 
       return rows[0]?.cnt ?? 0;
     },
 
     // ── Listar todos los mensajes (solo Admin/Maestro para administrar)
-    todasNotificaciones: async (_: unknown, __: unknown, context: GraphQLContext) => {
+    todasNotificaciones: async (_: unknown, { limit = 50, offset = 0 }: { limit?: number, offset?: number }, context: GraphQLContext) => {
       requireAuth(context);
       requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
       return AppDataSource.getRepository(NotificacionMensaje).find({
         order: { fecha_creacion: 'DESC' },
+        take: limit,
+        skip: offset,
       });
     },
   },
@@ -193,7 +199,7 @@ export const notificacionesResolvers = {
         titulo: string;
         mensaje: string;
         tipo_audiencia: string;
-        id_audiencia?: number;
+        id_audiencia?: string;
       },
       context: GraphQLContext
     ) => {

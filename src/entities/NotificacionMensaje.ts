@@ -22,8 +22,8 @@ export class NotificacionMensaje {
   @Column({ name: 'tipo_audiencia', type: 'varchar', length: 20 })
   tipo_audiencia!: string;
 
-  @Column({ name: 'id_audiencia', type: 'int', nullable: true })
-  id_audiencia?: number;
+  @Column({ name: 'id_audiencia', type: 'varchar', length: 50, nullable: true })
+  id_audiencia?: string;
 
   @Column({ name: 'fecha_creacion', type: 'datetime', default: () => 'GETDATE()' })
   fecha_creacion!: Date;

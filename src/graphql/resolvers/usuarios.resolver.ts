@@ -53,8 +53,8 @@ export const usuariosResolvers = {
         qb.andWhere('u.clave_unidad IN (:...claves_unidades)', { claves_unidades });
       }
 
-      // Filtro por zona para usuarios estándar
-      applyZonaFilterUsuarios(qb, 'u', context);
+      // Filtro por zona para usuarios estándar 
+      // applyZonaFilterUsuarios(qb, 'u', context);
 
       const totalCount = await qb.getCount();
       const first = Math.min(pagination?.first ?? 20, 20000);
@@ -161,7 +161,7 @@ export const usuariosResolvers = {
       const repo = AppDataSource.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id_usuario: parseInt(id_usuario) } });
       if (!usuario) throw new NotFoundError('Usuario');
-      
+
       repo.merge(usuario, updates);
       return repo.save(usuario);
     },
@@ -172,7 +172,7 @@ export const usuariosResolvers = {
       const repo = AppDataSource.getRepository(Usuario);
       const usuario = await repo.findOne({ where: { id_usuario: parseInt(id_usuario) } });
       if (!usuario) throw new NotFoundError('Usuario');
-      
+
       try {
         await repo.remove(usuario);
         return true;
