@@ -158,13 +158,13 @@ export const notificacionesResolvers = {
            ON nm.id_notificacion = nl.id_notificacion AND nl.id_usuario = @0
          WHERE (
            nm.tipo_audiencia = 'GLOBAL'
-           OR (nm.tipo_audiencia = 'ROL'      AND nm.id_audiencia = CAST(@1 AS VARCHAR))
+           OR (nm.tipo_audiencia = 'ROL'      AND nm.id_audiencia = @1)
            OR (nm.tipo_audiencia = 'UNIDAD'   AND nm.id_audiencia = @2)
-           OR (nm.tipo_audiencia = 'PERSONAL' AND nm.id_audiencia = CAST(@3 AS VARCHAR))
+           OR (nm.tipo_audiencia = 'PERSONAL' AND nm.id_audiencia = @3)
          )
          AND ISNULL(nl.leida, 0) = 0
          AND ISNULL(nl.oculta, 0) = 0`,
-        [user.id_usuario, user.id_rol, user.clave_unidad ?? '', user.matricula]
+        [user.id_usuario, String(user.id_rol), user.clave_unidad ?? '', String(user.matricula || '')]
       ) as { cnt: number }[];
 
       return rows[0]?.cnt ?? 0;
