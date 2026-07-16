@@ -289,7 +289,7 @@ export const typeDefs = gql`
     titulo: String!
     mensaje: String!
     tipo_audiencia: String!
-    id_audiencia: Int
+    id_audiencia: String
     fecha_creacion: DateTime!
     leida: Boolean!
     fecha_lectura: DateTime

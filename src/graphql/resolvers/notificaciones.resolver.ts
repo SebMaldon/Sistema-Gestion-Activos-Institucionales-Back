@@ -23,11 +23,11 @@ interface UsuarioPayload {
  */
 function mensajeAplicaAUsuario(msg: NotificacionMensaje, user: UsuarioPayload): boolean {
   switch (msg.tipo_audiencia) {
-    case 'GLOBAL':   return true;
-    case 'ROL':      return msg.id_audiencia === String(user.id_rol);
-    case 'UNIDAD':   return msg.id_audiencia === user.clave_unidad;
+    case 'GLOBAL': return true;
+    case 'ROL': return msg.id_audiencia === String(user.id_rol);
+    case 'UNIDAD': return msg.id_audiencia === user.clave_unidad;
     case 'PERSONAL': return msg.id_audiencia === String(user.matricula);
-    default:         return false;
+    default: return false;
   }
 }
 
@@ -138,12 +138,12 @@ export const notificacionesResolvers = {
       return mostrarOcultas
         ? resultado
         : resultado.filter((n) => {
-            if (n.oculta) return false;
-            if (n.leida && n.fecha_lectura && new Date(n.fecha_lectura) < limite24h) {
-              return false;
-            }
-            return true;
-          });
+          if (n.oculta) return false;
+          if (n.leida && n.fecha_lectura && new Date(n.fecha_lectura) < limite24h) {
+            return false;
+          }
+          return true;
+        });
     },
 
     // ── Conteo de no leídas para el badge del frontend
@@ -158,13 +158,13 @@ export const notificacionesResolvers = {
            ON nm.id_notificacion = nl.id_notificacion AND nl.id_usuario = @0
          WHERE (
            nm.tipo_audiencia = 'GLOBAL'
-           OR (nm.tipo_audiencia = 'ROL'      AND nm.id_audiencia = @1)
+           OR (nm.tipo_audiencia = 'ROL'      AND nm.id_audiencia = CAST(@1 AS VARCHAR))
            OR (nm.tipo_audiencia = 'UNIDAD'   AND nm.id_audiencia = @2)
-           OR (nm.tipo_audiencia = 'PERSONAL' AND nm.id_audiencia = @3)
+           OR (nm.tipo_audiencia = 'PERSONAL' AND nm.id_audiencia = CAST(@3 AS VARCHAR))
          )
          AND ISNULL(nl.leida, 0) = 0
          AND ISNULL(nl.oculta, 0) = 0`,
-        [user.id_usuario, String(user.id_rol), user.clave_unidad ?? '', String(user.matricula || '')]
+        [user.id_usuario, user.id_rol, user.clave_unidad ?? '', user.matricula]
       ) as { cnt: number }[];
 
       return rows[0]?.cnt ?? 0;
