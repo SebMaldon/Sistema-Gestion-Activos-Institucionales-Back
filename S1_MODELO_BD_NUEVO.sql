@@ -1,11 +1,7 @@
 USE [master]
 GO
-/****** Object:  Database [inventario]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Database [inventario]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 CREATE DATABASE [inventario]
-
-begin
-EXEC [inventario].[dbo].[sp_fulltext_database] @action = 'enable'
-end
 GO
 ALTER DATABASE [inventario] SET ANSI_NULL_DEFAULT OFF 
 GO
@@ -71,7 +67,7 @@ ALTER DATABASE [inventario] SET QUERY_STORE = OFF
 GO
 USE [inventario]
 GO
-/****** Object:  Table [dbo].[Archivos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Archivos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -85,7 +81,24 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Atributos_Por_TipoDispositivo]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[ArticulosSalidaBienesAntiguo]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[ArticulosSalidaBienesAntiguo](
+	[ID] [int] IDENTITY(1,1) NOT NULL,
+	[IDArticulo] [int] NOT NULL,
+	[Naturaleza] [varchar](10) NULL,
+	[Descripción] [varchar](450) NULL,
+	[Cantidad] [int] NULL,
+ CONSTRAINT [PK_ArticulosSalida] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Atributos_Por_TipoDispositivo]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -101,7 +114,7 @@ CREATE TABLE [dbo].[Atributos_Por_TipoDispositivo](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bien_Atributos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Bien_Atributos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -122,7 +135,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bien_Monitores]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Bien_Monitores]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -142,7 +155,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bienes]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Bienes]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -175,7 +188,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bienes_Staging]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Bienes_Staging]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -236,7 +249,7 @@ CREATE TABLE [dbo].[Bienes_Staging](
 	[id_bien_nuevo] [uniqueidentifier] NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bitacora]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Bitacora]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -256,7 +269,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cat_Atributos_Tecnicos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Cat_Atributos_Tecnicos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -274,7 +287,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cat_CategoriasActivo]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Cat_CategoriasActivo]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -290,7 +303,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cat_Modelos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Cat_Modelos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -306,7 +319,7 @@ CREATE TABLE [dbo].[Cat_Modelos](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cat_Unidades]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Cat_Unidades]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -322,7 +335,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cat_UnidadesMedida]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Cat_UnidadesMedida]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -337,7 +350,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ClasificacionesUnidades]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[ClasificacionesUnidades]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -351,7 +364,7 @@ CREATE TABLE [dbo].[ClasificacionesUnidades](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Contactos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Contactos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -369,7 +382,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cuentas_PC]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Cuentas_PC]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -386,7 +399,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Especificaciones_TI]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Especificaciones_TI]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -412,7 +425,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Folio_Salidas]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Folio_Salidas]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -425,7 +438,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Garantias]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Garantias]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -443,7 +456,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Incidencias]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Incidencias]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -461,13 +474,14 @@ CREATE TABLE [dbo].[Incidencias](
 	[alias] [varchar](max) NULL,
 	[requerimiento] [varchar](max) NULL,
 	[id_unidad] [varchar](50) NULL,
+	[numero_incidencia] [varchar](50) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[id_incidencia] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[marcas]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[marcas]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -481,7 +495,7 @@ CREATE TABLE [dbo].[marcas](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Mesa_Correspondencia]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Mesa_Correspondencia]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -497,13 +511,15 @@ CREATE TABLE [dbo].[Mesa_Correspondencia](
 	[Descripcion] [varchar](max) NULL,
 	[Tipo] [int] NULL,
 	[Archivo] [int] NULL,
-PRIMARY KEY CLUSTERED 
+	[Anio] [int] NOT NULL,
+ CONSTRAINT [PK_Mesa_Correspondencia] PRIMARY KEY CLUSTERED 
 (
+	[Anio] ASC,
 	[Folio] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[MesaIncidencias]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[MesaIncidencias]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -524,7 +540,18 @@ CREATE TABLE [dbo].[MesaIncidencias](
 	[IDTipoIncidencia] [varchar](max) NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Movimientos_Inventario]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[monitoreo_limpieza]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[monitoreo_limpieza](
+	[noserie] [nvarchar](max) NULL,
+	[limpieza_logica] [nvarchar](50) NULL,
+	[impresiones] [int] NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Movimientos_Inventario]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -546,7 +573,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Notas]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Notas]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -564,7 +591,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Notificaciones_Destinatarios]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Notificaciones_Destinatarios]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -575,7 +602,7 @@ CREATE TABLE [dbo].[Notificaciones_Destinatarios](
 	[id_unidad] [varchar](50) NULL
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Notificaciones_Lecturas]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Notificaciones_Lecturas]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -593,7 +620,7 @@ CREATE TABLE [dbo].[Notificaciones_Lecturas](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Notificaciones_Mensajes]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Notificaciones_Mensajes]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -611,7 +638,28 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Programas_PC]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Prestamos_Bienes]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Prestamos_Bienes](
+	[id_registro_prestamo] [int] IDENTITY(1,1) NOT NULL,
+	[id_bien] [uniqueidentifier] NOT NULL,
+	[id_usuario_registra_prestamo] [int] NOT NULL,
+	[id_usuario_registra_entrega] [int] NULL,
+	[fecha_inicio_prestamo] [datetime] NOT NULL,
+	[fecha_a_terminar_prestamo] [datetime] NULL,
+	[fecha_entrega] [datetime] NULL,
+	[descripcion_prestamo_inicio] [varchar](max) NULL,
+	[descripcion_prestamo_finalizacion] [varchar](max) NULL,
+ CONSTRAINT [PK_Prestamos_Bienes] PRIMARY KEY CLUSTERED 
+(
+	[id_registro_prestamo] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Programas_PC]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -623,7 +671,7 @@ CREATE TABLE [dbo].[Programas_PC](
 	[fecha_actualizacion] [date] NULL
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Proveedores]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Proveedores]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -637,7 +685,82 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Rol_empleados]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Registro_Salida_Bienes]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Registro_Salida_Bienes](
+	[id_salida_bien] [int] IDENTITY(1,1) NOT NULL,
+	[id_salida] [int] NOT NULL,
+	[id_bien] [uniqueidentifier] NULL,
+	[cantidad_o_id] [varchar](150) NULL,
+	[naturaleza] [varchar](20) NULL,
+	[descripcion] [varchar](max) NULL,
+ CONSTRAINT [PK_Registro_Salida_Bienes] PRIMARY KEY CLUSTERED 
+(
+	[id_salida_bien] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Registro_Salidas]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Registro_Salidas](
+	[id_salida] [int] IDENTITY(1,1) NOT NULL,
+	[folio] [varchar](50) NOT NULL,
+	[fecha_salida] [date] NOT NULL,
+	[fecha_registro] [datetime] NOT NULL,
+	[id_usuario_solicitante] [int] NULL,
+	[matricula] [varchar](50) NULL,
+	[solicitante] [varchar](200) NOT NULL,
+	[adscripcion] [varchar](200) NULL,
+	[empresa] [varchar](150) NULL,
+	[identificacion] [varchar](100) NULL,
+	[telefono] [varchar](50) NULL,
+	[motivo] [varchar](max) NULL,
+	[origen_bienes] [varchar](200) NULL,
+	[responsable] [varchar](200) NULL,
+	[sujeto_devolucion] [bit] NOT NULL,
+	[fecha_devolucion] [date] NULL,
+	[observaciones] [varchar](max) NULL,
+	[id_usuario_registra] [int] NULL,
+ CONSTRAINT [PK_Registro_Salidas] PRIMARY KEY CLUSTERED 
+(
+	[id_salida] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Reportes_Garantia]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[Reportes_Garantia](
+	[id_reporte_garantia] [int] IDENTITY(1,1) NOT NULL,
+	[id_garantia] [int] NOT NULL,
+	[id_bien] [uniqueidentifier] NOT NULL,
+	[num_serie] [varchar](50) NULL,
+	[estatus] [varchar](50) NOT NULL,
+	[descripcion_falla] [nvarchar](max) NOT NULL,
+	[resolucion] [nvarchar](max) NULL,
+	[fecha_reporte] [datetime] NULL,
+	[fecha_resolucion] [datetime] NULL,
+	[id_usuario_registra] [int] NULL,
+	[numero_reporte] [varchar](100) NULL,
+	[tipo_dispositivo] [int] NULL,
+	[usuario_reporta] [int] NULL,
+	[serie_pieza_nueva] [varchar](200) NULL,
+	[fecha_atencion] [datetime] NULL,
+ CONSTRAINT [PK_Reportes_Garantia] PRIMARY KEY CLUSTERED 
+(
+	[id_reporte_garantia] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Rol_empleados]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -651,7 +774,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Roles]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Roles]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -669,7 +792,37 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[segmentos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[SalidaBienesAntiguo]    Script Date: 14/07/2026 09:10:12 a. m. ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[SalidaBienesAntiguo](
+	[ID] [int] IDENTITY(1,1) NOT NULL,
+	[Responsable] [varchar](350) NULL,
+	[M_Responsable] [varchar](50) NULL,
+	[P_Responsable] [varchar](350) NULL,
+	[Solicitante] [varchar](350) NULL,
+	[M_Solicitante] [varchar](50) NULL,
+	[P_Solicitante] [varchar](350) NULL,
+	[Fecha] [datetime] NULL,
+	[Identificación] [varchar](50) NULL,
+	[Teléfono] [varchar](20) NULL,
+	[Devolución] [varchar](2) NULL,
+	[Para_Su] [varchar](50) NULL,
+	[EstadoFisico] [varchar](450) NULL,
+	[FechaDevolución] [varchar](12) NULL,
+	[Procedencia] [varchar](350) NULL,
+	[Adscripción] [varchar](350) NULL,
+	[UnidadBien] [varchar](350) NULL,
+	[Area] [int] NULL,
+ CONSTRAINT [PK_SalidaBienesAntiguo] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[segmentos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -698,7 +851,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[solicitudes_cambio]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[solicitudes_cambio]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -719,7 +872,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[tipo_dispositivos]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[tipo_dispositivos]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -733,7 +886,7 @@ CREATE TABLE [dbo].[tipo_dispositivos](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Tipo_Incidencias]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Tipo_Incidencias]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -751,7 +904,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Tipos_Enlaces]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Tipos_Enlaces]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -765,7 +918,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[TipoUnidades]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[TipoUnidades]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -780,7 +933,7 @@ CREATE TABLE [dbo].[TipoUnidades](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Ubicaciones]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Ubicaciones]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -795,7 +948,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Unidad_A_Cargo]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Unidad_A_Cargo]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -812,7 +965,7 @@ CREATE TABLE [dbo].[Unidad_A_Cargo](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[unidades]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[unidades]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -844,7 +997,7 @@ CREATE TABLE [dbo].[unidades](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Usuarios]    Script Date: 11/06/2026 01:13:40 p. m. ******/
+/****** Object:  Table [dbo].[Usuarios]    Script Date: 14/07/2026 09:10:12 a. m. ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -908,6 +1061,16 @@ ALTER TABLE [dbo].[Notificaciones_Lecturas] ADD  DEFAULT ((0)) FOR [oculta]
 GO
 ALTER TABLE [dbo].[Notificaciones_Mensajes] ADD  DEFAULT (CONVERT([datetime],((getutcdate() AT TIME ZONE 'UTC') AT TIME ZONE 'Mountain Standard Time (Mexico)'))) FOR [fecha_creacion]
 GO
+ALTER TABLE [dbo].[Prestamos_Bienes] ADD  DEFAULT (CONVERT([datetime],((getutcdate() AT TIME ZONE 'UTC') AT TIME ZONE 'Mountain Standard Time (Mexico)'))) FOR [fecha_inicio_prestamo]
+GO
+ALTER TABLE [dbo].[Registro_Salidas] ADD  DEFAULT (CONVERT([datetime],((getutcdate() AT TIME ZONE 'UTC') AT TIME ZONE 'Mountain Standard Time (Mexico)'))) FOR [fecha_registro]
+GO
+ALTER TABLE [dbo].[Registro_Salidas] ADD  DEFAULT ((0)) FOR [sujeto_devolucion]
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] ADD  DEFAULT ('ENVIADO A PROVEEDOR') FOR [estatus]
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] ADD  DEFAULT (CONVERT([datetime],((getutcdate() AT TIME ZONE 'UTC') AT TIME ZONE 'Mountain Standard Time (Mexico)'))) FOR [fecha_reporte]
+GO
 ALTER TABLE [dbo].[solicitudes_cambio] ADD  DEFAULT ('PENDIENTE') FOR [estado]
 GO
 ALTER TABLE [dbo].[solicitudes_cambio] ADD  DEFAULT (getdate()) FOR [fecha_solicitud]
@@ -917,6 +1080,13 @@ GO
 ALTER TABLE [dbo].[Usuarios] ADD  DEFAULT ((3)) FOR [id_rol]
 GO
 ALTER TABLE [dbo].[Usuarios] ADD  DEFAULT ((1)) FOR [estatus]
+GO
+ALTER TABLE [dbo].[ArticulosSalidaBienesAntiguo]  WITH CHECK ADD  CONSTRAINT [FK_ArticulosSalida_SalidaBienes] FOREIGN KEY([IDArticulo])
+REFERENCES [dbo].[SalidaBienesAntiguo] ([ID])
+ON UPDATE CASCADE
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[ArticulosSalidaBienesAntiguo] CHECK CONSTRAINT [FK_ArticulosSalida_SalidaBienes]
 GO
 ALTER TABLE [dbo].[Atributos_Por_TipoDispositivo]  WITH CHECK ADD  CONSTRAINT [FK_AtribTipoDisp_Atributo] FOREIGN KEY([id_atributo])
 REFERENCES [dbo].[Cat_Atributos_Tecnicos] ([id_atributo])
@@ -1123,11 +1293,61 @@ REFERENCES [dbo].[Usuarios] ([id_usuario])
 GO
 ALTER TABLE [dbo].[Notificaciones_Lecturas] CHECK CONSTRAINT [FK_NotLecturas_Usuario]
 GO
+ALTER TABLE [dbo].[Prestamos_Bienes]  WITH CHECK ADD  CONSTRAINT [FK_Prestamos_Bienes_Bien] FOREIGN KEY([id_bien])
+REFERENCES [dbo].[Bienes] ([id_bien])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[Prestamos_Bienes] CHECK CONSTRAINT [FK_Prestamos_Bienes_Bien]
+GO
+ALTER TABLE [dbo].[Prestamos_Bienes]  WITH CHECK ADD  CONSTRAINT [FK_Prestamos_Bienes_UsuEntrega] FOREIGN KEY([id_usuario_registra_entrega])
+REFERENCES [dbo].[Usuarios] ([id_usuario])
+GO
+ALTER TABLE [dbo].[Prestamos_Bienes] CHECK CONSTRAINT [FK_Prestamos_Bienes_UsuEntrega]
+GO
+ALTER TABLE [dbo].[Prestamos_Bienes]  WITH CHECK ADD  CONSTRAINT [FK_Prestamos_Bienes_UsuInicio] FOREIGN KEY([id_usuario_registra_prestamo])
+REFERENCES [dbo].[Usuarios] ([id_usuario])
+GO
+ALTER TABLE [dbo].[Prestamos_Bienes] CHECK CONSTRAINT [FK_Prestamos_Bienes_UsuInicio]
+GO
 ALTER TABLE [dbo].[Programas_PC]  WITH CHECK ADD  CONSTRAINT [FK_Programas_PC_Bien] FOREIGN KEY([id_bien])
 REFERENCES [dbo].[Bienes] ([id_bien])
 ON DELETE CASCADE
 GO
 ALTER TABLE [dbo].[Programas_PC] CHECK CONSTRAINT [FK_Programas_PC_Bien]
+GO
+ALTER TABLE [dbo].[Registro_Salida_Bienes]  WITH CHECK ADD  CONSTRAINT [FK_SalidaBienes_Bien] FOREIGN KEY([id_bien])
+REFERENCES [dbo].[Bienes] ([id_bien])
+ON DELETE SET NULL
+GO
+ALTER TABLE [dbo].[Registro_Salida_Bienes] CHECK CONSTRAINT [FK_SalidaBienes_Bien]
+GO
+ALTER TABLE [dbo].[Registro_Salida_Bienes]  WITH CHECK ADD  CONSTRAINT [FK_SalidaBienes_Salida] FOREIGN KEY([id_salida])
+REFERENCES [dbo].[Registro_Salidas] ([id_salida])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[Registro_Salida_Bienes] CHECK CONSTRAINT [FK_SalidaBienes_Salida]
+GO
+ALTER TABLE [dbo].[Registro_Salidas]  WITH CHECK ADD  CONSTRAINT [FK_Salidas_UsuarioRegistra] FOREIGN KEY([id_usuario_registra])
+REFERENCES [dbo].[Usuarios] ([id_usuario])
+ON DELETE SET NULL
+GO
+ALTER TABLE [dbo].[Registro_Salidas] CHECK CONSTRAINT [FK_Salidas_UsuarioRegistra]
+GO
+ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Bienes] FOREIGN KEY([id_bien])
+REFERENCES [dbo].[Bienes] ([id_bien])
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Bienes]
+GO
+ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Garantias] FOREIGN KEY([id_garantia])
+REFERENCES [dbo].[Garantias] ([id_garantia])
+ON DELETE CASCADE
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Garantias]
+GO
+ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Usuarios] FOREIGN KEY([id_usuario_registra])
+REFERENCES [dbo].[Usuarios] ([id_usuario])
+GO
+ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Usuarios]
 GO
 ALTER TABLE [dbo].[segmentos]  WITH CHECK ADD  CONSTRAINT [FK_CLAVE_SEGMENTOS_UNIDADES] FOREIGN KEY([clave])
 REFERENCES [dbo].[unidades] ([clave])
@@ -1213,61 +1433,4 @@ GO
 USE [master]
 GO
 ALTER DATABASE [inventario] SET  READ_WRITE 
-GO
-
--- Qwery nuevo para manejar las garantias
-USE [inventario]
-GO
-
-/****** Objeto: Table [dbo].[Reportes_Garantia] ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE TABLE [dbo].[Reportes_Garantia](
-	[id_reporte_garantia] [int] IDENTITY(1,1) NOT NULL,
-	[id_garantia] [int] NOT NULL,
-	[id_bien] [uniqueidentifier] NOT NULL,
-	[num_serie] [varchar](50) NULL,
-	[estatus] [varchar](50) NOT NULL,
-	[descripcion_falla] [nvarchar](max) NOT NULL,
-	[resolucion] [nvarchar](max) NULL,
-	[fecha_reporte] [datetime] NULL,
-	[fecha_resolucion] [datetime] NULL,
-	[id_usuario_registra] [int]  NULL,
- CONSTRAINT [PK_Reportes_Garantia] PRIMARY KEY CLUSTERED 
-(
-	[id_reporte_garantia] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
-GO
-
--- Configurar valores por defecto (Default Constraints)
-ALTER TABLE [dbo].[Reportes_Garantia] ADD DEFAULT ('ENVIADO A PROVEEDOR') FOR [estatus]
-GO
-ALTER TABLE [dbo].[Reportes_Garantia] ADD DEFAULT (CONVERT([datetime],((getutcdate() AT TIME ZONE 'UTC') AT TIME ZONE 'Mountain Standard Time (Mexico)'))) FOR [fecha_reporte]
-GO
-
--- Crear Llaves Foráneas (Foreign Keys)
--- 1. Relación con la tabla Garantias
-ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Garantias] FOREIGN KEY([id_garantia])
-REFERENCES [dbo].[Garantias] ([id_garantia])
-ON DELETE CASCADE
-GO
-ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Garantias]
-GO
-
--- 2. Relación con la tabla Bienes (usando el uniqueidentifier)
-ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Bienes] FOREIGN KEY([id_bien])
-REFERENCES [dbo].[Bienes] ([id_bien])
-GO
-ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Bienes]
-GO
-
--- 3. Relación con la tabla Usuarios (para auditoría de quién lo mandó)
-ALTER TABLE [dbo].[Reportes_Garantia]  WITH CHECK ADD  CONSTRAINT [FK_Reportes_Usuarios] FOREIGN KEY([id_usuario_registra])
-REFERENCES [dbo].[Usuarios] ([id_usuario])
-GO
-ALTER TABLE [dbo].[Reportes_Garantia] CHECK CONSTRAINT [FK_Reportes_Usuarios]
 GO
