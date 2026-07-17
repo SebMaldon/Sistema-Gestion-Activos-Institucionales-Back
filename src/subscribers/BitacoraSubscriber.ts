@@ -137,7 +137,7 @@ export class BitacoraSubscriber implements EntitySubscriberInterface {
     // Evitar spam en auditoría para notificaciones y otros que son internos o generan ruido
     const tablasIgnoradasGlobalmente = [
       'Notificaciones_Mensajes', 'notificaciones_mensajes',
-      'Notificaciones_Lectura', 'notificaciones_lectura'
+      'Notificaciones_Lecturas', 'notificaciones_lecturas'
     ];
 
     if (tablasIgnoradasGlobalmente.includes(tablaAfectada)) {
