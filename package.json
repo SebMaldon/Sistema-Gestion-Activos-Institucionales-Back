@@ -41,6 +41,7 @@
     "mssql": "^12.2.1",
     "reflect-metadata": "^0.2.2",
     "selfsigned": "^5.5.0",
+    "serve": "^14.2.6",
     "typeorm": "^0.3.28",
     "uuid": "^9.0.1",
     "winston": "^3.19.0"
