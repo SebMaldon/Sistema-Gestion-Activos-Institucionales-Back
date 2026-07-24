@@ -1132,6 +1132,8 @@ export const bienesResolvers = {
           puerto_red: null as any,
           switch_red: null as any
         });
+        
+        updates.id_usuario_resguardo = null;
       }
 
       updates.fecha_actualizacion = new Date();
