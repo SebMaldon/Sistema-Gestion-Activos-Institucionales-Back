@@ -352,5 +352,56 @@ export const salidasResolvers = {
         siguiente: String(folioActual + 1),
       };
     },
+
+    eliminarSalida: async (
+      _: unknown,
+      { id_salida }: { id_salida: number },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.MAESTRO, ROLES.ADMIN]);
+
+      const qr = AppDataSource.createQueryRunner();
+      await qr.connect();
+      await qr.startTransaction('SERIALIZABLE');
+
+      try {
+        // Buscar el registro para obtener su folio
+        const registro = await qr.manager.findOne(RegistroSalida, {
+          where: { id_salida },
+        });
+        if (!registro) throw new Error('Registro de salida no encontrado');
+
+        const folioAEliminar = registro.folio;
+
+        // Eliminar el registro (los bienes se borran en cascade por la relación OneToMany)
+        await qr.manager.delete(RegistroSalida, { id_salida });
+
+        // Verificar si el folio de este registro era el ÚLTIMO en Folio_Salidas
+        // Si lo era, eliminarlo para que el próximo folio emitido retome ese número
+        const maxFolioResult = await qr.query(
+          `SELECT ISNULL(MAX(TRY_CAST(Folio AS INT)), 0) AS max_folio FROM Folio_Salidas`
+        );
+        const maxFolio = Number(maxFolioResult[0]?.max_folio ?? 0);
+        const folioNum = Number(folioAEliminar);
+
+        if (!isNaN(folioNum) && folioNum === maxFolio) {
+          // Era el último folio: eliminarlo de Folio_Salidas para revertir el contador
+          await qr.query(
+            `DELETE FROM Folio_Salidas WHERE TRY_CAST(Folio AS INT) = @0`,
+            [folioNum]
+          );
+        }
+
+        await qr.commitTransaction();
+        return true;
+      } catch (e) {
+        await qr.rollbackTransaction();
+        console.error('Error en eliminarSalida:', e);
+        throw e;
+      } finally {
+        await qr.release();
+      }
+    },
   },
 };

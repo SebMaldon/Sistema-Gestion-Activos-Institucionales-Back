@@ -1598,6 +1598,8 @@ export const typeDefs = gql`
     # ── Salidas de Bienes — Registro ──────────────────────────
     registrarSalida(input: RegistroSalidaInput!): RegistroSalida!
     actualizarSalida(id_salida: Int!, input: RegistroSalidaInput!): RegistroSalida!
+    # Elimina una salida. Si su folio era el último emitido, revierte Folio_Salidas.
+    eliminarSalida(id_salida: Int!): Boolean!
 
     # ── Mesa Correspondencia ────────────────────────────────
     crearMesaCorrespondencia(input: MesaCorrespondenciaInput!): MesaCorrespondencia!
