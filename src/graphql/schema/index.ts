@@ -695,6 +695,26 @@ export const typeDefs = gql`
     detailStatsJson: String!
   }
 
+  # ─── MONITOREO LIMPIEZA E IMPRESIONES ──────────────────
+  type MonitoreoImpresionItem {
+    num_serie: String
+    dir_ip: String
+    descripcion: String
+    total_impresiones: Int
+    version: String
+    nombre_ubicacion: String
+  }
+
+  type MonitoreoImpresionEdge {
+    node: MonitoreoImpresionItem!
+    cursor: String!
+  }
+
+  type MonitoreoImpresionesConnection {
+    edges: [MonitoreoImpresionEdge!]!
+    pageInfo: PageInfo!
+  }
+
   # ─────────────────────────────────────────────────────────
   # QUERIES
   # ─────────────────────────────────────────────────────────
@@ -797,6 +817,16 @@ export const typeDefs = gql`
     # ── Cuentas PC (1:N por bien)
     cuentasPC(id_bien: ID!): [CuentaPC!]!
     cuentaPC(id_cuenta: ID!): CuentaPC
+
+    # ── Monitoreo Limpieza e Impresiones
+    monitoreoImpresiones(
+      search: String
+      version: String
+      ubicacion: String
+      sortBy: String
+      sortOrder: String
+      pagination: PaginationInput
+    ): MonitoreoImpresionesConnection!
 
     # ── Programas PC (1:N por bien)
     programasPC(id_bien: ID!): [ProgramasPC!]!

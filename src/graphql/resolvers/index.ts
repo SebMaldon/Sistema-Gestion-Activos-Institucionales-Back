@@ -14,6 +14,7 @@ import { salidasResolvers } from './salidas.resolver';
 import { salidasAntiguasResolvers } from './salidasAntiguas.resolver';
 import { mesaCorrespondenciaResolver } from './mesaCorrespondencia.resolver';
 import { prestamosResolvers } from './prestamos.resolver';
+import { monitoreoResolvers } from './monitoreo.resolver';
 
 // ── Custom Scalars ───────────────────────────────────────
 const dateTimeScalar = new GraphQLScalarType({
@@ -74,6 +75,7 @@ export const resolvers = {
     ...salidasAntiguasResolvers.Query,
     ...mesaCorrespondenciaResolver.Query,
     ...prestamosResolvers.Query,
+    ...monitoreoResolvers.Query,
   },
 
   Mutation: {
