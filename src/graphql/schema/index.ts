@@ -713,6 +713,12 @@ export const typeDefs = gql`
   type MonitoreoImpresionesConnection {
     edges: [MonitoreoImpresionEdge!]!
     pageInfo: PageInfo!
+    totalImpresiones: Int!
+  }
+
+  type MonitoreoResumenUnidad {
+    clave: String!
+    total_impresiones: Int!
   }
 
   # ─────────────────────────────────────────────────────────
@@ -823,10 +829,13 @@ export const typeDefs = gql`
       search: String
       version: String
       ubicacion: String
+      unidades: [String!]
       sortBy: String
       sortOrder: String
       pagination: PaginationInput
     ): MonitoreoImpresionesConnection!
+
+    monitoreoResumenUnidades: [MonitoreoResumenUnidad!]!
 
     # ── Programas PC (1:N por bien)
     programasPC(id_bien: ID!): [ProgramasPC!]!

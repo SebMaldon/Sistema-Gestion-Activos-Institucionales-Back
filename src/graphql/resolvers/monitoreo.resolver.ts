@@ -9,6 +9,7 @@ export const monitoreoResolvers = {
         search?: string;
         version?: string;
         ubicacion?: string;
+        unidades?: string[];
         sortBy?: string;
         sortOrder?: string;
         pagination?: { first?: number; page?: number };
@@ -52,6 +53,14 @@ export const monitoreoResolvers = {
         baseQuery += ` AND ub.nombre_ubicacion LIKE @${parameters.length}`;
         parameters.push(`%${args.ubicacion}%`);
       }
+      if (args.unidades && args.unidades.length > 0) {
+        const placeholders = [];
+        for (const unidad of args.unidades) {
+          placeholders.push(`@${parameters.length}`);
+          parameters.push(unidad);
+        }
+        baseQuery += ` AND b.clave_unidad_ref IN (${placeholders.join(',')})`;
+      }
 
       // 1. Get Total Count
       const countQuery = `
@@ -61,6 +70,14 @@ export const monitoreoResolvers = {
       
       const countResult = await AppDataSource.query(countQuery, parameters);
       const totalCount = parseInt(countResult[0]?.total || '0', 10);
+
+      // 1.5 Get Total Impressions Sum
+      const totalImpQuery = `
+        SELECT SUM(i.impresiones) as sum_total
+        ${baseQuery}
+      `;
+      const sumResult = await AppDataSource.query(totalImpQuery, parameters);
+      const totalImpresiones = parseInt(sumResult[0]?.sum_total || '0', 10);
 
       // 2. Get Data
       let dataQuery = `
@@ -125,7 +142,26 @@ export const monitoreoResolvers = {
           endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null,
           totalCount,
         },
+        totalImpresiones,
       };
+    },
+
+    monitoreoResumenUnidades: async (_parent: any, _args: any, context: GraphQLContext) => {
+      if (!context.user) throw new Error('No autorizado');
+      if (context.user.id_rol !== 1) throw new Error('Acceso denegado: solo maestros');
+
+      const query = `
+        SELECT u.clave, SUM(i.impresiones) as total
+        FROM unidades u
+        INNER JOIN bienes b ON b.clave_unidad_ref = u.clave
+        INNER JOIN impresiones i ON i.noserie = b.num_serie
+        GROUP BY u.clave
+      `;
+      const result = await AppDataSource.query(query);
+      return result.map((r: any) => ({
+        clave: r.clave,
+        total_impresiones: parseInt(r.total || '0', 10)
+      }));
     },
   },
 };
