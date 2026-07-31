@@ -64,11 +64,11 @@ export const monitoreoResolvers = {
         baseQuery += ` AND b.clave_unidad_ref IN (${placeholders.join(',')})`;
       }
       if (args.fechaInicio) {
-        baseQuery += ` AND i.fecha >= @${parameters.length}`;
+        baseQuery += ` AND CAST(i.fecha AS DATE) >= @${parameters.length}`;
         parameters.push(args.fechaInicio);
       }
       if (args.fechaFin) {
-        baseQuery += ` AND i.fecha <= @${parameters.length}`;
+        baseQuery += ` AND CAST(i.fecha AS DATE) <= @${parameters.length}`;
         parameters.push(args.fechaFin);
       }
 
