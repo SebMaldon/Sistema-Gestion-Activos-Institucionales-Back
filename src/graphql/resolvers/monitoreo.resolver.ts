@@ -10,6 +10,8 @@ export const monitoreoResolvers = {
         version?: string;
         ubicacion?: string;
         unidades?: string[];
+        fechaInicio?: string;
+        fechaFin?: string;
         sortBy?: string;
         sortOrder?: string;
         pagination?: { first?: number; page?: number };
@@ -61,6 +63,14 @@ export const monitoreoResolvers = {
         }
         baseQuery += ` AND b.clave_unidad_ref IN (${placeholders.join(',')})`;
       }
+      if (args.fechaInicio) {
+        baseQuery += ` AND i.fecha >= @${parameters.length}`;
+        parameters.push(args.fechaInicio);
+      }
+      if (args.fechaFin) {
+        baseQuery += ` AND i.fecha <= @${parameters.length}`;
+        parameters.push(args.fechaFin);
+      }
 
       // 1. Get Total Count
       const countQuery = `
@@ -87,18 +97,20 @@ export const monitoreoResolvers = {
           u.descripcion, 
           SUM(i.impresiones) AS total_impresiones,
           m.version,
-          ub.nombre_ubicacion
+          ub.nombre_ubicacion,
+          i.fecha
         ${baseQuery}
         GROUP BY 
           b.num_serie,
           u.descripcion,
           m.version,
           ub.nombre_ubicacion,
-          e.dir_ip
+          e.dir_ip,
+          i.fecha
       `;
 
       // Sorting
-      const validColumns = ['num_serie', 'dir_ip', 'descripcion', 'total_impresiones', 'version', 'nombre_ubicacion'];
+      const validColumns = ['num_serie', 'dir_ip', 'descripcion', 'total_impresiones', 'version', 'nombre_ubicacion', 'fecha'];
       let sortBy = 'b.num_serie';
       let sortDir = 'ASC';
 
@@ -109,6 +121,7 @@ export const monitoreoResolvers = {
         else if (args.sortBy === 'total_impresiones') sortBy = 'SUM(i.impresiones)';
         else if (args.sortBy === 'version') sortBy = 'm.version';
         else if (args.sortBy === 'nombre_ubicacion') sortBy = 'ub.nombre_ubicacion';
+        else if (args.sortBy === 'fecha') sortBy = 'i.fecha';
       }
       if (args.sortOrder && ['ASC', 'DESC'].includes(args.sortOrder.toUpperCase())) {
         sortDir = args.sortOrder.toUpperCase();
@@ -126,6 +139,7 @@ export const monitoreoResolvers = {
           total_impresiones: row.total_impresiones,
           version: row.version,
           nombre_ubicacion: row.nombre_ubicacion,
+          fecha: row.fecha,
         },
         cursor: Buffer.from(`monitoreo_${offset + index}`).toString('base64'),
       }));
