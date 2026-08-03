@@ -703,7 +703,8 @@ export const typeDefs = gql`
     total_impresiones: Int
     version: String
     nombre_ubicacion: String
-    fecha: DateTime
+    fecha_min: DateTime
+    fecha_max: DateTime
   }
 
   type MonitoreoImpresionEdge {

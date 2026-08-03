@@ -64,12 +64,18 @@ export const monitoreoResolvers = {
         baseQuery += ` AND b.clave_unidad_ref IN (${placeholders.join(',')})`;
       }
       if (args.fechaInicio) {
+        let fInicio: any = args.fechaInicio;
+        if (fInicio instanceof Date) fInicio = fInicio.toISOString();
+        fInicio = String(fInicio).substring(0, 10);
         baseQuery += ` AND CAST(i.fecha AS DATE) >= @${parameters.length}`;
-        parameters.push(args.fechaInicio);
+        parameters.push(fInicio);
       }
       if (args.fechaFin) {
+        let fFin: any = args.fechaFin;
+        if (fFin instanceof Date) fFin = fFin.toISOString();
+        fFin = String(fFin).substring(0, 10);
         baseQuery += ` AND CAST(i.fecha AS DATE) <= @${parameters.length}`;
-        parameters.push(args.fechaFin);
+        parameters.push(fFin);
       }
 
       // 1. Get Total Count
@@ -98,15 +104,16 @@ export const monitoreoResolvers = {
           SUM(i.impresiones) AS total_impresiones,
           m.version,
           ub.nombre_ubicacion,
-          i.fecha
+          MIN(i.fecha) AS raw_fecha_min,
+          CONVERT(varchar, MIN(i.fecha), 23) AS fecha_min,
+          CONVERT(varchar, MAX(i.fecha), 23) AS fecha_max
         ${baseQuery}
         GROUP BY 
           b.num_serie,
           u.descripcion,
           m.version,
           ub.nombre_ubicacion,
-          e.dir_ip,
-          i.fecha
+          e.dir_ip
       `;
 
       // Sorting
@@ -121,7 +128,7 @@ export const monitoreoResolvers = {
         else if (args.sortBy === 'total_impresiones') sortBy = 'SUM(i.impresiones)';
         else if (args.sortBy === 'version') sortBy = 'm.version';
         else if (args.sortBy === 'nombre_ubicacion') sortBy = 'ub.nombre_ubicacion';
-        else if (args.sortBy === 'fecha') sortBy = 'i.fecha';
+        else if (args.sortBy === 'fecha') sortBy = 'MIN(i.fecha)';
       }
       if (args.sortOrder && ['ASC', 'DESC'].includes(args.sortOrder.toUpperCase())) {
         sortDir = args.sortOrder.toUpperCase();
@@ -139,7 +146,8 @@ export const monitoreoResolvers = {
           total_impresiones: row.total_impresiones,
           version: row.version,
           nombre_ubicacion: row.nombre_ubicacion,
-          fecha: row.fecha,
+          fecha_min: row.fecha_min,
+          fecha_max: row.fecha_max,
         },
         cursor: Buffer.from(`monitoreo_${offset + index}`).toString('base64'),
       }));
