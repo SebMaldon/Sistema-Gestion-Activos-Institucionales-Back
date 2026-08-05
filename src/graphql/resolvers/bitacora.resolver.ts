@@ -152,19 +152,30 @@ export const bitacoraResolvers = {
         throw new Error('fechaDesde debe ser anterior a fechaHasta.');
       }
 
-      // Contar antes de borrar para el registro
-      const [{ cnt }] = await AppDataSource.query(
-        `SELECT COUNT(*) AS cnt FROM Bitacora WHERE fecha_movimiento >= @0 AND fecha_movimiento <= @1`,
-        [desde, hasta]
-      ) as { cnt: number }[];
+      // Asegurar que enviamos strings explícitos a SQL Server para evitar conversión de UTC
+      const formatSQL = (d: Date) => {
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      };
 
-      const registrosBorrados = Number(cnt);
+      const desdeStr = formatSQL(desde);
+      const hastaStr = formatSQL(hasta);
+
+      // Contar antes de borrar para el registro
+      const registrosBorrados = await AppDataSource.getRepository(Bitacora)
+        .createQueryBuilder('b')
+        .where('b.fecha_movimiento >= :desde', { desde: desdeStr })
+        .andWhere('b.fecha_movimiento <= :hasta', { hasta: hastaStr })
+        .getCount();
 
       // Borrar el rango
-      await AppDataSource.query(
-        `DELETE FROM Bitacora WHERE fecha_movimiento >= @0 AND fecha_movimiento <= @1`,
-        [desde, hasta]
-      );
+      await AppDataSource.getRepository(Bitacora)
+        .createQueryBuilder('b')
+        .delete()
+        .from(Bitacora)
+        .where('fecha_movimiento >= :desde', { desde: desdeStr })
+        .andWhere('fecha_movimiento <= :hasta', { hasta: hastaStr })
+        .execute();
 
       // Registrar la purga en la bitácora (este registro queda fuera del rango borrado)
       await registrarBitacora(

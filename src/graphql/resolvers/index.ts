@@ -86,6 +86,7 @@ export const resolvers = {
     ...transaccionalesResolvers.Mutation,
     ...movimientosResolvers.Mutation,
     ...ubicacionesResolvers.Mutation,
+    ...bitacoraResolvers.Mutation,
     ...notificacionesResolvers.Mutation,
     ...atributosResolvers.Mutation,
     ...solicitudesCambioResolvers.Mutation,
