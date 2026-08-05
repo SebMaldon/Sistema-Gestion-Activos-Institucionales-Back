@@ -265,6 +265,17 @@ export const typeDefs = gql`
     pageInfo: PageInfo!
   }
 
+  type PurgarBitacoraResult {
+    registrosBorrados: Int!
+    fechaDesde: DateTime!
+    fechaHasta: DateTime!
+  }
+
+  type BitacoraRangoFechas {
+    fechaMin: DateTime
+    fechaMax: DateTime
+  }
+
   # ─── NOTIFICACIONES ─────────────────────────────────────
 
   type NotificacionMensaje {
@@ -754,6 +765,7 @@ export const typeDefs = gql`
       pagination: PaginationInput
     ): UnidadesConnection!
     catUnidades: [Unidad!]!
+    todasLasUnidades: [Unidad!]!
     unidad(clave: ID!): Unidad
     catDistinctFiltros: DistinctFiltrosCatalog!
 
@@ -855,6 +867,7 @@ export const typeDefs = gql`
       pagination: PaginationInput
     ): BitacoraConnection!
     bitacoraEntrada(id_bitacora: ID!): Bitacora
+    bitacoraRangoFechas: BitacoraRangoFechas!
 
     # ── Notificaciones
     misNotificaciones(mostrarOcultas: Boolean): [MiNotificacion!]!
@@ -879,6 +892,7 @@ export const typeDefs = gql`
 
     # ── Solicitudes de Cambio (Maker-Checker)
     obtenerSolicitudesPendientes: [SolicitudCambio!]!
+    miSolicitudCambioUnidad: SolicitudCambio
 
     # ── Salidas de Bienes — Folio
     folioSalidas: FolioSalidas!
@@ -1145,6 +1159,8 @@ export const typeDefs = gql`
     login(matricula: String!, password: String!, equipoInfo: String): AuthPayload!
     changePassword(id_usuario: ID!, currentPassword: String!, newPassword: String!): Boolean!
 
+    # ── Bitácora
+    purgarBitacora(fechaDesde: DateTime!, fechaHasta: DateTime!): PurgarBitacoraResult!
     # ── Catálogos — Marcas
     createMarca(marca: String!): Marca!
     updateMarca(clave_marca: ID!, marca: String!): Marca!
@@ -1586,6 +1602,7 @@ export const typeDefs = gql`
 
     # ── Solicitudes de Cambio (Maker-Checker) ────────────────
     solicitarActualizacionBien(idBien: ID!, datosNuevos: String!): SolicitudCambio!
+    solicitarCambioUnidad(clave_unidad_nueva: String!): SolicitudCambio!
     aprobarCambio(solicitudId: Int!, camposAprobados: [String!]): Boolean!
     rechazarCambio(solicitudId: Int!, motivo: String): Boolean!
 

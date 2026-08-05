@@ -119,11 +119,67 @@ export const bitacoraResolvers = {
         where: { id_bitacora: parseInt(id_bitacora) },
       });
     },
+
+    bitacoraRangoFechas: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.MAESTRO]);
+      const [row] = await AppDataSource.query(
+        `SELECT MIN(fecha_movimiento) AS fechaMin, MAX(fecha_movimiento) AS fechaMax FROM Bitacora`
+      ) as { fechaMin: Date | null; fechaMax: Date | null }[];
+      return { fechaMin: row?.fechaMin ?? null, fechaMax: row?.fechaMax ?? null };
+    },
   },
 
   // ── Field resolvers
   Bitacora: {
     usuario: (parent: Bitacora, _: unknown, context: GraphQLContext) =>
       context.loaders.usuarioLoader.load(parent.id_usuario),
+  },
+
+  Mutation: {
+    purgarBitacora: async (
+      _: unknown,
+      { fechaDesde, fechaHasta }: { fechaDesde: Date; fechaHasta: Date },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.MAESTRO]);
+
+      const desde = new Date(fechaDesde);
+      const hasta = new Date(fechaHasta);
+
+      if (desde > hasta) {
+        throw new Error('fechaDesde debe ser anterior a fechaHasta.');
+      }
+
+      // Contar antes de borrar para el registro
+      const [{ cnt }] = await AppDataSource.query(
+        `SELECT COUNT(*) AS cnt FROM Bitacora WHERE fecha_movimiento >= @0 AND fecha_movimiento <= @1`,
+        [desde, hasta]
+      ) as { cnt: number }[];
+
+      const registrosBorrados = Number(cnt);
+
+      // Borrar el rango
+      await AppDataSource.query(
+        `DELETE FROM Bitacora WHERE fecha_movimiento >= @0 AND fecha_movimiento <= @1`,
+        [desde, hasta]
+      );
+
+      // Registrar la purga en la bitácora (este registro queda fuera del rango borrado)
+      await registrarBitacora(
+        context.user!.id_usuario,
+        'PURGA_BITACORA',
+        'Bitacora',
+        undefined,
+        {
+          fechaDesde: desde.toISOString(),
+          fechaHasta: hasta.toISOString(),
+          registrosBorrados,
+        }
+      );
+
+      return { registrosBorrados, fechaDesde: desde, fechaHasta: hasta };
+    },
   },
 };

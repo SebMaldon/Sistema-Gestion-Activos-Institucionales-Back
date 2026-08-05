@@ -5,6 +5,7 @@ import { EspecificacionTI } from '../../entities/EspecificacionTI';
 import { CuentaPC } from '../../entities/CuentaPC';
 import { ProgramasPC } from '../../entities/ProgramasPC';
 import { Usuario } from '../../entities/Usuario';
+import { Inmueble } from '../../entities/Inmueble';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES } from '../../middleware/auth.middleware';
 import { NotFoundError, ValidationError, ConflictError } from '../../utils/errors';
@@ -99,6 +100,22 @@ async function resolverNotificacionesSolicitud(bien_id: string): Promise<void> {
   }
 }
 
+// Elimina la notif 'Solicitud de Cambio de Unidad' del usuario solicitante (bien_id es null)
+async function resolverNotificacionesCambioUnidad(usuarioId: number): Promise<void> {
+  try {
+    await AppDataSource.query(
+      `DELETE FROM Notificaciones_Mensajes
+       WHERE titulo = 'Solicitud de Cambio de Unidad'
+         AND tipo_audiencia = 'ROL'
+         AND id_audiencia = @0
+         AND mensaje LIKE @1`,
+      [String(ROLES.MAESTRO), `%[uid:${usuarioId}]%`]
+    );
+  } catch (err) {
+    console.error('[resolverNotificacionesCambioUnidad] Error:', err);
+  }
+}
+
 export const solicitudesCambioResolvers = {
   Query: {
     obtenerSolicitudesPendientes: async (_: unknown, __: unknown, context: GraphQLContext) => {
@@ -109,6 +126,21 @@ export const solicitudesCambioResolvers = {
         where: { estado: 'PENDIENTE' },
         order: { fecha_solicitud: 'DESC' },
       });
+    },
+
+    miSolicitudCambioUnidad: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      const repo = AppDataSource.getRepository(SolicitudCambio);
+      const solicitud = await repo.findOne({
+        where: { usuario_solicitante_id: context.user!.id_usuario, estado: 'PENDIENTE' },
+        order: { fecha_solicitud: 'DESC' },
+      });
+      if (!solicitud) return null;
+      const datos = typeof solicitud.datos_nuevos === 'string'
+        ? JSON.parse(solicitud.datos_nuevos)
+        : solicitud.datos_nuevos;
+      if (datos._tipo !== 'CAMBIO_UNIDAD') return null;
+      return solicitud;
     },
   },
 
@@ -280,6 +312,75 @@ export const solicitudesCambioResolvers = {
       return res;
     },
 
+    solicitarCambioUnidad: async (
+      _: unknown,
+      { clave_unidad_nueva }: { clave_unidad_nueva: string },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.USUARIO]);
+
+      // Validar que la unidad existe
+      const unidadRepo = AppDataSource.getRepository(Inmueble);
+      const unidad = await unidadRepo.findOne({ where: { clave: clave_unidad_nueva } });
+      if (!unidad) throw new NotFoundError('Unidad');
+
+      const repo = AppDataSource.getRepository(SolicitudCambio);
+
+      // Si ya hay una solicitud pendiente de cambio de unidad para este usuario, actualizar
+      const yaExiste = await repo.findOne({
+        where: { usuario_solicitante_id: context.user!.id_usuario, estado: 'PENDIENTE' },
+      });
+      if (yaExiste) {
+        const datosExist = typeof yaExiste.datos_nuevos === 'string'
+          ? JSON.parse(yaExiste.datos_nuevos)
+          : yaExiste.datos_nuevos;
+        if (datosExist._tipo === 'CAMBIO_UNIDAD') {
+          datosExist.clave_unidad_nueva = clave_unidad_nueva;
+          datosExist.descripcion_unidad = unidad.descripcion || clave_unidad_nueva;
+          yaExiste.datos_nuevos = datosExist;
+          return repo.save(yaExiste);
+        }
+      }
+
+      const parsed = {
+        _tipo: 'CAMBIO_UNIDAD',
+        clave_unidad_nueva,
+        descripcion_unidad: unidad.descripcion || clave_unidad_nueva,
+        id_usuario_solicitante: context.user!.id_usuario,
+      };
+
+      const solicitud = repo.create({
+        bien_id: null as any,
+        usuario_solicitante_id: context.user!.id_usuario,
+        datos_nuevos: parsed,
+        estado: 'PENDIENTE',
+      });
+
+      const res = await repo.save(solicitud);
+
+      // Notificar a Maestros
+      try {
+        const msgRepo = AppDataSource.getRepository(NotificacionMensaje);
+        const userRepo = AppDataSource.getRepository(Usuario);
+        const solicitante = await userRepo.findOneBy({ id_usuario: context.user!.id_usuario });
+        const nombreCompleto = solicitante ? solicitante.nombre_completo : 'Desconocido';
+        const nuevaNotif = await msgRepo.save(
+          msgRepo.create({
+            titulo: 'Solicitud de Cambio de Unidad',
+            mensaje: `El usuario ${nombreCompleto} (${context.user!.matricula}) solicita cambio de unidad a: ${unidad.descripcion || clave_unidad_nueva}. [uid:${context.user!.id_usuario}]`,
+            tipo_audiencia: 'ROL',
+            id_audiencia: String(ROLES.MAESTRO),
+          })
+        );
+        await crearLecturaParaDestinatarios(nuevaNotif.id_notificacion, 'ROL', String(ROLES.MAESTRO));
+      } catch (err) {
+        console.error('[solicitarCambioUnidad] Error notificando:', err);
+      }
+
+      return res;
+    },
+
     aprobarCambio: async (
       _: unknown,
       { solicitudId, camposAprobados }: { solicitudId: number; camposAprobados?: string[] },
@@ -297,6 +398,28 @@ export const solicitudesCambioResolvers = {
         const datos = typeof solicitud.datos_nuevos === 'string'
           ? JSON.parse(solicitud.datos_nuevos)
           : solicitud.datos_nuevos;
+
+        // ── CAMBIO DE UNIDAD: flujo especial ──────────────────────────────────
+        if (datos._tipo === 'CAMBIO_UNIDAD') {
+          const usuarioRepo = manager.getRepository(Usuario);
+          const usuario = await usuarioRepo.findOne({
+            where: { id_usuario: solicitud.usuario_solicitante_id },
+          });
+          if (!usuario) throw new NotFoundError('Usuario solicitante');
+
+          usuario.clave_unidad = datos.clave_unidad_nueva;
+          await usuarioRepo.save(usuario);
+
+          solicitud.estado = 'APROBADO';
+          solicitud.usuario_aprobador_id = context.user!.id_usuario;
+          solicitud.fecha_resolucion = new Date();
+          await manager.save(SolicitudCambio, solicitud);
+
+          // Eliminar notif de cambio de unidad para todos los maestros
+          await resolverNotificacionesCambioUnidad(solicitud.usuario_solicitante_id);
+
+          return true;
+        }
 
         // ── Separar campos de Bien vs Especificaciones TI ──
         const bienUpdates: Record<string, any> = {};
@@ -513,10 +636,17 @@ export const solicitudesCambioResolvers = {
       if (!solicitud) throw new NotFoundError('Solicitud pendiente');
 
       const bien_id = solicitud.bien_id;
+      const usuario_solicitante_id = solicitud.usuario_solicitante_id;
+      const datos = typeof solicitud.datos_nuevos === 'string'
+        ? JSON.parse(solicitud.datos_nuevos)
+        : solicitud.datos_nuevos;
       await repo.remove(solicitud);
 
-      // Resolver notificaciones de solicitud pendiente para este bien
-      if (bien_id) await resolverNotificacionesSolicitud(bien_id);
+      if (datos._tipo === 'CAMBIO_UNIDAD') {
+        await resolverNotificacionesCambioUnidad(usuario_solicitante_id);
+      } else if (bien_id) {
+        await resolverNotificacionesSolicitud(bien_id);
+      }
 
       return true;
     },

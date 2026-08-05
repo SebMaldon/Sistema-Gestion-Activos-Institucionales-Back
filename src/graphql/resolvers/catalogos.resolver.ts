@@ -299,11 +299,19 @@ export const catalogosResolvers = {
       const qb = AppDataSource.getRepository(Inmueble).createQueryBuilder('i').orderBy('i.descripcion', 'ASC');
       if (isEstandar(context) && context.user?.clave_zona) {
         qb.andWhere('i.clave_zona = :_cz_uni', { _cz_uni: context.user.clave_zona });
-      } else if (isEstandar(context)) {
-        qb.andWhere('1 = 0');
       }
+      // Nota: estándares sin clave_zona ven todas (necesario para solicitar cambio de unidad)
       return qb.getMany();
     },
+
+    todasLasUnidades: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      return AppDataSource.getRepository(Inmueble)
+        .createQueryBuilder('i')
+        .orderBy('i.descripcion', 'ASC')
+        .getMany();
+    },
+
     unidad: async (_: unknown, { clave }: { clave: string }, context: GraphQLContext) => {
       requireAuth(context);
       return AppDataSource.getRepository(Inmueble).findOne({ where: { clave } });
