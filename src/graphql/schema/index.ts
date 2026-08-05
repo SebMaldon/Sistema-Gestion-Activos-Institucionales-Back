@@ -706,6 +706,34 @@ export const typeDefs = gql`
     detailStatsJson: String!
   }
 
+  # ─── MONITOREO LIMPIEZA E IMPRESIONES ──────────────────
+  type MonitoreoImpresionItem {
+    num_serie: String
+    dir_ip: String
+    descripcion: String
+    total_impresiones: Int
+    version: String
+    nombre_ubicacion: String
+    fecha_min: DateTime
+    fecha_max: DateTime
+  }
+
+  type MonitoreoImpresionEdge {
+    node: MonitoreoImpresionItem!
+    cursor: String!
+  }
+
+  type MonitoreoImpresionesConnection {
+    edges: [MonitoreoImpresionEdge!]!
+    pageInfo: PageInfo!
+    totalImpresiones: Int!
+  }
+
+  type MonitoreoResumenUnidad {
+    clave: String!
+    total_impresiones: Int!
+  }
+
   # ─────────────────────────────────────────────────────────
   # QUERIES
   # ─────────────────────────────────────────────────────────
@@ -809,6 +837,21 @@ export const typeDefs = gql`
     # ── Cuentas PC (1:N por bien)
     cuentasPC(id_bien: ID!): [CuentaPC!]!
     cuentaPC(id_cuenta: ID!): CuentaPC
+
+    # ── Monitoreo Limpieza e Impresiones
+    monitoreoImpresiones(
+      search: String
+      version: String
+      ubicacion: String
+      unidades: [String!]
+      fechaInicio: DateTime
+      fechaFin: DateTime
+      sortBy: String
+      sortOrder: String
+      pagination: PaginationInput
+    ): MonitoreoImpresionesConnection!
+
+    monitoreoResumenUnidades: [MonitoreoResumenUnidad!]!
 
     # ── Programas PC (1:N por bien)
     programasPC(id_bien: ID!): [ProgramasPC!]!
@@ -1277,6 +1320,12 @@ export const typeDefs = gql`
       fecha_a_terminar_prestamo: DateTime
       descripcion_prestamo_inicio: String
     ): PrestamoBien!
+    crearMultiplesPrestamosBienes(
+      ids_bienes: [ID!]!
+      fecha_inicio_prestamo: DateTime
+      fecha_a_terminar_prestamo: DateTime
+      descripcion_prestamo_inicio: String
+    ): Int!
     actualizarPrestamoBien(
       id_registro_prestamo: Int!
       fecha_inicio_prestamo: DateTime

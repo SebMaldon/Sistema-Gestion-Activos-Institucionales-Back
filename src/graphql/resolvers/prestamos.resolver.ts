@@ -71,6 +71,77 @@ export const prestamosResolvers = {
       });
     },
 
+    crearMultiplesPrestamosBienes: async (
+      _: unknown,
+      {
+        ids_bienes,
+        fecha_inicio_prestamo,
+        fecha_a_terminar_prestamo,
+        descripcion_prestamo_inicio,
+      }: {
+        ids_bienes: string[];
+        fecha_inicio_prestamo?: Date | string;
+        fecha_a_terminar_prestamo?: Date | string;
+        descripcion_prestamo_inicio?: string;
+      },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      requireRole(context, [ROLES.ADMIN, ROLES.MAESTRO]);
+
+      return AppDataSource.transaction(async (manager) => {
+        const bienRepo = manager.getRepository(Bien);
+        const prestamoRepo = manager.getRepository(PrestamoBien);
+
+        let count = 0;
+        
+        for (const id_bien of ids_bienes) {
+          const bien = await bienRepo.findOne({ where: { id_bien } });
+          if (!bien) continue;
+          
+          if (bien.estatus_operativo === 'PRESTAMO' || bien.estatus_operativo === 'PRÉSTAMO') {
+            // Ya está en préstamo: extender o actualizar su registro activo
+            const prestamoActivo = await prestamoRepo.findOne({
+              where: { id_bien, fecha_entrega: IsNull() },
+              order: { fecha_inicio_prestamo: 'DESC' },
+            });
+
+            if (prestamoActivo) {
+              if (fecha_a_terminar_prestamo) {
+                prestamoActivo.fecha_a_terminar_prestamo = new Date(fecha_a_terminar_prestamo);
+              }
+              if (descripcion_prestamo_inicio) {
+                // Podría concatenarse o reemplazarse, reemplacemos
+                prestamoActivo.descripcion_prestamo_inicio = descripcion_prestamo_inicio;
+              }
+              await prestamoRepo.save(prestamoActivo);
+              count++;
+            }
+          } else {
+            // No estaba en préstamo: crear registro de préstamo
+            const nuevoPrestamo = prestamoRepo.create({
+              id_bien,
+              id_usuario_registra_prestamo: context.user!.id_usuario,
+              fecha_inicio_prestamo: fecha_inicio_prestamo ? new Date(fecha_inicio_prestamo) : new Date(),
+              fecha_a_terminar_prestamo: fecha_a_terminar_prestamo ? new Date(fecha_a_terminar_prestamo) : undefined,
+              descripcion_prestamo_inicio,
+            });
+
+            await prestamoRepo.save(nuevoPrestamo);
+
+            // Actualizar estatus del Bien
+            bien.estatus_operativo = 'PRESTAMO';
+            bien.fecha_actualizacion = new Date();
+            await bienRepo.save(bien);
+            
+            count++;
+          }
+        }
+
+        return count;
+      });
+    },
+
     actualizarPrestamoBien: async (
       _: unknown,
       {
