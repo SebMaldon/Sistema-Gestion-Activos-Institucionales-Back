@@ -93,6 +93,7 @@ export const resolvers = {
     ...salidasResolvers.Mutation,
     ...mesaCorrespondenciaResolver.Mutation,
     ...prestamosResolvers.Mutation,
+    ...monitoreoResolvers.Mutation,
   },
 
   // ── Type-level field resolvers ───────────────────────────

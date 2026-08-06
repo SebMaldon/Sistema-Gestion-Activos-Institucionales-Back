@@ -716,6 +716,8 @@ export const typeDefs = gql`
     nombre_ubicacion: String
     fecha_min: DateTime
     fecha_max: DateTime
+    limpieza_logica: Int
+    wifi: Int
   }
 
   type MonitoreoImpresionEdge {
@@ -1198,6 +1200,8 @@ export const typeDefs = gql`
   # MUTATIONS
   # ─────────────────────────────────────────────────────────
   type Mutation {
+    # ── Monitoreo
+    updateMonitoreoLimpieza(noserie: String!, limpieza_logica: Int, wifi: Int): Boolean!
     # ── Auth
     login(matricula: String!, password: String!, equipoInfo: String): AuthPayload!
     changePassword(id_usuario: ID!, currentPassword: String!, newPassword: String!): Boolean!

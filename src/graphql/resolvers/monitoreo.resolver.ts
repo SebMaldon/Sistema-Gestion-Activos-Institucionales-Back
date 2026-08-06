@@ -1,5 +1,6 @@
 import { AppDataSource } from '../../config/database';
 import { GraphQLContext } from '../../middleware/context';
+import { registrarBitacora } from './bitacora.resolver';
 
 export const monitoreoResolvers = {
   Query: {
@@ -106,7 +107,9 @@ export const monitoreoResolvers = {
           ub.nombre_ubicacion,
           MIN(i.fecha) AS raw_fecha_min,
           CONVERT(varchar, MIN(i.fecha), 23) AS fecha_min,
-          CONVERT(varchar, MAX(i.fecha), 23) AS fecha_max
+          CONVERT(varchar, MAX(i.fecha), 23) AS fecha_max,
+          MAX(m.limpieza_logica) AS limpieza_logica,
+          MAX(m.wifi) AS wifi
         ${baseQuery}
         GROUP BY 
           b.num_serie,
@@ -148,6 +151,8 @@ export const monitoreoResolvers = {
           nombre_ubicacion: row.nombre_ubicacion,
           fecha_min: row.fecha_min,
           fecha_max: row.fecha_max,
+          limpieza_logica: row.limpieza_logica != null ? parseInt(row.limpieza_logica, 10) : null,
+          wifi: row.wifi != null ? parseInt(row.wifi, 10) : null,
         },
         cursor: Buffer.from(`monitoreo_${offset + index}`).toString('base64'),
       }));
@@ -184,6 +189,55 @@ export const monitoreoResolvers = {
         clave: r.clave,
         total_impresiones: parseInt(r.total || '0', 10)
       }));
+    },
+  },
+
+  Mutation: {
+    updateMonitoreoLimpieza: async (
+      _parent: any,
+      args: { noserie: string; limpieza_logica?: number; wifi?: number },
+      context: GraphQLContext
+    ) => {
+      if (!context.user) throw new Error('No autorizado');
+      if (context.user.id_rol !== 1) throw new Error('Acceso denegado: solo maestros');
+
+      const setClauses: string[] = [];
+      const params: any[] = [];
+
+      if (args.limpieza_logica !== undefined) {
+        setClauses.push(`limpieza_logica = @${params.length}`);
+        params.push(args.limpieza_logica);
+      }
+      if (args.wifi !== undefined) {
+        setClauses.push(`wifi = @${params.length}`);
+        params.push(args.wifi);
+      }
+
+      if (setClauses.length === 0) return false;
+
+      params.push(args.noserie);
+      await AppDataSource.query(
+        `UPDATE monitoreo_limpieza SET ${setClauses.join(', ')} WHERE noserie = @${params.length - 1}`,
+        params
+      );
+
+      const detalles: any = { noserie: args.noserie };
+      if (args.limpieza_logica !== undefined) {
+        detalles.limpieza_logica = args.limpieza_logica === 1 ? 'activo' : 'inactivo';
+      }
+      if (args.wifi !== undefined) {
+        detalles.wifi = args.wifi === 1 ? 'activo' : 'inactivo';
+      }
+
+      await registrarBitacora(
+        context.user.id_usuario,
+        'EDICION',
+        'monitoreo_limpieza',
+        args.noserie,
+        detalles
+      );
+
+      return true;
     },
   },
 };

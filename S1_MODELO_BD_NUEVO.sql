@@ -560,6 +560,7 @@ CREATE TABLE [dbo].[monitoreo_limpieza](
 	[noserie] [nvarchar](max) NULL,
 	[limpieza_logica] [nvarchar](50) NULL,
 	[impresiones] [int] NULL,
+	[wifi] [int] NULL,
 	[version] [nvarchar](50) NULL,
 	[fecha_impresion] [datetime] NULL
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
