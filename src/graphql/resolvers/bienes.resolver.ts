@@ -11,6 +11,7 @@ import { CatModelo } from '../../entities/CatModelo';
 import { CatCategoriaActivo } from '../../entities/CatCategoriaActivo';
 import { CatUnidadMedida } from '../../entities/CatUnidadMedida';
 import { Marca } from '../../entities/Marca';
+import { TipoDispositivo } from '../../entities/TipoDispositivo';
 import { GraphQLContext } from '../../middleware/context';
 import { requireAuth, requireRole, ROLES, applyZonaFilter, isEstandar } from '../../middleware/auth.middleware';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/errors';
@@ -57,10 +58,11 @@ export async function procesarMonitoresHelper(
   // Categoría: busca la que contenga 'computo' o 'cómputo' en el nombre
   const catRepo = manager.getRepository(CatCategoriaActivo);
   const umRepo = manager.getRepository(CatUnidadMedida);
+  const tipoRepo = manager.getRepository(TipoDispositivo);
 
   const catInformatico = await catRepo
     .createQueryBuilder('c')
-    .where("LOWER(c.nombre_categoria) LIKE '%informatico%' OR LOWER(c.nombre_categoria) LIKE '%informático%'")
+    .where("LOWER(c.nombre_categoria) LIKE '%computo%' OR LOWER(c.nombre_categoria) LIKE '%c\u00f3mputo%'")
     .getOne();
   const id_categoria = catInformatico?.id_categoria ?? 7;
 
@@ -69,6 +71,13 @@ export async function procesarMonitoresHelper(
     .where("LOWER(u.abreviatura) = 'pza' OR LOWER(u.nombre_unidad) LIKE '%pieza%'")
     .getOne();
   const id_unidad_medida = umPza?.id_unidad_medida ?? 1;
+
+  // Resolver tipo_disp = Monitor una sola vez
+  const tipoMonitor = await tipoRepo
+    .createQueryBuilder('t')
+    .where("LOWER(t.nombre_tipo) LIKE '%monitor%'")
+    .getOne();
+  const tipo_disp_monitor = tipoMonitor?.tipo_disp ?? null;
 
   // Bien padre (PC)
   const pc = await bienRepo.findOne({ where: { id_bien: id_bien_pc } });
@@ -133,12 +142,20 @@ export async function procesarMonitoresHelper(
         clave_modelo,
         descrip_disp: `${marcaName} ${modeloCleaned}`.trim() || 'Monitor',
         clave_marca: marcaEnt.clave_marca,
-        // tipo_disp: null (no tiene tipo específico)
+        tipo_disp: tipo_disp_monitor ?? undefined,
       });
       await modeloRepo.save(catModelo);
-    } else if (!catModelo.clave_marca) {
-      catModelo.clave_marca = marcaEnt.clave_marca;
-      await modeloRepo.save(catModelo);
+    } else {
+      let modeloModificado = false;
+      if (!catModelo.clave_marca) {
+        catModelo.clave_marca = marcaEnt.clave_marca;
+        modeloModificado = true;
+      }
+      if (!catModelo.tipo_disp && tipo_disp_monitor) {
+        catModelo.tipo_disp = tipo_disp_monitor;
+        modeloModificado = true;
+      }
+      if (modeloModificado) await modeloRepo.save(catModelo);
     }
 
     // 2. Buscar o crear Bien del monitor
