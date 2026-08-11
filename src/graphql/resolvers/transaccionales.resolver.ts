@@ -91,6 +91,7 @@ export const transaccionalesResolvers = {
       if (estatus_reparacion) qb.andWhere('i.estatus_reparacion = :e', { e: estatus_reparacion });
       if (id_bien) qb.andWhere('i.id_bien = :b', { b: id_bien });
       if (id_usuario_genera_reporte) qb.andWhere('i.id_usuario_genera_reporte = :ug', { ug: id_usuario_genera_reporte });
+      if (id_tipo_incidencia) qb.andWhere('i.id_tipo_incidencia = :ti', { ti: id_tipo_incidencia });
       if (id_unidad) qb.andWhere('i.id_unidad = :un', { un: id_unidad });
       if (search) {
         qb.andWhere('(i.descripcion_falla LIKE :s OR i.resolucion_textual LIKE :s OR i.alias LIKE :s OR i.requerimiento LIKE :s)', {

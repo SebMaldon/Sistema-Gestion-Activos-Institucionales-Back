@@ -253,10 +253,12 @@ export interface BienesFilter {
   atributo_id?: number;
   atributo_valor?: string;
   // Quick Filters
+  // Quick Filters
   con_notas_recientes?: boolean;
   sin_inventario?: boolean;
   inconvenientes?: boolean;
   tiene_agente?: boolean;
+  programas_instalados?: string[];
   // Sorting
   sort_by?: string;
   sort_dir?: string;
@@ -418,11 +420,21 @@ export function applyBienesFilters(qb: any, filter?: BienesFilter): { needsTI: b
   if (filter?.fecha_actualizacion_hasta) {
     qb.andWhere('b.fecha_actualizacion <= :fach', { fach: filter.fecha_actualizacion_hasta });
   }
+
+  if (filter?.programas_instalados?.length) {
+    qb.andWhere("b.id_bien IN (SELECT id_bien FROM Programas_PC WHERE programa IN (:...progs))", { progs: filter.programas_instalados });
+  }
+
   return { needsTI: !!needsTI };
 }
 
 export const bienesResolvers = {
   Query: {
+    programasInstalados: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      requireAuth(context);
+      const rows = await AppDataSource.query("SELECT DISTINCT programa FROM Programas_PC WHERE programa IS NOT NULL AND programa != '' ORDER BY programa ASC");
+      return rows.map((r: any) => r.programa);
+    },
     reportePorUnidades: async (
       _: unknown,
       { filter }: { filter?: BienesFilter },

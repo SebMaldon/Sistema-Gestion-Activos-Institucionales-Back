@@ -204,6 +204,7 @@ export const typeDefs = gql`
     unidadesACargo: [UnidadACargo!]
     contactos: [Contacto!]
     segmentos: [Segmento!]
+    ubicaciones: [Ubicacion!]
   }
 
   type UnidadACargo {
@@ -424,6 +425,8 @@ export const typeDefs = gql`
     fecha_adquisicion_hasta: Date
     fecha_actualizacion_desde: DateTime
     fecha_actualizacion_hasta: DateTime
+    # Programs
+    programas_instalados: [String!]
     # Sorting
     sort_by: String
     sort_dir: String
@@ -742,6 +745,8 @@ export const typeDefs = gql`
   type Query {
     # ── Auth
     me: Usuario
+
+    programasInstalados: [String!]!
 
     # ── Catálogos — Marcas
     marcas: [Marca!]!

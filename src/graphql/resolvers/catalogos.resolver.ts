@@ -801,6 +801,10 @@ export const catalogosResolvers = {
     segmentos: async (parent: Inmueble) => {
       const segmentoRepo = AppDataSource.getRepository(Segmento);
       return segmentoRepo.find({ where: { clave: parent.clave } });
+    },
+    ubicaciones: async (parent: Inmueble) => {
+      const Ubicacion = require('../../entities/Ubicacion').Ubicacion;
+      return AppDataSource.getRepository(Ubicacion).find({ where: { id_unidad: parent.clave } });
     }
   },
 
