@@ -389,7 +389,7 @@ export const solicitudesCambioResolvers = {
       requireAuth(context);
       requireRole(context, [ROLES.MAESTRO]);
 
-      return AppDataSource.transaction(async (manager) => {
+      await AppDataSource.transaction(async (manager) => {
         const solicitud = await manager.findOne(SolicitudCambio, {
           where: { id: solicitudId, estado: 'PENDIENTE' },
         });
@@ -418,7 +418,7 @@ export const solicitudesCambioResolvers = {
           // Eliminar notif de cambio de unidad para todos los maestros
           await resolverNotificacionesCambioUnidad(solicitud.usuario_solicitante_id);
 
-          return true;
+          return;
         }
 
         // ── Separar campos de Bien vs Especificaciones TI ──
@@ -607,18 +607,15 @@ export const solicitudesCambioResolvers = {
         solicitud.usuario_aprobador_id = context.user!.id_usuario;
         solicitud.fecha_resolucion = new Date();
         await manager.save(SolicitudCambio, solicitud);
-
-        return true;
       });
 
       // Resolver notificaciones de solicitud pendiente para este bien
       const solAprobada = await AppDataSource.getRepository(SolicitudCambio).findOne({ where: { id: solicitudId } });
       const bienIdAprobado = solAprobada?.bien_id;
-      if (bienIdAprobado) await resolverNotificacionesSolicitud(bienIdAprobado as string);
-
-
+      if (bienIdAprobado) {
+        await resolverNotificacionesSolicitud(bienIdAprobado as string);
+      }
       return true;
-
     },
 
     rechazarCambio: async (
