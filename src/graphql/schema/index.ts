@@ -739,6 +739,13 @@ export const typeDefs = gql`
     total_impresiones: Int!
   }
 
+  type MonitoreoFiltros {
+    versiones: [String!]!
+    ubicaciones: [String!]!
+    fechaMinGlobal: String
+    fechaMaxGlobal: String
+  }
+
   # ─────────────────────────────────────────────────────────
   # QUERIES
   # ─────────────────────────────────────────────────────────
@@ -848,17 +855,19 @@ export const typeDefs = gql`
     # ── Monitoreo Limpieza e Impresiones
     monitoreoImpresiones(
       search: String
-      version: String
-      ubicacion: String
+      version: [String!]
+      ubicacion: [String!]
       unidades: [String!]
       fechaInicio: DateTime
       fechaFin: DateTime
+      retrasoMayorA3Dias: Boolean
       sortBy: String
       sortOrder: String
       pagination: PaginationInput
     ): MonitoreoImpresionesConnection!
 
     monitoreoResumenUnidades: [MonitoreoResumenUnidad!]!
+    monitoreoFiltros(unidades: [String!]): MonitoreoFiltros!
 
     # ── Programas PC (1:N por bien)
     programasPC(id_bien: ID!): [ProgramasPC!]!

@@ -8,11 +8,12 @@ export const monitoreoResolvers = {
       _parent: any,
       args: {
         search?: string;
-        version?: string;
-        ubicacion?: string;
+        version: string[];
+        ubicacion: string[];
         unidades?: string[];
         fechaInicio?: string;
         fechaFin?: string;
+        retrasoMayorA3Dias?: boolean;
         sortBy?: string;
         sortOrder?: string;
         pagination?: { first?: number; page?: number };
@@ -48,13 +49,21 @@ export const monitoreoResolvers = {
         baseQuery += ` AND (b.num_serie LIKE @${parameters.length} OR e.dir_ip LIKE @${parameters.length})`;
         parameters.push(`%${args.search}%`);
       }
-      if (args.version) {
-        baseQuery += ` AND m.version LIKE @${parameters.length}`;
-        parameters.push(`%${args.version}%`);
+      if (args.version && args.version.length > 0) {
+        const placeholders = [];
+        for (const v of args.version) {
+          placeholders.push(`@${parameters.length}`);
+          parameters.push(v);
+        }
+        baseQuery += ` AND m.version IN (${placeholders.join(',')})`;
       }
-      if (args.ubicacion) {
-        baseQuery += ` AND ub.nombre_ubicacion LIKE @${parameters.length}`;
-        parameters.push(`%${args.ubicacion}%`);
+      if (args.ubicacion && args.ubicacion.length > 0) {
+        const placeholders = [];
+        for (const u of args.ubicacion) {
+          placeholders.push(`@${parameters.length}`);
+          parameters.push(u);
+        }
+        baseQuery += ` AND ub.nombre_ubicacion IN (${placeholders.join(',')})`;
       }
       if (args.unidades && args.unidades.length > 0) {
         const placeholders = [];
@@ -81,8 +90,12 @@ export const monitoreoResolvers = {
 
       // 1. Get Total Count
       const countQuery = `
-        SELECT COUNT(DISTINCT b.num_serie) as total
-        ${baseQuery}
+        SELECT COUNT(*) as total FROM (
+          SELECT b.num_serie
+          ${baseQuery}
+          GROUP BY b.num_serie
+          ${args.retrasoMayorA3Dias ? "HAVING MAX(i.fecha) <= DATEADD(day, -3, GETDATE())" : ""}
+        ) as sub
       `;
       
       const countResult = await AppDataSource.query(countQuery, parameters);
@@ -90,8 +103,12 @@ export const monitoreoResolvers = {
 
       // 1.5 Get Total Impressions Sum
       const totalImpQuery = `
-        SELECT SUM(i.impresiones) as sum_total
-        ${baseQuery}
+        SELECT SUM(sum_impresiones) as sum_total FROM (
+          SELECT SUM(i.impresiones) as sum_impresiones
+          ${baseQuery}
+          GROUP BY b.num_serie
+          ${args.retrasoMayorA3Dias ? "HAVING MAX(i.fecha) <= DATEADD(day, -3, GETDATE())" : ""}
+        ) as sub
       `;
       const sumResult = await AppDataSource.query(totalImpQuery, parameters);
       const totalImpresiones = parseInt(sumResult[0]?.sum_total || '0', 10);
@@ -117,6 +134,7 @@ export const monitoreoResolvers = {
           m.version,
           ub.nombre_ubicacion,
           e.dir_ip
+        ${args.retrasoMayorA3Dias ? "HAVING MAX(i.fecha) <= DATEADD(day, -3, GETDATE())" : ""}
       `;
 
       // Sorting
@@ -189,6 +207,51 @@ export const monitoreoResolvers = {
         clave: r.clave,
         total_impresiones: parseInt(r.total || '0', 10)
       }));
+    },
+
+    monitoreoFiltros: async (_parent: any, args: { unidades?: string[] }, context: GraphQLContext) => {
+      if (!context.user) throw new Error('No autorizado');
+
+      const versionesResult = await AppDataSource.query(`
+        SELECT DISTINCT m.version 
+        FROM monitoreo_limpieza m 
+        WHERE m.version IS NOT NULL AND m.version != ''
+        ORDER BY m.version
+      `);
+
+      let ubicacionesQuery = `
+        SELECT DISTINCT ub.nombre_ubicacion 
+        FROM Ubicaciones ub
+        WHERE ub.nombre_ubicacion IS NOT NULL AND ub.nombre_ubicacion != ''
+      `;
+      const params: any[] = [];
+
+      if (args.unidades && args.unidades.length > 0) {
+        const placeholders = [];
+        for (const u of args.unidades) {
+          placeholders.push(`@${params.length}`);
+          params.push(u);
+        }
+        ubicacionesQuery += ` AND ub.id_unidad IN (${placeholders.join(',')})`;
+      }
+
+      ubicacionesQuery += ` ORDER BY ub.nombre_ubicacion`;
+
+      const ubicacionesResult = await AppDataSource.query(ubicacionesQuery, params);
+
+      const fechasResult = await AppDataSource.query(`
+        SELECT 
+          CONVERT(varchar, MIN(fecha), 23) as min_fecha,
+          CONVERT(varchar, MAX(fecha), 23) as max_fecha
+        FROM impresiones
+      `);
+
+      return {
+        versiones: versionesResult.map((r: any) => r.version),
+        ubicaciones: ubicacionesResult.map((r: any) => r.nombre_ubicacion),
+        fechaMinGlobal: fechasResult[0]?.min_fecha || null,
+        fechaMaxGlobal: fechasResult[0]?.max_fecha || null,
+      };
     },
   },
 
