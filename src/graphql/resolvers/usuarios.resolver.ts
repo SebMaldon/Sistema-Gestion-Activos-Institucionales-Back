@@ -143,6 +143,45 @@ export const usuariosResolvers = {
       return repo.save(usuario);
     },
 
+    createUsuarioExe: async (
+      _: unknown,
+      args: {
+        matricula: string;
+        nombre_completo: string;
+        tipo_usuario?: string;
+        correo_electronico?: string;
+        password?: string;
+        id_rol?: number;
+        id_unidad?: number;
+        clave_unidad?: string;
+      },
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+      // Sin requireRole, cualquier usuario desde el exe puede crear
+      const repo = AppDataSource.getRepository(Usuario);
+
+      const exists = await repo.findOne({ where: { matricula: args.matricula } });
+      if (exists) throw new ConflictError(`La matrícula "${args.matricula}" ya está registrada`);
+
+      const usuario = repo.create({
+        matricula: args.matricula,
+        nombre_completo: args.nombre_completo,
+        tipo_usuario: args.tipo_usuario,
+        correo_electronico: args.correo_electronico,
+        id_rol: args.id_rol ?? ROLES.USUARIO,
+        id_unidad: args.id_unidad,
+        clave_unidad: args.clave_unidad,
+        estatus: true,
+      });
+
+      if (args.password) {
+        await usuario.hashPassword(args.password);
+      }
+
+      return repo.save(usuario);
+    },
+
     updateUsuario: async (
       _: unknown,
       {

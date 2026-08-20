@@ -1282,6 +1282,16 @@ export const typeDefs = gql`
       id_unidad: Int
       clave_unidad: String
     ): Usuario!
+    createUsuarioExe(
+      matricula: String!
+      nombre_completo: String!
+      tipo_usuario: String
+      correo_electronico: String
+      password: String
+      id_rol: Int
+      id_unidad: Int
+      clave_unidad: String
+    ): Usuario!
     updateUsuario(
       id_usuario: ID!
       matricula: String
