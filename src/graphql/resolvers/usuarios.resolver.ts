@@ -20,6 +20,7 @@ export const usuariosResolvers = {
         search,
         roles,
         claves_unidades,
+        duplicados,
         pagination,
       }: {
         estatus?: boolean;
@@ -27,6 +28,7 @@ export const usuariosResolvers = {
         search?: string;
         roles?: number[];
         claves_unidades?: string[];
+        duplicados?: boolean;
         pagination?: { first?: number; after?: string; page?: number };
       },
       context: GraphQLContext
@@ -51,6 +53,9 @@ export const usuariosResolvers = {
       }
       if (claves_unidades && claves_unidades.length > 0) {
         qb.andWhere('u.clave_unidad IN (:...claves_unidades)', { claves_unidades });
+      }
+      if (duplicados) {
+        qb.andWhere(`u.matricula IS NOT NULL AND u.matricula != '' AND u.matricula IN (SELECT matricula FROM Usuarios WHERE matricula IS NOT NULL AND matricula != '' GROUP BY matricula HAVING COUNT(matricula) > 1)`);
       }
 
       // Filtro por zona para usuarios estándar 

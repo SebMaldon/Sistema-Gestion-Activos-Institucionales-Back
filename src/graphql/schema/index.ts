@@ -827,6 +827,7 @@ export const typeDefs = gql`
       claves_unidades: [String]
       search: String
       roles: [Int]
+      duplicados: Boolean
       pagination: PaginationInput
     ): UsuariosConnection!
     usuario(id_usuario: ID!): Usuario
